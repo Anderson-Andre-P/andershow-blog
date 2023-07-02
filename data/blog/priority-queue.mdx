@@ -1,0 +1,456 @@
+---
+title: Fila de Prioridades
+date: '2023-02-28'
+tags: ['C/C++', 'Estruturas de Dados']
+draft: false
+summary: 'Neste post discutiremos como funciona e como implementar uma estruturas de dados chamada "Fila de Prioridades".'
+---
+
+# Introdução
+
+Uma `fila de prioridades` é uma estrutura de dados utilizada para manter um conjunto S de elementos, cada qual com um valor associado denominado chave.
+
+Uma das aplicações mais populares para uma fila de prioridade é a implementação de um heap (Um heap é uma árvore binária), usar um heap é utilizar uma fila de prioridades eficiente.
+
+## Heap
+
+Um heap é uma árvore binária, duas propriedades o desinem:
+
+1. O valor de um nó é maior ou igual ao valor de seus filhos;
+2. O heap é uma árvore binária completa ou quase-completa da esquerda para a direita
+
+Uma árvore completa é aquela que todos os nós, exceto folhas, possuem grau 2 e as folhas estão no mesmo nível. Se ela não for completa, todos os níveis estão preenchidos, exceto o último, que deve estar preenchido da esquerda para a direita até um certo ponto.
+
+Ela tem que ser quase completa da esquerda para a direita porque isso facilita a implementação dessa estrutura de dados usando um array.
+
+Por construção, a altura de um heap é Θ(log n), pois é uma estrutura completa ou quase completa da esquerda para a direita. Essa propriedade permite que as operações de inserção e remoção sejam eficientes.
+
+## Implementação
+
+### Arrays
+
+Devido ao fato do heap ser uma árvore completa ou quase-completa, somos capazes de utilizar um array para representá-lo.
+
+<div className="-mx-2 flex flex-wrap overflow-hidden xl:-mx-2">
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+    ![Heap 01](/static/images/priority_queue/heap_01.png)
+  </div>
+</div>
+
+Na figura acima, o array que representa o heap é:
+
+$$
+\mathbf{A} = \left[\begin{array}
+  {c}
+  90, 87, 18, 2, 68, 6, 15
+\end{array}\right]
+$$
+
+O como podemos observar, a raiz ocupa a posição 0 no array, depois seu filho da esquerda ocupa a posição 1 e seu filho da direita ocupa a posição 2, e assim sucessivamente até chegar ao fim do heap.
+
+O último nó no heap também é chamado de tail. Esse tail controla o índice do último elemento do array.
+
+### Left, right and parent
+
+Para caminhar em uma árvore precisamos, a partir de um nó, acessar o nó à esquerda, o nó à direita e o nó pai. Na implementação de árvores binárias de pesquisa nós utilizamos as referências left, right e parent. Contudo, como estamos utilizando um array para armazenar os elementos, precisamos implementar métodos que retornem a esquerda, a direita e o pai de um nó, baseado no seu índice.
+
+### Exemplos
+
+A título de exemplo utilizarei a imagem do heap anterior para realizar as contas e encontrar os index.
+
+#### Left
+
+Para achar o index do elemento left de um nó, utilizamos a equação abaixo:
+
+$$
+\mathbf{X} = 2 * index + 1
+$$
+
+Achando left do index 0:
+
+$$
+\mathbf{X} = 2 * 0 + 1
+$$
+
+$$
+\mathbf{X} = 1
+$$
+
+Achando left do index 1:
+
+$$
+\mathbf{X} = 2 * 1 + 1
+$$
+
+$$
+\mathbf{X} = 3
+$$
+
+Achando left do index 2:
+
+$$
+\mathbf{X} = 2 * 2+ 1
+$$
+
+$$
+\mathbf{X} = 5
+$$
+
+#### Right
+
+Para achar o index do elemento right de um nó, utilizamos a equação:
+
+$$
+\mathbf{Y} = 2 * (index + 1)
+$$
+
+Achando right do index 0:
+
+$$
+\mathbf{Y} = 2 * (0 + 1)
+$$
+
+$$
+\mathbf{Y} = 2
+$$
+
+Achando right do index 1:
+
+$$
+\mathbf{Y} = 2 * (1 + 1)
+$$
+
+$$
+\mathbf{Y} = 4
+$$
+
+Achando right do index 2:
+
+$$
+\mathbf{Y} = 2 * (2+ 1)
+$$
+
+$$
+\mathbf{Y} = 6
+$$
+
+#### Parent
+
+Para achar o index do elemento parent de um nó, utilizamos a equação $$\mathbf{Z} = \frac{(index−1)}{2}$$, caso o index base utilizado para achar o parent seja par precisamos fazer um casting para transformar ele de float para int, então a equação final seria:
+
+$$
+\mathbf{Z} = int(\frac{index−1}{2})
+$$
+
+Achando parent do index 1:
+
+$$
+\mathbf{Z} = int(\frac{1 − 1}{2})
+
+
+$$
+
+$$
+\mathbf{Z} = int(0)
+$$
+
+$$
+\mathbf{Z} = 0
+$$
+
+Achando parent do index 4:
+
+$$
+\mathbf{Z} = int(\frac{4 − 1}{2})
+$$
+
+$$
+\mathbf{Z} = int(1.5)
+$$
+
+$$
+\mathbf{Z} = 1
+$$
+
+Achando parent do index 5:
+
+$$
+\mathbf{Z} = int(\frac{5 − 1}{2})
+$$
+
+$$
+\mathbf{Z} = int(2)
+$$
+
+$$
+\mathbf{Z} = 2
+$$
+
+### Insert, remove and maximum with eficacity
+
+A adição de um novo elemento sempre é feita na próxima posição livre do array (independentemente do tamanho de sua chave),isso é feito fazendo tail + 1. Essa estratégia garante que o heap sempre será completo ou quase completo da esquerda para a direita.
+
+Depois de um elemento ser inserido na última posição do heap é feita uma verificação com seu parent caso sua chave seja maior ele troca de posição com o parent, depois é feita uma nova verificação para ver se seu novo parent tem chave maior, caso seja maior é feita uma nova troca entre suas posições no heap, essa troca é feita até que a propriedade do heap seja satisfeita.
+
+<div className="-mx-2 flex flex-wrap overflow-hidden xl:-mx-2">
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+    ![Heap 06](/static/images/priority_queue/heap_06.png)
+  </div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  ![Heap 06](/static/images/priority_queue/heap_07.png)
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  ![Heap 06](/static/images/priority_queue/heap_08.png)
+</div>
+
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+    ![Heap 06](/static/images/priority_queue/heap_09.png)
+  </div>
+</div>
+
+O pior caso de inserção de elementos no heap é inserir um elemento com uma chave maior que todos os elementos do heap, porque esse elemento adicionado por último vai precisar trocar de lugar com todos os seus parents, deixando sua complexidade como O(log n).
+
+A remoção de um elemento no heap sempre é feita na raiz, porque lá sempre vai estar o maior ou menor chave do heap. Para manter a propriedade de ser completo ou quase-completo da esquerda para a direita, trocamos o valor da raiz com a última folha e removemos essa última folha. Como foi feita uma remoção, então o tail subtrai 1.
+
+<div className="-mx-2 flex flex-wrap overflow-hidden xl:-mx-2">
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+    ![Heap 10](/static/images/priority_queue/heap_10.png)
+  </div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  ![Heap 11](/static/images/priority_queue/heap_11.png)
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  ![Heap 12](/static/images/priority_queue/heap_12.png)
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  ![Heap 13](/static/images/priority_queue/heap_13.png)
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  ![Heap 14](/static/images/priority_queue/heap_14.png)
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  ![Heap 15](/static/images/priority_queue/heap_15.png)
+</div>
+
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+    ![Heap 16](/static/images/priority_queue/heap_16.png)
+  </div>
+</div>
+
+No pior caso, o caminho percorrido é igual ao tamanho da altura, que sempre é O(log n) porque o heap é completo ou quase-completo da esquerda para a direita.
+
+### Aplicação
+
+Podemos aplicar filas de prioridades em heaps de duas formas:
+
+1. Max-heap
+
+As filas de prioridade máxima podem ser utilizadas para programar trabalhos em um computador compartilhado, a fila mantém o controle dos trabalhos a executar e suas prioridades relativas.
+
+Quando o trabalho termina ou é interrompido, o escalonador seleciona o trabalho de maior prioridade entre os trabalhos pendentes chamando a função Extract-Max. O escalonador também pode acrescentar novos trabalhos à fila a qualquer momento chamando a função Insert.
+
+2. Min-heap
+
+Uma fila de prioridade mínima pode ser utilizada em um simulador orientado a eventos. Os elementos na fila são eventos a simular, cada qual com um instante de ocorrência associado que serve como sua chave. Os eventos devem ser simulados na ordem de seu instante de ocorrência porque a simulação de um evento pode provocar outros eventos a simular no futuro.
+
+O programa chama a função Extract-Min em cada etapa para escolher o próximo evento a simular. À medida que novos eventos são produzidos, o simulador os insere na fila de prioridade mínima chamando a função Insert.
+
+## Exemplo de Algoritmo
+
+Abaixo está inserido o algoritmo C++ que utilizei para escrever esse artigo, copie ele e cole em uma IDE para executar.
+
+```cpp
+/*
+╔═════════════════════════════════════════╗
+║ Autor: Anderson André Pereira Eleutério ║
+╚═════════════════════════════════════════╝
+╔═════╦══════════════════╗
+║  n  ║ posições do heap ║
+║═════╬═════════════════ ╣
+║ *n  ║      tail        ║
+║═════╬═════════════════ ╣
+║  a  ║      vetor       ║
+║═════╬═════════════════ ╣
+║  i  ║      indice      ║
+╚═════╩══════════════════╝
+*/
+
+#include <stdio.h>
+
+#define MAX_SIZE 7
+
+// retorna o índice do nó pai
+int parent(int i) {
+    return (i - 1) / 2;
+}
+
+// devolve o índice do filho esquerdo
+int left_child(int i) {
+    return 2*i + 1;
+}
+
+// devolve o índice do filho da direita
+int right_child(int i) {
+    return 2*i + 2;
+}
+
+void swap(int *x, int *y) {
+    int temp = *x;
+    *x = *y;
+    *y = temp;
+}
+
+// insira o item na posição apropriada
+void insert(int a[], int data, int *n) {
+    if (*n >= MAX_SIZE) {
+        printf("%s\n", "O Heap está cheio. Não inseriu todos valores.");
+        return;
+    }
+    // primeiro insira o valor na última posição da matriz
+    // e mova-o para cima
+    a[*n] = data;
+    *n = *n + 1;
+
+    // mova até que a propriedade heap satisfaça
+    int i = *n - 1;
+    while (i != 0 && a[parent(i)] < a[i]) {
+        swap(&a[parent(i)], &a[i]);
+        i = parent(i);
+    }
+}
+
+// move o item na posição i da matriz a
+// em sua posição apropriada
+void max_heapify(int a[], int i, int n){
+    // encontrar nó filho esquerdo
+    int left = left_child(i);
+
+    // encontrar o nó filho direito
+    int right = right_child(i);
+
+    // encontre o maior entre 3 nós
+    int largest = i;
+
+    // verifique se o nó left é maior do que o nó atual
+    if (left <= n && a[left] > a[largest]) {
+        largest = left;
+    }utiliza
+
+    // verifique se o nó right é maior do que o nó atual
+    if (right <= n && a[right] > a[largest]) {
+        largest = right;
+    }
+
+    // troque o maior nó com o nó atual
+    // e repita este processo até que o nó atual seja maior que
+    // o nó direito e o nó esquerdo
+    if (largest != i) {
+        int temp = a[i];
+        a[i] = a[largest];
+        a[largest] = temp;
+        max_heapify(a, largest, n);
+    }
+
+}
+/*
+// converte um array em um heap
+void build_max_heap(int a[], int n) {
+    int i;
+    for (i = n/2; i >= 0; i--) {
+        max_heapify(a, i, n);
+    }
+}
+*/
+// retorna o item máximo do heap
+int get_max(int a[], int *n) {
+ printf("Valor na raiz: %d\n", a[0]);
+    return a[0];
+}
+
+// retorna o último item do heap
+int get_min(int a[], int *n) {
+ printf("Último valor do heap: %d\n", a[*n - 1]);
+    return a[0];
+}
+
+// apaga o item máximo e retorna
+int extract_max(int a[], int *n) {
+    int max_item = a[0];
+
+    // Mostrando qual é o item maior
+    //printf("Valor na raiz: %d\n\n", max_item = a[0]);
+
+    // substitua o primeiro item pelo último item
+    a[0] = a[*n - 1];
+    *n = *n - 1;
+
+    // manter a propriedade heap, heapificando o
+    // primeiro item
+    max_heapify(a, 0, *n);
+    return max_item;
+}
+
+// imprime o heap
+void print_heap(int a[], int n) {
+    int i;
+    for (i = 0; i < n; i++) {
+        printf("Posicao %d: %d\n", i ,a[i]);
+    }
+    printf("\n");
+}
+
+int main() {
+    int n = 0;
+    int a[MAX_SIZE];
+    /*
+    //a[0] = 0;
+    //a[1] = 66; a[2] = 10; a[3] = 103;
+    //build_max_heap(a, n);
+utiliza
+    //2, 6, 68, 90, 87, 15, 18.
+    * */
+    insert(a, 2, &n);
+    insert(a, 6, &n);
+    insert(a, 68, &n);
+    insert(a, 90, &n);
+    insert(a, 87, &n);
+    insert(a, 15, &n);
+    insert(a, 18, &n);
+
+    print_heap(a, n);
+    get_max(a, &n);
+    get_min(a, &n);
+    extract_max(a , &n);
+    print_heap(a, n);
+    get_max(a, &n);
+
+    return 0;
+}
+```
+
+## Referências
+
+[Estruturas de Dados e Algoritmos](https://joaoarthurbm.github.io/eda/posts/heap/)
+
+[Power of Heap](https://www.youtube.com/watch?v=RU08pp_VPSs)

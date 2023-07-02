@@ -1,0 +1,131 @@
+---
+title: Introdução ao SQL → o que é, como funciona e por que é essencial para gerenciar dados
+date: '2023-02-23'
+tags: ['SQL', 'Banco de dados']
+draft: false
+summary: 'SQL é uma linguagem padrão para acessar e manipular bancos de dados e nesse post faremos uma breve introdução sobre ela.'
+---
+
+# Introdução
+
+SQL (Structured Query Language) é uma linguagem de programação usada para gerenciar bancos de dados relacionais. Ela permite que os usuários realizem uma variedade de operações, como inserir, atualizar e recuperar dados em um banco de dados.
+
+Ele é uma linguagem de programação declarativa, o que significa que você especifica o que deseja fazer com os dados, e não como fazê-lo. Isso torna o SQL fácil de usar e ler, especialmente para aqueles que não têm formação em programação.
+
+O SQL é usado em muitas aplicações, incluindo gerenciamento de estoque, processamento de transações financeiras, análise de dados de vendas, análise de dados de marketing, gerenciamento de relacionamento com o cliente e muito mais. É uma parte fundamental da maioria das tecnologias de armazenamento de dados, incluindo bancos de dados relacionais, bancos de dados NoSQL, plataformas de big data e muito mais.
+
+Existem muitos tipos diferentes de dados que podem ser armazenados em um banco de dados, incluindo números, datas, textos, imagens e muito mais. O SQL permite que você manipule esses dados de muitas maneiras diferentes, incluindo a ordenação, agrupamento, filtragem e cálculo de estatísticas.
+
+## As categorias de comandos SQL
+
+Existem quatro categorias principais de comandos SQL:
+
+- Comandos DDL (Data Definition Language): esses comandos permitem que os usuários definam e modifiquem a estrutura dos objetos do banco de dados, como tabelas, índices e visões. Exemplos de comandos DDL incluem CREATE TABLE, DROP TABLE e ALTER TABLE.
+
+- Comandos DML (Data Manipulation Language): esses comandos permitem que os usuários manipulem os dados armazenados no banco de dados. Exemplos de comandos DML incluem SELECT, INSERT, UPDATE e DELETE.
+
+- Comandos DCL (Data Control Language): esses comandos permitem que os usuários controlem o acesso aos objetos do banco de dados. Exemplos de comandos DCL incluem GRANT e REVOKE.
+
+- Comandos TCL (Transaction Control Language): esses comandos permitem que os usuários controlem transações em um banco de dados. Exemplos de comandos TCL incluem COMMIT e ROLLBACK.
+
+O SQL é baseado em conjuntos, o que significa que as operações em bancos de dados são tratadas como operações em conjuntos matemáticos. Por exemplo, quando você executa uma consulta SELECT, o resultado é um conjunto de linhas que satisfazem as condições especificadas na consulta. As operações de união, interseção e diferença também são suportadas em SQL, o que permite a combinação de conjuntos de dados de várias tabelas em uma única consulta.
+
+O SQL também permite o uso de funções agregadas, como SUM, COUNT, AVG, MAX e MIN, que permitem calcular estatísticas sobre conjuntos de dados. Além disso, o SQL pode ser usado para criar visões, que são consultas armazenadas que podem ser usadas como tabelas em consultas subsequentes. Isso pode ser muito útil para simplificar consultas complexas ou criar uma camada de abstração sobre tabelas existentes.
+
+## Mas afinal, o que são as palavras reservadas do SQL?
+
+Cada palavra reservada do SQL tem uma função específica, que é utilizada para manipular dados e estruturas em bancos de dados. Listei abaixo algumas dessas palavras chave (as mais utilizadas) e coloquei uma breve descrição do que elas fazem:
+
+**SELECT**: é usado para selecionar dados de uma ou mais tabelas.
+
+**INSERT**: é usado para inserir novos dados em uma tabela.
+
+**UPDATE**: é usado para atualizar dados existentes em uma tabela.
+
+**DELETE**: é usado para excluir dados de uma tabela.
+
+**CREATE**: é usado para criar uma nova tabela ou banco de dados.
+
+**ALTER**: é usado para modificar uma tabela ou banco de dados existente.
+
+**DROP**: é usado para excluir uma tabela ou banco de dados existente.
+
+**WHERE**: é usado para filtrar os resultados de uma consulta com base em uma ou mais condições.
+
+**JOIN**: é usado para combinar dados de duas ou mais tabelas em uma única consulta.
+
+**GROUP BY**: é usado para agrupar dados com base em uma ou mais colunas.
+
+**ORDER BY**: é usado para classificar os resultados de uma consulta com base em uma ou mais colunas.
+
+**HAVING**: é usado para filtrar os resultados de uma consulta que inclui uma cláusula GROUP BY.
+
+Você pode encontrar outras palavras reservadas e palavras chave [clicando aqui](https://www.ibm.com/docs/pt-br/psfa/7.1.0?topic=guide-sql-reserved-words-keywords).
+
+## Algumas das operações básicas que podem ser realizadas com SQL
+
+Fiz uma breve introdução com algumas das operações mais comuns que podem ser realizadas por iniciantes com SQL:
+
+1. Criar uma tabela: a cláusula CREATE TABLE permite aos usuários criar uma tabela com um ou mais campos. Por exemplo, a tabela Cars pode ser criada com campos CarsID, Name, Year, Class e Price.
+
+```sql
+CREATE TABLE Cars(
+    CarsID int,
+    Name varchar(50),
+    Yearint,
+    Class varchar(50),
+    Price float
+);
+```
+
+2. Inserir dados em uma tabela: a cláusula INSERT INTO permite aos usuários inserir dados em uma tabela existente. Por exemplo, para inserir um novo carro na tabela Cars:
+
+```sql
+INSERT INTO Cars (CarsID, Name, Year, Class, Price)
+VALUES (1, 'Ferrari', 2023, 'Supercar', 5000000.00);
+```
+
+3. Selecionar dados de uma tabela: a cláusula SELECT permite aos usuários selecionar dados de uma tabela existente. Por exemplo, para selecionar todos os dados da tabela Cars:
+
+```sql
+SELECT * FROM Cars;
+```
+
+4. Filtrar dados usando a cláusula WHERE: a cláusula WHERE permite aos usuários filtrar os dados de uma tabela com base em uma condição. Por exemplo, para selecionar apenas os carros que foram lançados depois de 2020:
+
+```sql
+SELECT * FROM Cars
+WHERE Year >= 2020;
+```
+
+5. Atualizar dados em uma tabela: a cláusula UPDATE permite aos usuários atualizar os dados em uma tabela existente. Por exemplo, para atualizar a classe do carro com Id igual a 1:
+
+```sql
+UPDATE Cars
+SET Class = 'Supercar';
+WHERE CarsID = 1;
+```
+
+6. Excluir dados de uma tabela: a cláusula DELETE permite aos usuários excluir dados de uma tabela existente. Por exemplo, para excluir um carro da tabela Cars:
+
+```sql
+DELETE FROM Cars
+WHERE CarsID = 1;
+```
+
+Essas são apenas algumas das operações básicas que podem ser realizadas com SQL. A linguagem também inclui funções avançadas para trabalhar com datas, texto, matemática e muito mais. Além disso, SQL é suportado por uma ampla variedade de bancos de dados relacionais, incluindo MySQL, PostgreSQL, Oracle e Microsoft SQL Server.
+
+Caso você queira ver mais exemplos de códigos SQL pode clicar nesses links:
+[Link 1](https://www.freecodecamp.org/portuguese/news/os-melhores-exemplos-de-sql/), [Link 2](https://www.luis.blog.br/exemplos-de-sql-select.html#:~:text=Exemplos%20de%20SQL%20%E2%80%93%20Fun%C3%A7%C3%A3o%20SUM%20e%20Group%20By&text=COUNT%20%2D%20para%20contar%20a%20quantidade,para%20retornar%20o%20maior%20valor), [Link 3](https://kenzie.com.br/blog/comandos-sql/).
+
+## Resumo
+
+Em resumo, o SQL é uma linguagem essencial para gerenciar e manipular dados em bancos de dados relacionais. Ele oferece uma variedade de comandos poderosos que permitem que você selecione, insira, atualize e exclua dados de maneira eficiente e segura. Com o conhecimento do SQL, você pode trabalhar com uma ampla variedade de dados e aplicativos, tornando-se um profissional valioso em muitos setores.
+
+### Referências
+
+- Silberschatz, A., Korth, H. F., & Sudarshan, S. (2010). Sistema de gerenciamento de banco de dados (Vol. 6). São Paulo: Cengage Learning.
+- Date, C. J. (2013). Introdução a sistemas de bancos de dados (Vol. 1). Rio de Janeiro: Elsevier.
+- Beaulieu, A. (2009). Aprendendo SQL (Vol. 2). São Paulo: O’Reilly.
+- Jorgensen, E. (2014). SQL injection attacks and defense. Syngress.
+- W3Schools. SQL Tutorial. Disponível em: https://www.w3schools.com/sql/default.asp. Acesso em: 23 de fevereiro de 2023.

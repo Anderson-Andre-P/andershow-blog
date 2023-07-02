@@ -1,0 +1,29 @@
+---
+title: Entendendo o Docker → a plataforma de virtualização de contêineres que revoluciona o desenvolvimento de aplicativos
+date: '2023-02-20'
+tags: ['Docker', 'Virtualização']
+draft: false
+summary: 'Docker é uma plataforma aberta para desenvolvimento, envio e execução de aplicativos. O Docker permite que você separe seus aplicativos de sua infraestrutura para que você possa entregar software rapidamente.'
+---
+
+# Introdução
+
+Podemos dizer que Docker é uma plataforma de virtualização de contêineres que permite empacotar e executar aplicativos em ambientes isolados. Cada contêiner Docker é uma unidade completa e portátil de software que inclui todas as dependências necessárias para executar o aplicativo, como bibliotecas, frameworks e outras ferramentas.
+
+Criar contêiners no Docker não é o mesmo que criar uma máquina virtual no seu computador, uma das diferenças é que o Docker utiliza poder de processamento sob demanda, enquanto que o em uma máquina virtual você precisaria alocar quanto de processamento quer utilizar, essa é uma vantagem para o Docker, pois se você criar uma máquina virtual e alocar 30Gb de memória porém utilizar apenas 20Gb, vai deixar “sobrando” 10Gb de memória que não está sendo utilizada.
+
+Os contêineres Docker são criados a partir de imagens, que são como modelos de contêineres pré-configurados que contêm todos os arquivos e configurações necessários para executar um aplicativo em um ambiente Docker. As imagens são armazenadas em um registro, como o Docker Hub, e podem ser compartilhadas e reutilizadas por outros desenvolvedores. Você pode ver um modelo de execução de uma image do Python em um contêiner [clicando aqui](https://docs.docker.com/language/python/run-containers/).
+
+Uma das principais vantagens do Docker é que ele torna o desenvolvimento e a implantação de aplicativos muito mais simples e eficiente. Com o Docker, os desenvolvedores podem criar aplicativos em qualquer ambiente local e, em seguida, empacotá-los em contêineres Docker para serem executados em qualquer ambiente Docker compatível. Isso significa que os aplicativos podem ser facilmente movidos entre diferentes ambientes de desenvolvimento, teste e produção sem a necessidade de modificar o código ou reconfigurar os ambientes.
+
+Além disso, o Docker ajuda a garantir que os aplicativos funcionem da mesma forma em todos os ambientes, independentemente das diferenças de configuração ou dependências. Isso é possível porque cada contêiner Docker é isolado dos outros contêineres e do sistema operacional host, o que garante que o aplicativo tenha acesso apenas às dependências e recursos que precisa.
+
+O Docker é amplamente utilizado na indústria de software para criar, implantar e gerenciar aplicativos em ambientes distribuídos. Ele é compatível com várias linguagens de programação, sistemas operacionais e plataformas em nuvem, o que o torna uma escolha popular para equipes de desenvolvimento e operações.
+
+### Referências
+
+- [Documentação oficial do Docker](https://www.docker.com/)
+- [O que é Docker e como utilizar a plataforma?](https://blog.xpeducacao.com.br/o-que-e-docker/)
+- [Container docker: o que é e quais são as vantagens de usar?](https://www.meupositivo.com.br/panoramapositivo/container-docker/)
+- [Docker: Do Zero a Marinheiro](https://medium.com/data-hackers/docker-do-zero-a-marinheiro-adf4d9087f76)
+- [Docker explained in simple terms!!](https://blog.devgenius.io/docker-explained-in-simple-terms-178748e28e99)
