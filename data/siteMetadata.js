@@ -2,7 +2,8 @@ const siteMetadata = {
   title: 'Andershow Blog',
   author: 'Anderson André',
   headerTitle: 'Andershow',
-  description: 'Um blog criado com Next.js e Tailwind.css',
+  description:
+    'Seja protagonista no desenvolvimento front-end. Aprenda as habilidades essenciais de um desenvolvedor e transforme suas ideias em interfaces visuais atraentes e funcionais.',
   language: 'pt-br',
   theme: 'system', // system, dark or light
   siteUrl: 'https://anderson-andre.netlify.app/',
