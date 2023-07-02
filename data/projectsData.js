@@ -12,7 +12,7 @@ const projectsData = [
     href: 'https://github.com/Anderson-Andre-P/coffee',
   },
   {
-    title: 'Coffee App',
+    title: 'Christmas Website',
     description: `Esse é um projeto de estudos de fim de semana que consistia em criar um website utilizando clean code e boas práticas de desenvolvimento com HTML, CSS e Js.`,
     imgSrc: '/static/images/projects/christmas/christmas.png',
     href: 'https://github.com/Anderson-Andre-P/christmas-website',
