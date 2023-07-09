@@ -1,0 +1,151 @@
+---
+title: Introdução ao Redux no React
+date: '2023-07-13'
+tags: ['ReactJs', 'Redux', 'Front-end']
+draft: false
+summary: 'Neste artigo, vamos explorar uma introdução ao Redux no contexto do desenvolvimento React.'
+---
+
+# Introdução
+
+O React é uma biblioteca JavaScript popular para o desenvolvimento de interfaces de usuário interativas. À medida que as aplicações React crescem em tamanho e complexidade, o gerenciamento do estado da aplicação pode se tornar um desafio. É aí que entra o Redux, uma biblioteca de gerenciamento de estado que ajuda a simplificar e organizar a lógica de estado em aplicações React.
+
+## O que é Redux?
+
+Redux é uma biblioteca JavaScript que permite gerenciar o estado de uma aplicação de forma previsível e consistente. Ele segue o padrão de design Flux e é amplamente utilizado em aplicações React, embora também possa ser usado com outros frameworks JavaScript.
+
+O Redux opera com um único objeto de estado centralizado, chamado de **store**, que armazena todas as informações relevantes para a aplicação. Qualquer mudança no estado é feita através de ações (actions), que são objetos simples que descrevem o que aconteceu. As ações são enviadas para os **reducers**, que são funções puras responsáveis por atualizar o estado com base nas ações recebidas.
+
+## Conceitos chave do Redux
+
+Existem alguns conceitos chave que você precisa entender ao trabalhar com Redux:
+
+1. **Actions**: São objetos que descrevem as mudanças no estado da aplicação. Elas contêm um tipo (type) que indica o tipo de ação e podem conter outros dados relevantes.
+2. **Reducers**: São funções puras que recebem o estado atual e uma ação, e retornam um novo estado atualizado. Os reducers são responsáveis por atualizar o estado da aplicação com base nas ações recebidas.
+3. **Store**: É o objeto que contém o estado da aplicação. Ele é criado usando a função `createStore()` do Redux e é responsável por manter o estado atualizado e notificar os componentes sobre as mudanças.
+4. **Provider**: É um componente fornecido pelo pacote `react-redux` que permite que a store seja acessível por todos os componentes da aplicação React.
+5. **Connect**: É uma função fornecida pelo pacote `react-redux` que conecta os componentes React ao Redux, permitindo que eles acessem o estado e despachem ações.
+
+## Exemplo básico de uso do Redux no React
+
+Aqui está um exemplo básico de como usar o Redux em uma aplicação React:
+
+1. **Instale os pacotes**: Execute o seguinte comando no terminal para instalar as dependências necessárias:
+
+```shell
+npm install redux react-redux
+```
+
+2. **Defina as ações**: Crie um arquivo `actions.js` para definir as ações da aplicação:
+
+```jsx
+// actions.js
+export const incrementCounter = () => ({
+  type: 'INCREMENT_COUNTER',
+})
+
+export const decrementCounter = () => ({
+  type: 'DECREMENT_COUNTER',
+})
+```
+
+3. **Crie o reducer**: Crie um arquivo `reducer.js` para definir o reducer da aplicação:
+
+```jsx
+// reducer.js
+const initialState = {
+  counter: 0,
+}
+
+const reducer = (state = initialState, action) => {
+  switch (action.type) {
+    case 'INCREMENT_COUNTER':
+      return {
+        ...state,
+        counter: state.counter + 1,
+      }
+    case 'DECREMENT_COUNTER':
+      return {
+        ...state,
+        counter: state.counter - 1,
+      }
+    default:
+      return state
+  }
+}
+
+export default reducer
+```
+
+4. **Crie a store**: Crie um arquivo `store.js` para criar a store da aplicação:
+
+```jsx
+// store.js
+import { createStore } from 'redux'
+import reducer from './reducer'
+
+const store = createStore(reducer)
+
+export default store
+```
+
+5. **Configure o Provider**: No componente raiz da sua aplicação, envolva os componentes com o Provider do Redux para que eles tenham acesso ao estado e possam despachar ações:
+
+```jsx
+// index.js
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { Provider } from 'react-redux'
+import store from './store'
+import App from './App'
+
+ReactDOM.render(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  document.getElementById('root')
+)
+```
+
+6. **Conecte componentes**: No componente que precisa acessar o estado ou despachar ações, utilize a função `connect` para conectá-lo ao Redux:
+
+```jsx
+// Counter.js
+import React from 'react'
+import { connect } from 'react-redux'
+import { incrementCounter, decrementCounter } from './actions'
+
+const Counter = ({ counter, increment, decrement }) => {
+  return (
+    <div>
+      <h1>Counter: {counter}</h1>
+      <button onClick={increment}>Increment</button>
+      <button onClick={decrement}>Decrement</button>
+    </div>
+  )
+}
+
+const mapStateToProps = (state) => ({
+  counter: state.counter,
+})
+
+const mapDispatchToProps = {
+  increment: incrementCounter,
+  decrement: decrementCounter,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Counter)
+```
+
+Neste exemplo, o componente `Counter` é conectado ao Redux usando a função `connect`. Ele recebe o estado do contador do Redux através da função `mapStateToProps` e as ações de incremento e decremento são despachadas através da função `mapDispatchToProps`.
+
+Espero que esta introdução ao Redux no React tenha lhe proporcionado uma visão geral do uso dessa poderosa biblioteca de gerenciamento de estado. Com o Redux, você pode criar aplicações React mais escaláveis e fáceis de manter.
+
+Se você quiser se aprofundar mais no Redux, recomendo consultar a documentação oficial e explorar projetos e tutoriais adicionais.
+
+Fique à vontade para deixar suas dúvidas e comentários abaixo. Estou aqui para ajudar!
+
+_Referências:_
+
+- [Redux](https://redux.js.org/)
+- [React Redux Documentation](https://react-redux.js.org/introduction/getting-started)
