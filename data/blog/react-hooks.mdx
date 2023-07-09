@@ -1,0 +1,108 @@
+---
+title: Explorando Hooks do React - Gerenciamento de Estado, Efeitos e Contexto em Componentes Funcionais
+date: '2023-07-10'
+tags: ['ReactJs', 'Hooks', 'Front-end']
+draft: false
+summary: 'Neste post, exploramos exemplos práticos de uso dos Hooks useState, useEffect e useContext para o gerenciamento de estado, efeitos colaterais e contexto, respectivamente. '
+---
+
+# Introdução
+
+Os Hooks do React revolucionaram a forma como lidamos com estado, efeitos colaterais e contexto em componentes funcionais. Neste post, vamos explorar os principais Hooks do React, como useState, useEffect e useContext, e mostrar exemplos práticos de como utilizá-los para gerenciar esses aspectos essenciais no desenvolvimento de aplicações React.
+
+## useState: Gerenciamento de Estado
+
+O Hook useState permite adicionar estado a componentes funcionais. Com ele, podemos declarar e atualizar variáveis de estado de forma simples e eficiente.
+
+Exemplo de uso do useState:
+
+```jsx
+import React, { useState } from 'react'
+
+function Counter() {
+  const [count, setCount] = useState(0)
+
+  const increment = () => {
+    setCount(count + 1)
+  }
+
+  return (
+    <div>
+      <p>Contagem: {count}</p>
+      <button onClick={increment}>Incrementar</button>
+    </div>
+  )
+}
+```
+
+No exemplo acima, o useState é utilizado para declarar a variável de estado "count" com o valor inicial 0. A função "setCount" é responsável por atualizar o valor do estado. Ao clicar no botão "Incrementar", a função "increment" é chamada, atualizando o valor de "count" e refletindo a mudança na interface.
+
+## useEffect: Gerenciamento de Efeitos Colaterais
+
+O Hook useEffect é utilizado para lidar com efeitos colaterais em componentes funcionais, como requisições assíncronas, inscrições em eventos e manipulação do DOM. Ele é executado após cada renderização do componente.
+
+Exemplo de uso do useEffect:
+
+```jsx
+import React, { useState, useEffect } from 'react'
+
+function DataFetching() {
+  const [data, setData] = useState([])
+
+  useEffect(() => {
+    fetch('https://api.example.com/data')
+      .then((response) => response.json())
+      .then((data) => setData(data))
+  }, [])
+
+  return (
+    <div>
+      <ul>
+        {data.map((item) => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+No exemplo acima, o useEffect é utilizado para buscar dados de uma API assíncrona usando a função fetch. O array vazio [] passado como segundo argumento indica que o efeito deve ser executado apenas uma vez, após a montagem inicial do componente. Quando os dados são obtidos, eles são armazenados no estado "data" e renderizados na interface.
+
+## useContext: Gerenciamento de Contexto
+
+O Hook useContext é utilizado para acessar o contexto em componentes funcionais. Ele permite a comunicação entre componentes em diferentes níveis da árvore de componentes sem a necessidade de passar propriedades manualmente.
+
+Exemplo de uso do useContext:
+
+```jsx
+import React, { useContext } from 'react'
+
+const ThemeContext = React.createContext('light')
+
+function ThemeSwitcher() {
+  const theme = useContext(ThemeContext)
+
+  return (
+    <div>
+      <p>Tema atual: {theme}</p>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <ThemeSwitcher />
+    </ThemeContext.Provider>
+  )
+}
+```
+
+No exemplo acima, é criado um contexto chamado "ThemeContext" com o valor padrão "light". Em seguida, o componente "ThemeSwitcher" utiliza o useContext para acessar o valor do tema do contexto. O componente "App" envolve o "ThemeSwitcher" com o provedor "ThemeContext.Provider" e define o valor do tema como "dark". Assim, o componente "ThemeSwitcher" consegue acessar o valor do tema definido pelo provedor.
+
+## Conclusão
+
+Os Hooks do React são poderosas ferramentas que tornam o desenvolvimento de componentes funcionais mais simples e eficiente. O useState permite o gerenciamento de estado de forma intuitiva, o useEffect lida com efeitos colaterais de maneira elegante e o useContext facilita o acesso ao contexto entre componentes. Com esses Hooks, é possível criar componentes funcionais mais reutilizáveis, legíveis e fáceis de manter em aplicações React.
+
+Neste post, exploramos exemplos práticos de uso dos Hooks useState, useEffect e useContext para o gerenciamento de estado, efeitos colaterais e contexto, respectivamente. Esperamos que você possa aproveitar ao máximo essas ferramentas em seus projetos React e melhorar a qualidade e a eficiência do seu código.
