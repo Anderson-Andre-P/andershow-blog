@@ -1,0 +1,270 @@
+---
+title: Desenvolvendo uma aplicação com light e dark theme usando Next.js
+date: '2023-07-15'
+tags: ['Styled Components', 'Next.Js', 'Front-end', 'Tailwind']
+draft: false
+summary: 'Neste artigo, vamos explorar como fazer uma aplicação em Next.Js com um tema light e um tema dark.'
+---
+
+# Introdução
+
+Neste tutorial, vamos aprender como criar uma aplicação com suporte a light e dark theme utilizando Next.js, uma poderosa estrutura de desenvolvimento web baseada em React. Além disso, iremos utilizar o Styled Components para estilizar os componentes da aplicação e o Tailwind CSS para facilitar a criação de estilos responsivos.
+
+A capacidade de alternar entre um tema claro e escuro é uma funcionalidade cada vez mais popular em aplicações modernas. Ela permite que os usuários personalizem a aparência da aplicação de acordo com suas preferências e também fornece uma melhor experiência de visualização em diferentes ambientes e condições de iluminação.
+
+Neste tutorial, iremos criar um contexto de tema utilizando o Context API do React, permitindo que os componentes da nossa aplicação acessem o tema selecionado. Vamos armazenar a escolha do tema no local storage para persistir a preferência do usuário. Também utilizaremos o Tailwind CSS para criar estilos responsivos de forma rápida e eficiente, e o Styled Components para estilizar os componentes de forma declarativa e dinâmica.
+
+Vamos abordar os seguintes passos neste tutorial:
+
+1. Configuração inicial do projeto Next.js.
+2. Definição dos temas e estilos globais utilizando o Tailwind CSS.
+3. Criação do contexto de tema e armazenamento da escolha do usuário no local storage.
+4. Implementação do componente de layout para aplicar o tema selecionado.
+5. Criação da página inicial com a opção de alternar entre light e dark theme.
+
+Ao final deste tutorial, você terá uma aplicação funcional com suporte a light e dark theme, permitindo que os usuários alternem entre os temas de forma intuitiva e personalizada.
+
+Vamos começar criando o projeto e configurando o ambiente!
+
+## Passo 1: Crie a estrutura de pastas
+
+A fim de facilitar o tutorial, recomendo criar a estrutura de pastas conforme abaixo:
+
+```bash
+toggle-theme/
+├── src/
+│   ├── components/
+│   │   └── Layout.jsx
+│   ├── contexts/
+│   │   └── ThemeContext.jsx
+│   ├── pages/
+│   │   ├── _app.jsx
+│   │   └── index.jsx
+│   └── styles/
+│       ├── themes.tsx
+│       └── globals.css
+├── tailwind.config.js
+├── package.json
+├── tsconfig.json
+└── ...
+```
+
+## Passo 2: Crie um novo projeto Next.js
+
+Abra o terminal e execute o seguinte comando para criar um novo projeto Next.js chamado "toggle-theme":
+
+```bash
+npx create-next-app toggle-theme
+```
+
+## Passo 3: Instale as dependências necessárias
+
+Navegue para o diretório do projeto:
+
+```bash
+cd toggle-theme
+```
+
+Em seguida, instale as dependências necessárias, incluindo o Styled Components e o Tailwind CSS:
+
+```bash
+npm install styled-components tailwindcss
+```
+
+## Passo 4: Configure o Tailwind CSS
+
+Execute o comando a seguir para gerar o arquivo `tailwind.config.js` e o arquivo `styles/globals.css` para configurar o Tailwind CSS:
+
+```bash
+npx tailwindcss init -p
+```
+
+Agora, você pode adicionar estilos globais personalizados no arquivo `styles/globals.css`. Por exemplo:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white dark:bg-gray-800;
+  }
+}
+
+/* Resto do seu código CSS personalizado */
+```
+
+## Passo 5: Crie o contexto do tema
+
+Dentro da pasta `contexts`, crie um arquivo chamado `ThemeContext.jsx` e adicione o seguinte código:
+
+```jsx
+import React, { createContext, useState, useEffect } from 'react'
+import { lightTheme, darkTheme } from '../styles/theme'
+import { ThemeProvider } from 'styled-components'
+
+const ThemeContext = createContext()
+
+const ThemeProviderWrapper = ({ children }) => {
+  const [theme, setTheme] = useState('light')
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      setTheme(savedTheme)
+    } else {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+      setTheme(systemTheme)
+      localStorage.setItem('theme', systemTheme)
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+  }
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <ThemeProvider theme={theme === 'light' ? lightTheme : darkTheme}>{children}</ThemeProvider>
+    </ThemeContext.Provider>
+  )
+}
+
+export { ThemeContext, ThemeProviderWrapper }
+```
+
+Este código define o contexto do tema, gerenciando o estado do tema selecionado (light ou dark) e alternando entre eles. Ele também verifica o tema do sistema e salva a escolha do tema no local storage.
+
+## Passo 6: Crie os temas
+
+Dentro da pasta `styles`, crie um arquivo chamado `themes.jsx` e adicione o seguinte código:
+
+```jsx
+export const lightTheme = {
+  background: '#ffffff',
+  text: '#000000',
+}
+
+export const darkTheme = {
+  background: '#333333',
+  text: '#ffffff',
+}
+```
+
+Esses objetos representam as definições de cores para os temas light e dark. Você pode personalizar as cores conforme desejado.
+
+## Passo 7: Crie o componente de layout
+
+Dentro da pasta `components`, crie um arquivo chamado `Layout.js` e adicione o seguinte código:
+
+```jsx
+'use client'
+
+import React, { useContext } from 'react'
+import { ThemeContext } from '../contexts/ThemeContext'
+import styled from 'styled-components'
+
+const LayoutContainer = styled.div`
+  background-color: ${(props) => props.theme.background};
+  color: ${(props) => props.theme.text};
+`
+
+const Layout = ({ children }) => {
+  return (
+    <LayoutContainer className="flex min-h-screen items-center justify-center">
+      <div className="rounded-lg bg-white px-6 py-4 shadow-lg dark:bg-gray-800">{children}</div>
+    </LayoutContainer>
+  )
+}
+
+export default Layout
+```
+
+Esse componente `Layout` aplica o tema selecionado ao `LayoutContainer` usando as classes do Tailwind CSS. Ele também envolve o conteúdo com um card estilizado.
+
+## Passo 8: Atualize o arquivo \_app.jsx
+
+Abra o arquivo `_app.jsx` em `pages/_app.jsx` e faça as seguintes atualizações:
+
+```jsx
+import '../styles/globals.css'
+import type { AppProps } from 'next/app'
+import { ThemeProvider } from 'next-themes'
+
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <ThemeProvider attribute="class">
+      <Component {...pageProps} />
+    </ThemeProvider>
+  )
+}
+
+export default MyApp
+```
+
+Aqui, envolvemos o componente principal da aplicação com o `ThemeProviderWrapper`, fornecendo o contexto do tema para todos os componentes.
+
+Passo 9: Crie a página inicial
+
+Dentro da pasta `pages`, crie um arquivo chamado `index.jsx` e adicione o seguinte código:
+
+```jsx
+'use client'
+import React from 'react'
+import { useTheme } from 'next-themes'
+import Layout from '../components/Layout'
+
+const Button = () => {
+  const { systemTheme, theme, setTheme } = useTheme()
+  const currentTheme = theme === 'system' ? systemTheme : theme
+
+  return (
+    <main className="flex h-screen flex-col items-center justify-center">
+      <h2 className={`text-center text-4xl text-gray-800 dark:text-white sm:text-6xl md:text-9xl `}>
+        {theme === 'light' ? 'light' : 'dark'} theme
+      </h2>
+      <button
+        className="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600 dark:bg-blue-700"
+        onClick={() => (theme == 'dark' ? setTheme('light') : setTheme('dark'))}
+      >
+        Alternar para {theme === 'light' ? 'dark' : 'light'} theme
+      </button>
+    </main>
+  )
+}
+
+export default Button
+```
+
+Neste exemplo, adicionamos um título, um botão para alternar entre os temas e um card com informações sobre o tema atual.
+
+## Passo 10: Execute a aplicação
+
+Inicie o servidor de desenvolvimento:
+
+```bash
+npm run dev
+```
+
+## Conclusão
+
+Parabéns! Você concluiu com sucesso o tutorial de criação de uma aplicação com Light e Dark Theme em Next.js. Agora você tem uma aplicação funcional que permite aos usuários alternarem entre temas claro e escuro de forma personalizada.
+
+A utilização do Next.js proporcionou uma base sólida para o desenvolvimento da aplicação, aproveitando os recursos do React e fornecendo uma experiência de desenvolvimento eficiente. O Styled Components permitiu a estilização dos componentes de forma declarativa e dinâmica, enquanto o Tailwind CSS ofereceu uma abordagem eficiente e responsiva para a criação de estilos.
+
+Espero que este simples passo a passo tenha fornecido uma introdução útil ao Next.js, Styled Components e Tailwind CSS, e que você esteja mais confiante para explorar e utilizar essas poderosas ferramentas em seus projetos futuros.
+
+Para obter mais informações e aprofundar seu conhecimento, consulte a documentação oficial das bibliotecas utilizadas neste tutorial:
+
+- [Documentação do Next.js](https://Next.Js.org/docs)
+- [Documentação do Tailwind CSS](https://tailwindcss.com/docs)
+- [Documentação do Styled Components](https://styled-components.com/docs)
+
+Se quiser ver como o projeto final vai ficar, acesse meu repositório no Github:
+
+- [Toggle Theme - Solução](https://github.com/Anderson-Andre-P/toggle-theme-next-tailwind)
