@@ -157,7 +157,7 @@ export default function Home({ posts }) {
                 <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                   Abr 2023
                   <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
-                  Atualmente
+                  Out 2023
                 </span>
               </p>
               <p className="flex items-center truncate">
