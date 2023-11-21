@@ -1,6 +1,6 @@
+/* eslint-disable prettier/prettier */
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTheme } from 'next-themes'
-
 import siteMetadata from '@/data/siteMetadata'
 
 const Giscus = () => {
@@ -64,7 +64,7 @@ const Giscus = () => {
   return (
     <div className="pb-6 pt-6 text-center text-gray-700 dark:text-gray-300">
       {enableLoadComments && <button onClick={LoadComments}>Load Comments</button>}
-      <div className="giscus" id={COMMENTS_ID} />
+      <div className="giscus" id={COMMENTS_ID}  />
     </div>
   )
 }
