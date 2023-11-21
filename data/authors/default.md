@@ -1,14 +1,14 @@
 ---
 name: Anderson André
 avatar: /static/images/profile_pic.jpeg
-occupation: Desenvolvedor de Software Front-end
-company: IE Tecnologia
+occupation: Software engenering
+company: OPEN TO WORK
 email: eleu.ander@gmail.com
 linkedin: https://www.linkedin.com/in/anderson-andre-pereira/
 github: https://github.com/Anderson-Andre-P
 ---
 
-Estudante de **Sistemas de Informação** com previsão de graduação em 12/2023 pela Fundação de Ensino e Pesquisa de Itajubá - FEPI. Sou um apaixonado por **tecnologia**. Criativo, proativo, flexível e com um amplo entendimento no desenvolvimento de aplicações web e mobile com `Flutter` e `React`.
+Estudante de **Sistemas de Informação** com graduação em 11/2023 pela Fundação de Ensino e Pesquisa de Itajubá - FEPI. Sou um apaixonado por **tecnologia**. Criativo, proativo, flexível e com um amplo entendimento no desenvolvimento de aplicações web e mobile com `Flutter` e `React`.
 
 ### Sumário
 
@@ -22,7 +22,7 @@ Estudante de **Sistemas de Informação** com previsão de graduação em 12/202
 
 ### Desenvolvedor de Software @**[IE Tecnologia](https://www.ietecnologia.com/)**
 
-`Abr 2023 - Atualmente`
+`Abr 2023 - Out 2023`
 
 Atividades realizadas: Bug fixing, interface design, development of web and mobile interfaces faithful to the design.
 

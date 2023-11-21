@@ -25,9 +25,9 @@ export default function AuthorLayout({ children, frontMatter }) {
                 className="rounded-full"
               />
             </div>
-            <h3 className="py-2 text-2xl font-bold leading-8 tracking-tight">{name}</h3>
+            <h3 className="py-2 text-2xl font-bold leading-8 tracking-tight lg:m-4">{name}</h3>
             <div className="text-gray-500 dark:text-gray-400">{occupation}</div>
-            <div className="text-gray-500 dark:text-gray-400">{company}</div>
+            <div className="text-gray-500 dark:text-gray-400 lg:m-4">{company}</div>
             <div className="flex space-x-3 px-4 py-6 md:px-6 md:py-0">
               <SocialIcon kind="mail" href={`mailto:${email}`} size={5} />
               <SocialIcon kind="github" href={github} size={5} />
