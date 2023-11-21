@@ -23,7 +23,7 @@ No ecossistema do Flutter, a escolha entre os widgets Stateless e StatefulWidget
 
 O Flutter oferece dois protagonistas principais: o imutável StatelessWidget e o mutável StatefulWidget. Cada um desempenha um papel específico na construção de interfaces de usuário, apresentando características que se adaptam a diferentes necessidades e contextos. Neste artigo, exploraremos não apenas as diferenças técnicas entre esses widgets, mas também estratégias práticas para otimizar o desempenho e lidar com o desafiador gerenciamento de estado.
 
-Após mergulhar nos detalhes intricados de Stateless e Stateful, busquei fornecer uma visão holística, para capacitar os desenvolvedores a fazer escolhas informadas que elevem a qualidade e eficácia de suas aplicações multiplataforma desenvolvida com Flutter.
+Após estudar os detalhes dos Widgets Stateless e Stateful, busquei fornecer uma visão holística, para capacitar os desenvolvedores a fazer escolhas informadas que elevem a qualidade e eficácia de suas aplicações multiplataforma desenvolvida com Flutter.
 
 ## StatefulWidget e StatelessWidget
 
@@ -37,10 +37,10 @@ class MyHomePage extends StatelessWidget {
  Widget build(BuildContext context) {
    return Scaffold(
      appBar: AppBar(
-       title: Text("Primeira App"),
+       title: Text("First Word"),
      ),
      body: Container(
-       child: Text("Olá, mundo!"),
+       child: Text("Hello, world!"),
      ),
    );
  }
@@ -65,8 +65,6 @@ class _MeuWidgetState extends State<MeuWidget> {
 
 A principal diferença entre os dois tipos de widgets é que os widgets Stateful podem mudar ao longo do tempo, enquanto os widgets Stateless são imutáveis. Portanto, você deve escolher o tipo de widget apropriado com base nas necessidades do seu aplicativo.
 
-Lembre-se, no entanto, que os widgets Stateful consomem mais memória do que os widgets Stateless. Portanto, você deve usar widgets Stateful apenas quando necessário.
-
 ## Como posso saber se um widget deve ser Stateful ou Stateless?
 
 A decisão de usar um widget Stateless ou Stateful no Flutter depende se o widget precisa manter o estado ou não.
@@ -84,10 +82,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
- int _contador = 0;
- void _incrementarContador() {
+ int _counter = 0;
+ void _incrementCounter() {
    setState(() {
-     _contador++;
+     _counter++;
    });
  }
  @override
@@ -101,19 +99,19 @@ class _MyHomePageState extends State<MyHomePage> {
          mainAxisAlignment: MainAxisAlignment.center,
          children: <Widget>[
            Text(
-             '$_contador',
+             '$_counter',
              style: Theme.of(context).textTheme.headline4,
            ),
            SizedBox(height: 20,),
            RaisedButton(
              child: Text(
-               'Adicionar +1',
+               'Add +1',
                style: TextStyle(
                 fontSize: 18,
                 color: Colors.white,
                ),
              ),
-             onPressed: _incrementarContador,
+             onPressed: _incrementCounter,
              color: Theme.of(context).primaryColor,
            ),
            SizedBox(height: 10,),
@@ -127,7 +125,7 @@ class _MyHomePageState extends State<MyHomePage> {
              ),
              onPressed: () {
                setState(() {
-                _contador = 0;
+                _counter = 0;
                });
              },
              color: Theme.of(context).primaryColor,
@@ -150,10 +148,10 @@ class MyHomePage extends StatelessWidget {
  Widget build(BuildContext context) {
    return Scaffold(
      appBar: AppBar(
-       title: Text("Primeira App"),
+       title: Text("First Word"),
      ),
      body: Container(
-       child: Text("Olá, mundo!"),
+       child: Text("Hello, world!"),
      ),
    );
  }
@@ -178,7 +176,7 @@ Os widgets Stateless são mais leves e mais eficientes em termos de desempenho. 
 
 Por outro lado, os widgets Stateful são mais pesados em termos de desempenho. Isso ocorre porque eles são mutáveis, o que significa que eles podem mudar ao longo do tempo. Sempre que o estado de um widget Stateful é alterado, o Flutter precisa reconstruir o widget. Isso pode ser caro em termos de desempenho, pois o Flutter precisa calcular novamente quais partes da interface do usuário precisam ser redesenhadas.
 
-No entanto, é importante notar que a diferença de desempenho entre os widgets Stateless e Stateful geralmente é mínima para a maioria dos aplicativos. A escolha entre usar um widget Stateless ou Stateful deve ser baseada em se o widget precisa manter um estado ou não, e não necessariamente em considerações de desempenho. Se um widget não precisa manter um estado, você deve usar um widget Stateless. Se um widget precisa manter um estado, você deve usar um widget Stateful.
+É importante notar que a diferença de desempenho entre os widgets Stateless e Stateful geralmente é mínima para a maioria dos aplicativos. A escolha entre usar um widget Stateless ou Stateful deve ser baseada em se o widget precisa manter um estado ou não, e não necessariamente em considerações de desempenho. Se um widget não precisa manter um estado, você deve usar um widget Stateless. Se um widget precisa manter um estado, você deve usar um widget Stateful.
 
 ## Como o Flutter lida com a reconstrução de widgets Stateful?
 
@@ -193,11 +191,11 @@ class MeuWidget extends StatefulWidget {
 }
 
 class _MeuWidgetState extends State<MeuWidget> {
- int _contador = 0;
+ int _counter = 0;
 
- void _incrementarContador() {
+ void _incrementCounter() {
   setState(() {
-    _contador++;
+    _counter++;
   });
  }
 
@@ -208,11 +206,11 @@ class _MeuWidgetState extends State<MeuWidget> {
 }
 ```
 
-No exemplo acima, sempre que o método `_incrementarContador()` é chamado, ele chama `setState()`, o que faz com que o Flutter reconstrua o widget e atualize a interface do usuário para refletir o novo valor do contador.
+No exemplo acima, sempre que o método `_incrementCounter()` é chamado, ele chama `setState()`, o que faz com que o Flutter reconstrua o widget e atualize a interface do usuário para refletir o novo valor do contador.
 
 Além disso, o Flutter também fornece uma maneira de forçar a reconstrução de um widget usando chaves. Se você usar uma chave global (GlobalKey) para o seu widget, o Flutter manterá o mesmo objeto de estado (State) quando o widget for movido de um local para outro na árvore de widgets. Isso significa que você pode forçar a reconstrução de um widget chamando `setState()` em um widget pai que possui uma chave global.
 
-No entanto, é importante notar que a reconstrução de widgets Stateful pode ser cara em termos de desempenho. Portanto, você deve tentar minimizar o número de vezes que você chama `setState()`, e apenas usar `setState()` quando o estado do widget realmente mudar.
+Entretanto, é importante notar que a reconstrução de widgets Stateful pode ser cara em termos de desempenho. Portanto, você deve tentar minimizar o número de vezes que você chama `setState()`, e apenas usar `setState()` quando o estado do widget realmente mudar.
 
 ## Como posso minimizar o número de vezes que eu chamo `setState()`?
 
@@ -238,14 +236,14 @@ Future<void> _incrementCounter() async {
 }
 ```
 
-Lembre-se, no entanto, que a chamada excessiva de `setState()` pode levar a problemas de desempenho. Portanto, você deve tentar minimizar o número de vezes que chama `setState()`, e apenas usar `setState()` quando o estado do widget realmente mudar.
+Lembre-se que a chamada excessiva de `setState()` pode levar a problemas de desempenho. Portanto, você deve tentar minimizar o número de vezes que chama `setState()`, e apenas usar `setState()` quando o estado do widget realmente mudar.
 
 ## Como posso lidar com problemas de desempenho causados pela chamada excessiva de `setState()`?
 
 Para lidar com problemas de desempenho causados pela chamada excessiva de `setState()`, você pode considerar as seguintes estratégias:
 
-1. Debouncing e Throttling: Essas são duas técnicas que podem ser usadas para reduzir a sobrecarga de mudanças de estado no Flutter. O debouncing garante que uma função não seja chamada novamente até que um certo período de tempo tenha passado sem a função ser chamada. O throttling, por outro lado, garante que uma função não seja chamada com mais frequência do que um determinado intervalo de tempo. Isso pode ser útil para otimizar a performance em operações como validação de formulário, sugestão de pesquisa e eventos de rolagem.
-2. Uso do ChangeNotifier: O ChangeNotifier é uma classe simples incluída no framework Flutter que pode notificar seus ouvintes sempre que uma mudança ocorrer, tornando-o extremamente útil para gerenciar estados complexos. Em vez de usar `setState()`, você pode usar o método `notifyListeners()` na sua classe ChangeNotifier para notificar ouvintes sobre mudanças de estado. Isso pode ajudar a evitar reconstruções desnecessárias.
+1. **Debouncing e Throttling:** Essas são duas técnicas que podem ser usadas para reduzir a sobrecarga de mudanças de estado no Flutter. O debouncing garante que uma função não seja chamada novamente até que um certo período de tempo tenha passado sem a função ser chamada. O throttling, por outro lado, garante que uma função não seja chamada com mais frequência do que um determinado intervalo de tempo. Isso pode ser útil para otimizar a performance em operações como validação de formulário, sugestão de pesquisa e eventos de rolagem.
+2. **Uso do ChangeNotifier:** O ChangeNotifier é uma classe simples incluída no framework Flutter que pode notificar seus ouvintes sempre que uma mudança ocorrer, tornando-o extremamente útil para gerenciar estados complexos. Em vez de usar `setState()`, você pode usar o método `notifyListeners()` na sua classe ChangeNotifier para notificar ouvintes sobre mudanças de estado. Isso pode ajudar a evitar reconstruções desnecessárias.
 
 Aqui está um exemplo de como você pode usar o ChangeNotifier para gerenciamento de estado reativo:
 
@@ -276,9 +274,9 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-3. Minimize operações caras: O Flutter fornece ferramentas como o DevTools que podem ajudá-lo a identificar operações caras no seu aplicativo. Você pode usar essas ferramentas para identificar e otimizar essas operações.
+3. **Minimize operações caras:** O Flutter fornece ferramentas como o DevTools que podem ajudá-lo a identificar operações caras no seu aplicativo. Você pode usar essas ferramentas para identificar e otimizar essas operações.
 
-Lembre-se, no entanto, que a chamada excessiva de `setState()` pode levar a problemas de desempenho. Portanto, você deve tentar minimizar o número de vezes que chama `setState()`, e apenas usar `setState()` quando o estado do widget realmente mudar.
+A chamada excessiva de `setState()` pode levar a problemas de desempenho. Portanto, você deve tentar minimizar o número de vezes que chama `setState()`, e apenas usar `setState()` quando o estado do widget realmente mudar.
 
 ## Além do ChangeNotifier, existem outras classes no Flutter que posso usar para gerenciamento de estado?
 
@@ -286,11 +284,18 @@ Sim, além do ChangeNotifier, existem outras classes e padrões no Flutter que v
 
 **Provider:** O Provider é um padrão de gerenciamento de estado simples e eficiente que usa o InheritedWidget do Flutter para fornecer um estado para seus widgets. O Provider é fácil de usar e não requer a criação de classes separadas para o seu estado. Você pode encontrar mais informações sobre o Provider na documentação oficial do Flutter.
 
-**InheritedWidget:** O InheritedWidget é uma classe abstrata especial que fornece um meio de propagar informações para widgets descendentes. Você pode usar o InheritedWidget para criar seu próprio provedor de estado. No entanto, o InheritedWidget pode ser um pouco mais difícil de usar do que o Provider, pois requer a criação de classes separadas para o seu estado.
+**InheritedWidget:** O InheritedWidget é uma classe abstrata especial que fornece um meio de propagar informações para widgets descendentes. Você pode usar o InheritedWidget para criar seu próprio provedor de estado. Ademais, o InheritedWidget pode ser um pouco mais difícil de usar do que o Provider, pois requer a criação de classes separadas para o seu estado.
 
-**BLoC (Business Logic Component):** O BLoC é um padrão de gerenciamento de estado mais avançado que usa Streams e Sinks para gerenciar o estado. O BLoC separa a lógica de negócios da interface do usuário, tornando o código mais fácil de testar e manter. No entanto, o BLoC também é mais complexo do que o Provider ou o InheritedWidget e pode ser um pouco mais difícil de aprender.
+**BLoC (Business Logic Component):** O BLoC é um padrão de gerenciamento de estado mais avançado que usa Streams e Sinks para gerenciar o estado. O BLoC separa a lógica de negócios da interface do usuário, tornando o código mais fácil de testar e manter. Contudo, o BLoC também é mais complexo do que o Provider ou o InheritedWidget e pode ser um pouco mais difícil de aprender.
 
 **MobX:** O MobX é uma biblioteca de gerenciamento de estado que usa observables, ações e reações para gerenciar o estado. O MobX é muito poderoso e flexível, mas também é mais complexo do que o Provider ou o InheritedWidget. Ele também requer a instalação de uma biblioteca adicional.
 
 Escolher a abordagem de gerenciamento de estado correta depende das necessidades do seu aplicativo. Para aplicativos simples, o Provider ou o InheritedWidget podem ser suficientes. Para aplicativos mais complexos, você pode querer considerar o uso do BLoC ou do MobX.
-"
+
+## Referências
+
+- [StatefulWidget class](https://api.flutter.dev/flutter/widgets/StatefulWidget-class.html)
+- [StatelessWidget class](https://api.flutter.dev/flutter/widgets/StatelessWidget-class.html)
+- [Add interactivity to your Flutter app](https://docs.flutter.dev/ui/interactivity)
+- [Flutter - Qual é a diferença entre stateless e stateful widget?](https://www.alura.com.br/artigos/flutter-diferenca-entre-stateless-e-statefull-widget)
+- [Performance best practices](https://docs.flutter.dev/perf/best-practices)
