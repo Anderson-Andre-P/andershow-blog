@@ -50,12 +50,12 @@ class MyHomePage extends StatelessWidget {
 Por outro lado, os widgets Stateful são mutáveis, o que significa que eles podem mudar ao longo do tempo. Eles são úteis quando você precisa de um widget que pode mudar ao longo do tempo, como um contador ou um botão que muda de estado quando pressionado. Aqui está um exemplo de um widget Stateful:
 
 ```dart
-class MeuWidget extends StatefulWidget {
+class MyWidget extends StatefulWidget {
  @override
- _MeuWidgetState createState() => _MeuWidgetState();
+ _MyWidgetState createState() => _MyWidgetState();
 }
 
-class _MeuWidgetState extends State<MeuWidget> {
+class _MyWidgetState extends State<MyWidget> {
  @override
  Widget build(BuildContext context) {
    return Container();
@@ -185,12 +185,12 @@ No Flutter, a reconstrução de widgets Stateful é gerenciada pelo método `set
 Aqui está um exemplo de como você pode usar `setState()` em um widget Stateful:
 
 ```dart
-class MeuWidget extends StatefulWidget {
+class MyWidget extends StatefulWidget {
  @override
- _MeuWidgetState createState() => _MeuWidgetState();
+ _MyWidgetState createState() => _MyWidgetState();
 }
 
-class _MeuWidgetState extends State<MeuWidget> {
+class _MyWidgetState extends State<MyWidget> {
  int _counter = 0;
 
  void _incrementCounter() {
