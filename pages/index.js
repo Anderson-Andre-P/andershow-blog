@@ -132,7 +132,9 @@ export default function Home({ posts }) {
         </div>
       </div>
       <div className="content mt-12 sm:mt-24">
-        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">Experiências</h2>
+        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">
+          Principais Experiências
+        </h2>
         <ul className="mt-8">
           <li className="dark:text-zinc-350 my-5 flex items-center gap-4 text-zinc-500">
             <a
@@ -144,8 +146,8 @@ export default function Home({ posts }) {
               <Image
                 src="/static/images/logos/ie_tecnologia_logo.png"
                 alt="IE Tecnologia"
-                width="50px"
-                height="50px"
+                width="50"
+                height="50"
                 className="rounded-md"
               />
             </a>
@@ -157,12 +159,45 @@ export default function Home({ posts }) {
                 <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                   Abr 2023
                   <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
-                  Out 2023
+                  Nov 2023
                 </span>
               </p>
               <p className="flex items-center truncate">
                 <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
                   Desenvolvedor de software
+                </span>
+              </p>
+            </div>
+          </li>
+          <li className="dark:text-zinc-350 my-5 flex items-center gap-4 text-zinc-500">
+            <a
+              className="link focusable font-medium text-zinc-800 dark:text-white"
+              href="https://www.getninjas.com.br/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                src="/static/images/logos/get_ninjas_logo.jpg"
+                alt="Procon"
+                width="50"
+                height="50"
+                className="rounded-md"
+              />
+            </a>
+            <div className="flex min-w-0 flex-col justify-center">
+              <p className="mb-1 flex items-center">
+                <span className="truncate font-semibold text-zinc-700 dark:text-zinc-100">
+                  Get Ninjas - Freelancer
+                </span>
+                <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                  Fev 2023
+                  <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
+                  Mar 2023
+                </span>
+              </p>
+              <p className="flex items-center truncate">
+                <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
+                  Desenvolvedor Web
                 </span>
               </p>
             </div>
@@ -177,8 +212,8 @@ export default function Home({ posts }) {
               <Image
                 src="/static/images/logos/foursys_logo.png"
                 alt="Foursys"
-                width="50px"
-                height="50px"
+                width="50"
+                height="50"
                 className="rounded-md"
               />
             </a>
@@ -195,7 +230,40 @@ export default function Home({ posts }) {
               </p>
               <p className="flex items-center truncate">
                 <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
-                  Desenvolvedor de software
+                  Desenvolvedor Web
+                </span>
+              </p>
+            </div>
+          </li>
+          <li className="dark:text-zinc-350 my-5 flex items-center gap-4 text-zinc-500">
+            <a
+              className="link focusable font-medium text-zinc-800 dark:text-white"
+              href="https://www.getninjas.com.br/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                src="/static/images/logos/get_ninjas_logo.jpg"
+                alt="Procon"
+                width="50"
+                height="50"
+                className="rounded-md"
+              />
+            </a>
+            <div className="flex min-w-0 flex-col justify-center">
+              <p className="mb-1 flex items-center">
+                <span className="truncate font-semibold text-zinc-700 dark:text-zinc-100">
+                  Get Ninjas - Freelancer
+                </span>
+                <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                  Dez 2021
+                  <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
+                  Mar 2022
+                </span>
+              </p>
+              <p className="flex items-center truncate">
+                <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
+                  Desenvolvedor Web
                 </span>
               </p>
             </div>
@@ -210,8 +278,8 @@ export default function Home({ posts }) {
               <Image
                 src="/static/images/logos/procon_logo.png"
                 alt="Procon"
-                width="50px"
-                height="50px"
+                width="50"
+                height="50"
                 className="rounded-md"
               />
             </a>
@@ -221,7 +289,7 @@ export default function Home({ posts }) {
                   Procon
                 </span>
                 <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  Out 2021
+                  Set 2021
                   <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
                   Dez 2021
                 </span>

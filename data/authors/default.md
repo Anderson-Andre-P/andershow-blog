@@ -22,35 +22,43 @@ Estudante de **Sistemas de Informação** com graduação em 11/2023 pela Funda�
 
 ### Desenvolvedor de Software @**[IE Tecnologia](https://www.ietecnologia.com/)**
 
-`Abr 2023 - Out 2023`
+`Abr 2023 - Nov 2023`
 
-Atividades realizadas: Bug fixing, interface design, development of web and mobile interfaces faithful to the design.
+Atividades realizadas: Desenvolvimento de websites, integração com API's e serviços externos, desenvolvimento de interfaces fiéis ao design, publiccação de aplicativos nas lojas virtuais, otimização de desempenho e fluidez de aplicativos, manutenção e atualização de aplicações legadas, resolução de problemas técnicos e code review, orientação de profissionais com menor sênioridade, pesquisa e levantamento de requisitos.
 
-Linguagens e tecnologias: `Dart`, `Flutter`, `Angular`, `JavaScript`, `HTML`, `CSS`, `Firebase`, `Publicação de aplicativos nas lojas`.
+Linguagens e tecnologias: `Dart`, `Flutter`, `NextJs`, `JavaScript`, `HTML`, `CSS`, `Firebase`, `Play Store`, `TDD`, `Figma`.
 
-### Desenvolvedor Mobile @**[Foursys - Soluções em TI](https://www.foursys.com.br/)**
+### Desenvolvedor Web @**[GetNinjas - Freelancer](https://www.getninjas.com.br/)**
+
+`Fev 2023 - Mar 2023`
+
+Atividades realizadas: construção da parte visual e interativa de websites, trabalho de forma independente, prospecção de clientes
+
+Linguagens e tecnologias: `HTML`, `CSS`, `JavaScript`, `WordPress`, `Bootstrap`, `Figma`.
+
+### Desenvolvedor de Software @**[Foursys - Soluções em TI](https://www.foursys.com.br/)**
 
 `Abr 2022 - Jan 2023`
 
-Atividades realizadas: Bug fixing, development of web and mobile interfaces faithful to the design.
+Atividades realizadas: correção de bugs, implementação de novas funcionalidades, integração com API's e serviços externos, refatoração de códigos existentes.
 
-Linguagens e tecnologias: `Dart`, `Flutter`, `JavaScript`, `HTML`, `CSS`
+Linguagens e tecnologias: `Dart`, `Flutter`, `JavaScript`, `HTML`, `CSS`, `Figma`
+
+### Desenvolvedor Web @**[GetNinjas - Freelancer](https://www.getninjas.com.br/)**
+
+`Dez 2021 - Mar 2022`
+
+Atividades realizadas: construção da parte visual e interativa de websites, trabalho de forma independente, prospecção de clientes
+
+Linguagens e tecnologias: `HTML`, `CSS`, `JavaScript`, `WordPress`, `Bootstrap`, `Figma`.
 
 ### Desenvolvedor Web @**[Procon](https://itajuba.proconvoce.com.br/)**
 
-`Out 2021 - Dez 2021`
+`Set 2021 - Dez 2021`
 
 Atividades realizadas: Web interface design development, development of web interfaces faithful to the design.
 
 Linguagens e tecnologias: `HTML`, `CSS`, `JavaScript`, `Angular`, `TypeScript`, `Bootstrap`
-
-## Projetos
-
-### Zaffre Imóveis
-
-`Ago 2022 - Atualmente`
-
-A proposta desse aplicativo é ajudar a resolver um problema que encontro atualmente, no caso seria criar uma imobiliária que funcione online.
 
 ## Educação
 
@@ -64,7 +72,7 @@ Criar, instalar e adaptar sistemas que auxiliam nos processos empresariais, como
 
 E, além disso, criar minha própria startup, desenvolvendo seu projeto de negócio desde a ideia ao protótipo funcional para o mercado.
 
-Competências: `C (linguagem de programação)` · `MySQL` · `SQL` · `Competências interpessoais` · `Programação orientada a objetos (POO)` · `Metodologias Ágeis` · `Desenvolvimento de software` · `JavaScript`
+Competências: `C (linguagem de programação)` · `MySQL` · `SQL` · `Competências interpessoais` · `Programação orientada a objetos (POO)` · `Metodologias Ágeis` · `Desenvolvimento de software` · `JavaScript` · `Dart` · `Flutter` · `Inteligência Artificial`
 
 ## Habilidades
 
@@ -98,6 +106,4 @@ Competências: `C (linguagem de programação)` · `MySQL` · `SQL` · `Competê
 
 ### Outras experiências:
 
-- **2023:** Desenvolvedor de software Freelancer
-- **2021:** Desenvolvedor de software Freelancer
-- **2020:** User Experience Writer na Hotmart
+- _2020:_ User Experience Writer na Hotmart

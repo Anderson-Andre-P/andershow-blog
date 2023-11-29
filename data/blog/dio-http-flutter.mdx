@@ -1,0 +1,210 @@
+---
+title: Como consumir APIs no Flutter utilizando Dio e HTTP
+summary: 'Consumir APIs é uma prática comum para desenvolvedores, facilitando o compartilhamento de dados externos com suas aplicações, desde informações de usuários em nuvens até transações financeiras. No contexto do ecossistema Flutter, a biblioteca Dio se destaca como uma escolha popular para realizar requisições HTTP, proporcionando robustez. Este artigo explora estratégias eficazes para enfrentar desafios e lidar com erros ao consumir APIs usando o Dio.'
+tags: ['Flutter', 'Dio', 'HTTP']
+authors: ['default']
+date: '2023-11-30'
+lastmod: '2023-11-30'
+images: ['/static/images/Banner-dio-http.png']
+draft: false
+---
+
+<Image
+  alt={`Dio e Http`}
+  src={`/static/images/Banner-dio-http.png`}
+  width={2000 / 2}
+  height={1000 / 2}
+  priority
+/>
+
+## Introdução
+
+Consumir APIs é uma tarefa comum entre os desenvolvedores, pois as APIs (Interfaces de Programação de Aplicações) permitem o compartilhamento de dados externos com a aplicação. Isso inclui a obtenção de informações de usuários em um banco de dados na nuvem, o armazenamento de dados de pedidos ou até mesmo a realização de transações financeiras, como pagamentos com cartão de crédito. No ecossistema Flutter, a biblioteca Dio é uma escolha popular para realizar requisições HTTP, oferecendo robustez e recursos adicionais. Neste artigo, exploraremos estratégias eficazes para lidar com desafios e erros ao consumir APIs usando o Dio.
+
+## Dio vs Http
+
+O Flutter possui a biblioteca chamada de HTTP, mas existem outras bibliotecas, como a Dio, que é um cliente HTTP muito poderoso que suporta interceptadores, download de arquivos, timeouts e outras funcionalidades. A biblioteca HTTP no Flutter é muito básica, enquanto a Dio é mais completa já que possui suporte a timeout, interceptor e manipulação de erros, por exemplo. No caso de consumo de API Rest, na minha opinião, é indicado o uso do Dio.
+
+## Como consumir uma API usando Dio
+
+Para começar, adicione a referência do Dio em seu pubspec. Em seguida, crie uma instância do `Dio()` e você terá disponíveis todos os verbos HTTP (get, post, put, delete, patch). Pode retornar um response que tem o atributo data que é onde estará o retorno dos dados de seu get que será um json. Você pode transformar este json para um objeto, percorrendo a lista utilizando o método `.map()` e transformando em seu modelo.
+
+Para consumir uma API usando Dio, você precisa inicializar uma instância do Dio. Neste exemplo, usamos a classe BaseOptions para inserir as principais configurações a serem utilizadas nas requisições. No exemplo foram declarados a baseUrl, que contém o endpoint da API e o connectTimeout de 5000 milisegundos. Por fim, as options são atribuídas a instância do Dio.
+
+```dart
+final options = BaseOptions(
+ baseUrl: 'https://api.example.com',
+ connectTimeout: 5000,
+);
+final dio = Dio(options);
+```
+
+Para fazer uma requisição GET, você pode usar o método `get()`. Este método retorna um Response que contém os dados da resposta da API. Você pode acessar os dados da resposta através do atributo data do objeto Response.
+
+```dart
+final response = await dio.get('/path');
+final data = response.data;
+```
+
+Para fazer uma requisição POST, você pode usar o método `post()`. Este método também retorna um Response. Para enviar dados no corpo da requisição, você pode passar um mapa como argumento para o método `post()`.
+
+```dart
+final response = await dio.post(
+ '/path',
+ data: {
+   'key1': 'value1',
+   'key2': 'value2',
+ },
+);
+final data = response.data;
+```
+
+A Dio também suporta interceptadores, que permitem interceptar requisições HTTP antes e depois delas serem executadas. Isso pode ser útil para adicionar cabeçalhos de autenticação a todas as requisições, tratar respostas e erros, entre outras coisas.
+
+```dart
+dio.interceptors.add(
+ InterceptorsWrapper(
+   onRequest: (options, handler) {
+     options.headers['Authorization'] = 'Bearer token';
+     return handler.next(options);
+   },
+ ),
+);
+```
+
+## Como consumir uma API usando Http
+
+Para consumir uma API usando Http, você pode usar o método getForObject para obter dados de um usuário cadastrado em um banco de dados nas nuvens. Por exemplo, você pode obter os dados do perfil de um usuário por meio de uma requisição GET ao respectivo endereço.
+
+Para consumir uma API usando Http, você pode usar o método `get()`. Este método retorna um Response que contém os dados da resposta da API. Você pode acessar os dados da resposta através do atributo body do objeto Response.
+
+```dart
+final response = await http.get(Uri.parse('https://api.example.com/path'));
+final data = jsonDecode(response.body);
+```
+
+Para fazer uma requisição POST, você pode usar o método `post()`. Este método também retorna um Response. Para enviar dados no corpo da requisição, você pode passar um mapa como argumento para o método `post()`.
+
+```dart
+final response = await http.post(
+ Uri.parse('https://api.example.com/path'),
+ body: {
+   'key1': 'value1',
+   'key2': 'value2',
+ },
+);
+final data = jsonDecode(response.body);
+```
+
+## Como posso lidar com erros ao fazer requisições usando Dio?
+
+O Dio fornece um mecanismo de tratamento de erros robusto que pode ser usado para lidar com erros ao fazer requisições. Quando um erro ocorre, o Dio encapsula o Error/Exception em um DioException.
+
+```dart
+try {
+ // 404
+ await dio.get('https://api.example.com/path');
+} on DioException catch (e) {
+ if (e.response != null) {
+   print(e.response.data)
+   print(e.response.headers)
+   print(e.response.requestOptions)
+ } else {
+   print(e.requestOptions)
+   print(e.message)
+ }
+}
+```
+
+Você pode usar blocos try-catch em torno das requisições do Dio para capturar erros e responder de acordo:
+
+```dart
+Future<Either<Failure, ResponseDto>> getResponse(RequestDto requestDto) async {
+   if (await _networkInfo.isConnected) {
+     try {
+       ...
+       .
+       .
+       return Right(response);
+     } catch (error) {
+       return Left(ErrorHandler.handle(error).failure);
+     }
+   } else {
+     return Left(DataSource.NO_INTERNET_CONNECTION.getFailure());
+   }
+}
+```
+
+Além disso, você pode criar uma classe ErrorHandler que implementa a interface Exception para lidar com exceções. Esta classe tem um campo failure que é inicializado de acordo com o tipo de erro.
+
+```dart
+class ErrorHandler implements Exception {
+ late Failure failure;
+ ErrorHandler.handle(dynamic error) {
+   if (error is DioException) {
+     failure = _handleError(error);
+   } else {
+     failure = DataSource.DEFAULT.getFailure();
+   }
+ }
+}
+```
+
+Para garantir uma experiência positiva do usuário, você pode converter mensagens de erro técnicas em mensagens amigáveis ao usuário. Você pode usar uma função auxiliar para mapear códigos de erro para mensagens legíveis por humanos que guiam os usuários sobre como proceder.
+
+```dart
+"success": "success",
+"bad_request_error": "bad request. try again later",
+"no_content": "success with not content",
+"forbidden_error": "forbidden request. try again later",
+"unauthorized_error": "user unauthorized, try again later",
+"not_found_error": "url not found, try again later",
+"conflict_error": "conflict found, try again later",
+"internal_server_error": "some thing went wrong, try again later",
+"unknown_error": "some thing went wrong, try again later",
+"timeout_error": "time out, try again late",
+"default_error": "some thing went wrong, try again later",
+"cache_error": "cache error, try again later",
+"no_internet_error": "Please check your internet connection"
+```
+
+Para lidar com erros ao fazer requisições usando a biblioteca Http do Flutter, você pode usar a propriedade `statusCode` da resposta para verificar se a requisição foi bem-sucedida. Se o `statusCode` for diferente de 200, isso significa que ocorreu algum tipo de erro.
+
+Aqui está um exemplo de como você pode fazer isso:
+
+```dart
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+Future<List<T>> getData<T>(String apiUrl, T Function(Map<String, dynamic>) fromJson) async {
+  final response = await http.get(Uri.parse(apiUrl));
+
+  if (response.statusCode == 200) {
+    final json = jsonDecode(response.body);
+    return List<T>.from(json.map((element) => fromJson(element)));
+  } else {
+    return Future.error("Oops! Error.");
+  }
+}
+```
+
+Neste exemplo, se a requisição for bem-sucedida (ou seja, `statusCode` é 200), os dados da resposta são decodificados e convertidos em uma lista de objetos `Filme`. Se a requisição falhar (ou seja, `statusCode` é diferente de 200), um erro é retornado.
+
+Além disso, você pode usar blocos `try-catch` para capturar exceções que podem ocorrer durante a requisição. Isso pode ser útil para lidar com erros de rede ou outros erros inesperados.
+
+```dart
+try {
+ final response = await http.get(Uri.parse('https://api.example.com/path'));
+ final data = jsonDecode(response.body);
+} catch (e) {
+ print('An error occurred: $e');
+}
+```
+
+Neste exemplo, se ocorrer algum erro durante a requisição, ele será capturado e a mensagem de erro será impressa no console.
+
+Lembre-se, é importante tratar erros de maneira adequada para garantir uma boa experiência do usuário e para evitar que seu aplicativo falhe inesperadamente.
+
+## Conclusão
+
+Ambas as bibliotecas, Dio e Http, são úteis para consumir APIs no Flutter. A escolha entre elas depende das necessidades específicas do seu projeto. A Dio é mais completa e suporta mais funcionalidades, enquanto o Http é mais básico. Independentemente da biblioteca escolhida, é importante entender como consumir APIs de forma eficiente para garantir a performance da sua aplicação.

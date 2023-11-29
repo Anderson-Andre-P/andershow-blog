@@ -20,8 +20,8 @@ export default function AuthorLayout({ children, frontMatter }) {
               <Image
                 src="/static/images/profile_pic.jpeg"
                 alt="avatar"
-                width="150px"
-                height="150px"
+                width="150"
+                height="150"
                 className="rounded-full"
               />
             </div>
