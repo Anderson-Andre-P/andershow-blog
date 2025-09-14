@@ -40,9 +40,7 @@ export default function AuthorLayout({ children, frontMatter }) {
             <p className="mt-2 text-lg font-medium text-indigo-600 dark:text-indigo-400">
               {occupation}
             </p>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              {company}
-            </p>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{company}</p>
 
             {/* Separador */}
             <div className="my-4 h-px w-full bg-gradient-to-r from-transparent via-zinc-300 to-transparent dark:via-zinc-700"></div>

@@ -45,17 +45,16 @@ export default function Home({ posts }) {
         </div>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
           Software developer with a degree in Information Systems and a passion for creating
-          efficient and effective solutions. My technical skills cover a wide range of
-          technologies, including object-oriented programming, version control, database
-          management, and software development with scalable architectures such as
-          Model-View-Controller (MVC) and Model-View-ViewModel (MVVM).
+          efficient and effective solutions. My technical skills cover a wide range of technologies,
+          including object-oriented programming, version control, database management, and software
+          development with scalable architectures such as Model-View-Controller (MVC) and
+          Model-View-ViewModel (MVVM).
         </p>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          I have extensive experience as a mobile and web application developer, performing
-          tasks such as bug fixing and problem-solving in legacy software systems. In addition
-          to my professional experience, I am constantly working on personal projects to
-          improve my skills and stay up to date with the latest trends and advancements in
-          the field.
+          I have extensive experience as a mobile and web application developer, performing tasks
+          such as bug fixing and problem-solving in legacy software systems. In addition to my
+          professional experience, I am constantly working on personal projects to improve my skills
+          and stay up to date with the latest trends and advancements in the field.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-4 text-center">
@@ -114,19 +113,17 @@ export default function Home({ posts }) {
       <Skills />
 
       <div className="content mb-8">
-        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">
-          Projects
-        </h2>
+        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">Projects</h2>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          Here you’ll find a curated selection of projects that showcase my expertise
-          in mobile and web development. Each project reflects my focus on delivering
-          high-quality code, scalable solutions, and seamless user experiences, while
-          applying modern technologies such as Flutter, Angular, and RESTful APIs.
+          Here you’ll find a curated selection of projects that showcase my expertise in mobile and
+          web development. Each project reflects my focus on delivering high-quality code, scalable
+          solutions, and seamless user experiences, while applying modern technologies such as
+          Flutter, Angular, and RESTful APIs.
         </p>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          These projects range from real-world professional work to personal initiatives
-          that highlight my ability to solve problems, optimize performance, and create
-          intuitive applications aligned with business goals and user needs.
+          These projects range from real-world professional work to personal initiatives that
+          highlight my ability to solve problems, optimize performance, and create intuitive
+          applications aligned with business goals and user needs.
         </p>
       </div>
 
@@ -144,19 +141,12 @@ export default function Home({ posts }) {
         </div>
       </div>
       <div className="content mt-12 sm:mt-24">
-        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">
-          Main Experiences
-        </h2>
+        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">Main Experiences</h2>
         <ul className="mt-8">
           {/* DDMX */}
           <li className="group relative my-5 flex items-start gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
             {/* Logo */}
-            <a
-              className="shrink-0"
-              href="https://www.ddmx.com/"
-              rel="noreferrer"
-              target="_blank"
-            >
+            <a className="shrink-0" href="https://www.ddmx.com/" rel="noreferrer" target="_blank">
               <Image
                 src="/static/images/logos/ddmx_logo.png"
                 alt="DDMX"
@@ -169,11 +159,9 @@ export default function Home({ posts }) {
             {/* Content */}
             <div className="flex min-w-0 flex-col">
               {/* Enterprise */}
-              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
-                DDMX
-              </h3>
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">DDMX</h3>
 
-              { /* Position and Level */}
+              {/* Position and Level */}
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   Mobile Developer
@@ -195,25 +183,25 @@ export default function Home({ posts }) {
                   delivering smooth, responsive, and scalable user experiences.
                 </li>
                 <li>
-                  Maintenance and enhancement of native Android applications in Java, as well
-                  as hybrid development integrating Flutter, Kotlin, and Swift to maximize
-                  performance and compatibility.
+                  Maintenance and enhancement of native Android applications in Java, as well as
+                  hybrid development integrating Flutter, Kotlin, and Swift to maximize performance
+                  and compatibility.
                 </li>
                 <li>
                   Implementation of real-time video monitoring using external SDKs, ensuring
                   stability and high performance in video streaming.
                 </li>
                 <li>
-                  Design and integration of new features, focused on usability, UX, and
-                  delivering customer value.
+                  Design and integration of new features, focused on usability, UX, and delivering
+                  customer value.
                 </li>
                 <li>
                   Performance optimization of mobile applications, reducing response times and
                   resource consumption.
                 </li>
                 <li>
-                  Migration and upgrade of projects to null safety, improving code security
-                  and stability.
+                  Migration and upgrade of projects to null safety, improving code security and
+                  stability.
                 </li>
                 <li>
                   Integration of maps and geolocation features for real-time tracking and
@@ -223,16 +211,13 @@ export default function Home({ posts }) {
                   DAO (Data Access Object) integration for efficient data management and
                   persistence.
                 </li>
+                <li>Use of WebSockets for real-time communication and dynamic map updates.</li>
                 <li>
-                  Use of WebSockets for real-time communication and dynamic map updates.
+                  Application of usability heuristics to improve user experience and streamline
+                  interaction flows.
                 </li>
                 <li>
-                  Application of usability heuristics to improve user experience and
-                  streamline interaction flows.
-                </li>
-                <li>
-                  Publishing and managing applications on Google Play Store and Apple App
-                  Store.
+                  Publishing and managing applications on Google Play Store and Apple App Store.
                 </li>
                 <li>
                   Additional experience with Angular and TypeScript, applied to web projects
@@ -279,16 +264,17 @@ export default function Home({ posts }) {
 
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                 <li>
-                  Changed the API query architecture, reducing latency by 92% and developing data download functionality in CSV format to mitigate server overload.
+                  Changed the API query architecture, reducing latency by 92% and developing data
+                  download functionality in CSV format to mitigate server overload.
                 </li>
                 <li>
-                  Implemented loading functionality with async data cache, cutting latency from 15s to 3s on incremental loads.
+                  Implemented loading functionality with async data cache, cutting latency from 15s
+                  to 3s on incremental loads.
                 </li>
+                <li>Created new features to improve the panel, increasing user intuitiveness.</li>
                 <li>
-                  Created new features to improve the panel, increasing user intuitiveness.
-                </li>
-                <li>
-                  Guided professionals with different experience levels, ensuring technical excellence and promoting collaborative learning.
+                  Guided professionals with different experience levels, ensuring technical
+                  excellence and promoting collaborative learning.
                 </li>
               </ul>
             </div>
@@ -324,7 +310,6 @@ export default function Home({ posts }) {
                 <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">
                   Junior
                 </span>
-
               </div>
 
               <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -335,9 +320,7 @@ export default function Home({ posts }) {
                 <li>
                   Gained experience in teamwork and communication, applying Scrum methodology.
                 </li>
-                <li>
-                  Refactored codebases, improving performance and stability.
-                </li>
+                <li>Refactored codebases, improving performance and stability.</li>
                 <li>
                   Resolved ~85% of reported bugs and introduced new features, boosting engagement.
                 </li>
@@ -377,8 +360,6 @@ export default function Home({ posts }) {
                 <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">
                   Intern
                 </span>
-
-
               </div>
 
               <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -386,17 +367,22 @@ export default function Home({ posts }) {
               </span>
 
               <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                I actively participated in the design of product interfaces seeking to provide a good user experience for customers of the product developed by applying design thinking techniques during the process of creating a virtual store for a company specialized in selling Apple cell phones.
-              </p>
-
-
-              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                In another project, I implemented features using programming logic with the Dart programming language in a project that used Flutter to create high-quality applications for Android, iOS and the Web.
+                I actively participated in the design of product interfaces seeking to provide a
+                good user experience for customers of the product developed by applying design
+                thinking techniques during the process of creating a virtual store for a company
+                specialized in selling Apple cell phones.
               </p>
 
               <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                In another project, I implemented features using programming logic with the Dart
+                programming language in a project that used Flutter to create high-quality
+                applications for Android, iOS and the Web.
+              </p>
 
-                In these two projects I was able to develop my communication and writing skills in addition to gaining experience in teamwork in creating software using the agile Scrum methodology.
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                In these two projects I was able to develop my communication and writing skills in
+                addition to gaining experience in teamwork in creating software using the agile
+                Scrum methodology.
               </p>
             </div>
           </li>
@@ -419,9 +405,7 @@ export default function Home({ posts }) {
             </a>
 
             <div className="flex min-w-0 flex-col">
-              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
-                Procon
-              </h3>
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">Procon</h3>
 
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">

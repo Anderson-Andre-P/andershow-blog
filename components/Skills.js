@@ -12,7 +12,7 @@ import {
   SiMobx,
 } from 'react-icons/si'
 
-import {AiFillFolderOpen,AiOutlineMobile,} from 'react-icons/ai'
+import { AiFillFolderOpen, AiOutlineMobile } from 'react-icons/ai'
 
 import { motion } from 'framer-motion'
 import { showHoverAnimation, removeHoverAnimation } from '../lib/windowAnimation'
@@ -31,7 +31,7 @@ const skills = [
     name: 'Firebase',
     logo: SiFirebase,
   },
-  
+
   {
     name: 'Gerenciamento de Estado',
     logo: SiMobx,
@@ -40,13 +40,12 @@ const skills = [
     name: 'Nextjs',
     logo: SiNextdotjs,
   },
-  
+
   {
     name: 'MySql',
     logo: SiMysql,
   },
 
-  
   {
     name: 'Dart',
     logo: SiDart,
@@ -72,7 +71,6 @@ const skills = [
     name: 'Desenvolvimento Mobile',
     logo: AiOutlineMobile,
   },
-
 ]
 
 const Skills = () => {
@@ -96,7 +94,7 @@ const Skills = () => {
               key={skill.name}
               onMouseMove={(e) => showHoverAnimation(e)}
               onMouseLeave={(e) => removeHoverAnimation(e)}
-              className="dark:bg-darkPrimary hover:dark:bg-darkSecondary group flex origin-center transform items-center justify-center gap-4 rounded-sm border border-gray-300 hover:border-gray-400 p-4 dark:border-neutral-700 sm:justify-start md:origin-top"
+              className="dark:bg-darkPrimary hover:dark:bg-darkSecondary group flex origin-center transform items-center justify-center gap-4 rounded-sm border border-gray-300 p-4 hover:border-gray-400 dark:border-neutral-700 sm:justify-start md:origin-top"
             >
               <div className="pointer-events-none relative select-none transition group-hover:scale-110 sm:group-hover:scale-100">
                 <skill.logo className="h-8 w-8" />
