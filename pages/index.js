@@ -113,7 +113,7 @@ export default function Home({ posts }) {
       <Skills />
 
       <div className="content mb-8">
-        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">Projects</h2>
+        <h2 className="font-poppins title-font text-3xl font-bold">Projects</h2>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
           Here you’ll find a curated selection of projects that showcase my expertise in mobile and
           web development. Each project reflects my focus on delivering high-quality code, scalable
