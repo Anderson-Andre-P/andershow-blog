@@ -30,7 +30,7 @@ export default function Home({ posts }) {
               Anderson André
             </h1>
             <h2 className="mb-1 text-xl font-bold tracking-tight text-zinc-600 dark:text-white md:text-2xl">
-              Especialista em criar softwares escaláveis para o mundo real.
+              Specialist in building scalable software for the real world.
             </h2>
           </div>
           {/* <div className="relative mb-8 mr-auto w-[100px] sm:mb-0 sm:w-[200px]">
@@ -44,19 +44,20 @@ export default function Home({ posts }) {
           </div> */}
         </div>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          Desenvolvedor de software com formação em Sistemas de Informação e paixão por desenvolver
-          soluções eficientes e eficazes. Minhas habilidades técnicas abrangem uma ampla gama de
-          tecnologias, incluindo: orientação a objetos, controle de versão, gerenciamento de banco
-          de dados e desenvolvimento de software com arquiteturas escaláveis como
-          Model-View-Controller (MVC) e Model-View-ViewModel (MVVM).
+          Software developer with a degree in Information Systems and a passion for creating
+          efficient and effective solutions. My technical skills cover a wide range of
+          technologies, including object-oriented programming, version control, database
+          management, and software development with scalable architectures such as
+          Model-View-Controller (MVC) and Model-View-ViewModel (MVVM).
         </p>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          Possuo uma vasta experiência como desenvolvedor de aplicações mobile e web realizando
-          tarefas como correção de bugs e solucionamento de problemas em sistemas de software
-          legados. Além de minha experiência profissional, estou sempre trabalhando em projetos
-          pessoais para melhorar minhas habilidades e acompanhar as últimas tendências e avanços do
-          setor.
+          I have extensive experience as a mobile and web application developer, performing
+          tasks such as bug fixing and problem-solving in legacy software systems. In addition
+          to my professional experience, I am constantly working on personal projects to
+          improve my skills and stay up to date with the latest trends and advancements in
+          the field.
         </p>
+
         <div className="mt-8 flex flex-wrap gap-4 text-center">
           <a
             className="focusable flex flex-none cursor-pointer items-center justify-center gap-2 rounded-md bg-blue-500 px-2.5 py-2 font-medium text-white shadow-lg shadow-blue-500/10 transition selection:bg-white/30 hover:bg-blue-500/80 hover:shadow-blue-500/5 focus:ring-blue-500/40 dark:bg-blue-400 dark:text-zinc-900 dark:shadow-blue-400/10 dark:selection:bg-zinc-900/30 dark:hover:bg-blue-400/80 dark:hover:shadow-blue-400/5 dark:focus:ring-blue-400/40 sm:w-auto sm:px-3 sm:pl-2.5"
@@ -113,11 +114,22 @@ export default function Home({ posts }) {
       <Skills />
 
       <div className="content mb-8">
-        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">Projetos</h2>
-        <p className="max-w-[46ch] leading-relaxed text-zinc-500 dark:text-slate-300">
-          Uma seleção de projetos que eu trabalhei nos últimos anos...
+        <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">
+          Projects
+        </h2>
+        <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
+          Here you’ll find a curated selection of projects that showcase my expertise
+          in mobile and web development. Each project reflects my focus on delivering
+          high-quality code, scalable solutions, and seamless user experiences, while
+          applying modern technologies such as Flutter, Angular, and RESTful APIs.
+        </p>
+        <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
+          These projects range from real-world professional work to personal initiatives
+          that highlight my ability to solve problems, optimize performance, and create
+          intuitive applications aligned with business goals and user needs.
         </p>
       </div>
+
       <div className="container py-12">
         <div className="-m-4 flex flex-wrap">
           {projectsData.map((d) => (
@@ -133,12 +145,107 @@ export default function Home({ posts }) {
       </div>
       <div className="content mt-12 sm:mt-24">
         <h2 className="mb-2 text-xl font-bold text-zinc-800 dark:text-white">
-          Principais Experiências
+          Main Experiences
         </h2>
         <ul className="mt-8">
-          <li className="dark:text-zinc-350 my-5 flex items-center gap-4 text-zinc-500">
+          {/* DDMX */}
+          <li className="group relative my-5 flex items-start gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+            {/* Logo */}
             <a
-              className="link focusable font-medium text-zinc-800 dark:text-white"
+              className="shrink-0"
+              href="https://www.ddmx.com/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                src="/static/images/logos/ddmx_logo.png"
+                alt="DDMX"
+                width="56"
+                height="56"
+                className="rounded-md border border-zinc-200 dark:border-zinc-700"
+              />
+            </a>
+
+            {/* Content */}
+            <div className="flex min-w-0 flex-col">
+              {/* Enterprise */}
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+                DDMX
+              </h3>
+
+              { /* Position and Level */}
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Mobile Developer
+                </span>
+                <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">
+                  Mid-Level
+                </span>
+              </div>
+
+              {/* Period */}
+              <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Nov 2024 — Current
+              </span>
+
+              {/* Description */}
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <li>
+                  Cross-platform mobile application development with Flutter (iOS and Android),
+                  delivering smooth, responsive, and scalable user experiences.
+                </li>
+                <li>
+                  Maintenance and enhancement of native Android applications in Java, as well
+                  as hybrid development integrating Flutter, Kotlin, and Swift to maximize
+                  performance and compatibility.
+                </li>
+                <li>
+                  Implementation of real-time video monitoring using external SDKs, ensuring
+                  stability and high performance in video streaming.
+                </li>
+                <li>
+                  Design and integration of new features, focused on usability, UX, and
+                  delivering customer value.
+                </li>
+                <li>
+                  Performance optimization of mobile applications, reducing response times and
+                  resource consumption.
+                </li>
+                <li>
+                  Migration and upgrade of projects to null safety, improving code security
+                  and stability.
+                </li>
+                <li>
+                  Integration of maps and geolocation features for real-time tracking and
+                  positioning, including performance optimization for map rendering.
+                </li>
+                <li>
+                  DAO (Data Access Object) integration for efficient data management and
+                  persistence.
+                </li>
+                <li>
+                  Use of WebSockets for real-time communication and dynamic map updates.
+                </li>
+                <li>
+                  Application of usability heuristics to improve user experience and
+                  streamline interaction flows.
+                </li>
+                <li>
+                  Publishing and managing applications on Google Play Store and Apple App
+                  Store.
+                </li>
+                <li>
+                  Additional experience with Angular and TypeScript, applied to web projects
+                  integrated with mobile solutions.
+                </li>
+              </ul>
+            </div>
+          </li>
+
+          {/* IE Tecnologia */}
+          <li className="group relative my-5 flex items-start gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+            <a
+              className="shrink-0"
               href="https://www.ietecnologia.com/"
               rel="noreferrer"
               target="_blank"
@@ -146,65 +253,51 @@ export default function Home({ posts }) {
               <Image
                 src="/static/images/logos/ie_tecnologia_logo.png"
                 alt="IE Tecnologia"
-                width="50"
-                height="50"
-                className="rounded-md"
+                width="56"
+                height="56"
+                className="rounded-md border border-zinc-200 dark:border-zinc-700"
               />
             </a>
-            <div className="flex min-w-0 flex-col justify-center">
-              <p className="mb-1 flex items-center">
-                <span className="truncate font-semibold text-zinc-700 dark:text-zinc-100">
-                  IE Tecnologia
+
+            <div className="flex min-w-0 flex-col">
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+                IE Tecnologia
+              </h3>
+
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Mobile Developer
                 </span>
-                <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  Abr 2023
-                  <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
-                  Nov 2023
+                <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">
+                  Junior
                 </span>
-              </p>
-              <p className="flex items-center truncate">
-                <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
-                  Desenvolvedor de software
-                </span>
-              </p>
+              </div>
+
+              <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Apr 2023 — Nov 2023
+              </span>
+
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <li>
+                  Changed the API query architecture, reducing latency by 92% and developing data download functionality in CSV format to mitigate server overload.
+                </li>
+                <li>
+                  Implemented loading functionality with async data cache, cutting latency from 15s to 3s on incremental loads.
+                </li>
+                <li>
+                  Created new features to improve the panel, increasing user intuitiveness.
+                </li>
+                <li>
+                  Guided professionals with different experience levels, ensuring technical excellence and promoting collaborative learning.
+                </li>
+              </ul>
             </div>
           </li>
-          <li className="dark:text-zinc-350 my-5 flex items-center gap-4 text-zinc-500">
+
+          {/* Foursys */}
+          <li className="group relative my-5 flex items-start gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
             <a
-              className="link focusable font-medium text-zinc-800 dark:text-white"
-              href="https://www.getninjas.com.br/"
-              rel="noreferrer"
-              target="_blank"
-            >
-              <Image
-                src="/static/images/logos/get_ninjas_logo.jpg"
-                alt="Procon"
-                width="50"
-                height="50"
-                className="rounded-md"
-              />
-            </a>
-            <div className="flex min-w-0 flex-col justify-center">
-              <p className="mb-1 flex items-center">
-                <span className="truncate font-semibold text-zinc-700 dark:text-zinc-100">
-                  Get Ninjas - Freelancer
-                </span>
-                <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  Fev 2023
-                  <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
-                  Mar 2023
-                </span>
-              </p>
-              <p className="flex items-center truncate">
-                <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
-                  Desenvolvedor Web
-                </span>
-              </p>
-            </div>
-          </li>
-          <li className="dark:text-zinc-350 my-5 flex items-center gap-4 text-zinc-500">
-            <a
-              className="link focusable font-medium text-zinc-800 dark:text-white"
+              className="shrink-0"
               href="https://www.foursys.com.br/"
               rel="noreferrer"
               target="_blank"
@@ -212,65 +305,106 @@ export default function Home({ posts }) {
               <Image
                 src="/static/images/logos/foursys_logo.png"
                 alt="Foursys"
-                width="50"
-                height="50"
-                className="rounded-md"
+                width="56"
+                height="56"
+                className="rounded-md border border-zinc-200 dark:border-zinc-700"
               />
             </a>
-            <div className="flex min-w-0 flex-col justify-center">
-              <p className="mb-1 flex items-center">
-                <span className="truncate font-semibold text-zinc-700 dark:text-zinc-100">
-                  Foursys - Soluções em TI
+
+            <div className="flex min-w-0 flex-col">
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+                Foursys - Soluções em TI
+              </h3>
+
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Mobile Developer
                 </span>
-                <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  Abr 2022
-                  <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
-                  Jan 2023
+
+                <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">
+                  Junior
                 </span>
-              </p>
-              <p className="flex items-center truncate">
-                <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
-                  Desenvolvedor Web
-                </span>
-              </p>
+
+              </div>
+
+              <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Oct 2022 — Feb 2023
+              </span>
+
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <li>
+                  Gained experience in teamwork and communication, applying Scrum methodology.
+                </li>
+                <li>
+                  Refactored codebases, improving performance and stability.
+                </li>
+                <li>
+                  Resolved ~85% of reported bugs and introduced new features, boosting engagement.
+                </li>
+                <li>
+                  Integrated software with APIs, improving data accessibility and functionality.
+                </li>
+              </ul>
             </div>
           </li>
-          <li className="dark:text-zinc-350 my-5 flex items-center gap-4 text-zinc-500">
+
+          {/* Foursys */}
+          <li className="group relative my-5 flex items-start gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
             <a
-              className="link focusable font-medium text-zinc-800 dark:text-white"
-              href="https://www.getninjas.com.br/"
+              className="shrink-0"
+              href="https://www.foursys.com.br/"
               rel="noreferrer"
               target="_blank"
             >
               <Image
-                src="/static/images/logos/get_ninjas_logo.jpg"
-                alt="Procon"
-                width="50"
-                height="50"
-                className="rounded-md"
+                src="/static/images/logos/foursys_logo.png"
+                alt="Foursys"
+                width="56"
+                height="56"
+                className="rounded-md border border-zinc-200 dark:border-zinc-700"
               />
             </a>
-            <div className="flex min-w-0 flex-col justify-center">
-              <p className="mb-1 flex items-center">
-                <span className="truncate font-semibold text-zinc-700 dark:text-zinc-100">
-                  Get Ninjas - Freelancer
+
+            <div className="flex min-w-0 flex-col">
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+                Foursys - Soluções em TI
+              </h3>
+
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Mobile Developer
                 </span>
-                <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  Dez 2021
-                  <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
-                  Mar 2022
+                <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">
+                  Intern
                 </span>
+
+
+              </div>
+
+              <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Apr 2022 — Oct 2022
+              </span>
+
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                I actively participated in the design of product interfaces seeking to provide a good user experience for customers of the product developed by applying design thinking techniques during the process of creating a virtual store for a company specialized in selling Apple cell phones.
               </p>
-              <p className="flex items-center truncate">
-                <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
-                  Desenvolvedor Web
-                </span>
+
+
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                In another project, I implemented features using programming logic with the Dart programming language in a project that used Flutter to create high-quality applications for Android, iOS and the Web.
+              </p>
+
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+
+                In these two projects I was able to develop my communication and writing skills in addition to gaining experience in teamwork in creating software using the agile Scrum methodology.
               </p>
             </div>
           </li>
-          <li className="dark:text-zinc-350 my-5 flex items-center gap-4 text-zinc-500">
+
+          {/* Procon */}
+          <li className="group relative my-5 flex items-start gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
             <a
-              className="link focusable font-medium text-zinc-800 dark:text-white"
+              className="shrink-0"
               href="https://itajuba.proconvoce.com.br/"
               rel="noreferrer"
               target="_blank"
@@ -278,26 +412,32 @@ export default function Home({ posts }) {
               <Image
                 src="/static/images/logos/procon_logo.png"
                 alt="Procon"
-                width="50"
-                height="50"
-                className="rounded-md"
+                width="56"
+                height="56"
+                className="rounded-md border border-zinc-200 dark:border-zinc-700"
               />
             </a>
-            <div className="flex min-w-0 flex-col justify-center">
-              <p className="mb-1 flex items-center">
-                <span className="truncate font-semibold text-zinc-700 dark:text-zinc-100">
-                  Procon
+
+            <div className="flex min-w-0 flex-col">
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+                Procon
+              </h3>
+
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Web Developer
                 </span>
-                <span className="ml-1.5 inline-block flex-none translate-y-px rounded bg-zinc-100 p-1 text-xs font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  Set 2021
-                  <span className="text-zinc-350 dark:text-zinc-550 mx-0.5">—</span>
-                  Dez 2021
+                <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">
+                  Intern
                 </span>
-              </p>
-              <p className="flex items-center truncate">
-                <span className="flex-1 truncate text-zinc-500 dark:text-zinc-400">
-                  Desenvolvedor mobile
-                </span>
+              </div>
+
+              <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Set 2021 — Dec 2021
+              </span>
+
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                I participated in the development of web applications with Angular.
               </p>
             </div>
           </li>
