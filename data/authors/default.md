@@ -1,5 +1,5 @@
 ---
-name: Anderson André
+name: Anderson Eleutério
 avatar: /static/images/profile_pic.jpeg
 occupation: Software Engineer
 company: CLOSE TO WORK
@@ -10,7 +10,7 @@ github: https://github.com/Anderson-Andre-P
 
 ## 👋 About Me
 
-Hello! I'm **Anderson André**, a passionate **Software Engineer** with a degree in **Information Systems** (graduated in Nov/2023 at [FEPI](https://fepi.br/)).
+Hello! I'm **Anderson Eleutério**, a passionate **Software Engineer** with a degree in **Information Systems** (graduated in Nov/2023 at [FEPI](https://fepi.br/)).
 
 I specialize in building **scalable applications** for both web and mobile platforms, mainly using `Flutter` and `React`. My focus is always on creating solutions that combine **performance**, **usability**, and **real-world impact**.
 

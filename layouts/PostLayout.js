@@ -31,17 +31,19 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
         <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
           <header className="pt-6 xl:pb-6">
             <div className="space-y-1 text-center">
-              <dl className="space-y-10">
-                <div>
-                  <dt className="sr-only">Publicado em</dt>
-                  <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                    <time dateTime={date}>
-                      {new Date(date).toLocaleDateString(siteMetadata.locale, postDateTemplate)}
-                      {/* {formatDate(new Date(date), locale)} */}
-                    </time>
-                  </dd>
-                </div>
+              <dl>
+                <dt className="sr-only">Published in</dt>
+                <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
+                  <time dateTime={date}>
+                    {new Date(date).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </time>
+                </dd>
               </dl>
+
               <div>
                 <PageTitle>{title}</PageTitle>
               </div>
@@ -112,7 +114,7 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                     {prev && (
                       <div>
                         <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Último artigos
+                          Last articles
                         </h2>
                         <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
                           <Link href={`/blog/${prev.slug}`}>{prev.title}</Link>
@@ -122,7 +124,7 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                     {next && (
                       <div>
                         <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Próximo artigo
+                          Next article
                         </h2>
                         <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
                           <Link href={`/blog/${next.slug}`}>{next.title}</Link>
@@ -137,7 +139,7 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                   href="/blog"
                   className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
                 >
-                  &larr; Voltar para o Blog
+                  &larr; Return
                 </Link>
               </div>
             </footer>

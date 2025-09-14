@@ -1,6 +1,6 @@
 const siteMetadata = {
   title: 'Andershow Blog',
-  author: 'Anderson André',
+  author: 'Anderson Eleutério',
   headerTitle: 'Andershow',
   description:
     'Seja protagonista no desenvolvimento front-end. Aprenda as habilidades essenciais de um desenvolvedor e transforme suas ideias em interfaces visuais atraentes e funcionais.',

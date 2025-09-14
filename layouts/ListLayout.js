@@ -29,7 +29,7 @@ export default function ListLayout({ posts, title, initialDisplayPosts = [], pag
               aria-label="Search articles"
               type="text"
               onChange={(e) => setSearchValue(e.target.value)}
-              placeholder="Buscar artigos"
+              placeholder="Search articles"
               className="block w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-900 dark:bg-gray-800 dark:text-gray-100"
             />
             <svg
@@ -56,10 +56,14 @@ export default function ListLayout({ posts, title, initialDisplayPosts = [], pag
               <li key={slug} className="py-4">
                 <article className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
                   <dl>
-                    <dt className="sr-only">Publicado em</dt>
+                    <dt className="sr-only">Published in</dt>
                     <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
                       <time dateTime={date}>
-                        {new Date(date).toLocaleDateString(siteMetadata.locale, postDateTemplate)}
+                        {new Date(date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
                       </time>
                     </dd>
                   </dl>

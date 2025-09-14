@@ -22,7 +22,7 @@ export default function Footer() {
           <Link href="/">{siteMetadata.title}</Link>
         </div>
         <div className="mb-8 text-sm text-gray-500 dark:text-gray-400">
-          <Link href="https://github.com/Anderson-Andre-P">Feito com o 🫀</Link>
+          <Link href="https://github.com/Anderson-Andre-P">Build with 🫀</Link>
         </div>
       </div>
     </footer>
