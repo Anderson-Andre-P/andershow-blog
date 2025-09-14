@@ -9,11 +9,11 @@ export default function Projects() {
       <PageSEO title={`Projects - ${siteMetadata.author}`} description={siteMetadata.description} />
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         <div className="space-y-2 pb-8 pt-6 md:space-y-5">
-          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
-            Projetos
+          <h1 className="text-4xl font-extrabold tracking-tight text-zinc-800 dark:text-white sm:text-5xl">
+            Projects
           </h1>
-          <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            Nessa seção eu coloco alguns dos projetos que mais me orgulho.
+          <p className="text-lg text-zinc-600 dark:text-zinc-400">
+            Explore my portfolio of mobile and web projects, showcasing my expertise in cross-platform development, performance optimization, and delivering intuitive, high-quality user experiences.
           </p>
         </div>
         <div className="container py-12">
