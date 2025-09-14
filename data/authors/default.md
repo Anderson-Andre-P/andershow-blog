@@ -1,109 +1,47 @@
 ---
 name: Anderson André
 avatar: /static/images/profile_pic.jpeg
-occupation: Software engenering
-company: OPEN TO WORK
+occupation: Software Engineer
+company: CLOSE TO WORK
 email: eleu.ander@gmail.com
 linkedin: https://www.linkedin.com/in/anderson-andre-pereira/
 github: https://github.com/Anderson-Andre-P
 ---
 
-Estudante de **Sistemas de Informação** com graduação em 11/2023 pela Fundação de Ensino e Pesquisa de Itajubá - FEPI. Sou um apaixonado por **tecnologia**. Criativo, proativo, flexível e com um amplo entendimento no desenvolvimento de aplicações web e mobile com `Flutter` e `React`.
+## 👋 About Me
 
-### Sumário
+Hello! I'm **Anderson André**, a passionate **Software Engineer** with a degree in **Information Systems** (graduated in Nov/2023 at [FEPI](https://fepi.br/)).  
 
-- [💼 Experiências](#experiência)
-- [🧑🏻‍💻 Projetos](#projetos)
-- [🎓 Educação](#educação)
-- [🤹🏼‍♂️ Habilidades](#habilidades)
-- [🏐 Interesses](#interesses)
+I specialize in building **scalable applications** for both web and mobile platforms, mainly using `Flutter` and `React`. My focus is always on creating solutions that combine **performance**, **usability**, and **real-world impact**.  
 
-## Experiência
+Beyond my technical background, I see myself as a **creative, proactive, and flexible professional**, always eager to learn and explore new technologies. I enjoy transforming complex problems into elegant and efficient software solutions.
 
-### Desenvolvedor de Software @**[IE Tecnologia](https://www.ietecnologia.com/)**
+---
 
-`Abr 2023 - Nov 2023`
+## 🚀 What I Do
 
-Atividades realizadas: Desenvolvimento de websites, integração com API's e serviços externos, desenvolvimento de interfaces fiéis ao design, publiccação de aplicativos nas lojas virtuais, otimização de desempenho e fluidez de aplicativos, manutenção e atualização de aplicações legadas, resolução de problemas técnicos e code review, orientação de profissionais com menor sênioridade, pesquisa e levantamento de requisitos.
+- **Cross-platform mobile apps** with Flutter (iOS & Android).  
+- **Web applications** with React and modern JavaScript frameworks.  
+- **API integration & backend collaboration** to deliver complete solutions.  
+- **UI/UX implementation**, turning design into smooth user experiences.  
 
-Linguagens e tecnologias: `Dart`, `Flutter`, `NextJs`, `JavaScript`, `HTML`, `CSS`, `Firebase`, `Play Store`, `TDD`, `Figma`.
+---
 
-### Desenvolvedor Web @**[GetNinjas - Freelancer](https://www.getninjas.com.br/)**
+## 🌱 Current Focus
 
-`Fev 2023 - Mar 2023`
+Right now, I'm deepening my expertise in:  
+- **Scalable architectures** (MVC, MVVM, Clean Architecture).  
+- **Performance optimization** for mobile and web apps.  
+- **Cloud integration** and modern DevOps practices.  
 
-Atividades realizadas: construção da parte visual e interativa de websites, trabalho de forma independente, prospecção de clientes
+---
 
-Linguagens e tecnologias: `HTML`, `CSS`, `JavaScript`, `WordPress`, `Bootstrap`, `Figma`.
+## 🎯 Beyond Code
 
-### Desenvolvedor de Software @**[Foursys - Soluções em TI](https://www.foursys.com.br/)**
+When I’m not coding, you’ll probably find me:  
+- 🚴 Riding my bike  
+- 📷 Exploring photography  
+- 🎶 Listening to music  
+- ✈️ Planning my next trip  
 
-`Abr 2022 - Jan 2023`
-
-Atividades realizadas: correção de bugs, implementação de novas funcionalidades, integração com API's e serviços externos, refatoração de códigos existentes.
-
-Linguagens e tecnologias: `Dart`, `Flutter`, `JavaScript`, `HTML`, `CSS`, `Figma`
-
-### Desenvolvedor Web @**[GetNinjas - Freelancer](https://www.getninjas.com.br/)**
-
-`Dez 2021 - Mar 2022`
-
-Atividades realizadas: construção da parte visual e interativa de websites, trabalho de forma independente, prospecção de clientes
-
-Linguagens e tecnologias: `HTML`, `CSS`, `JavaScript`, `WordPress`, `Bootstrap`, `Figma`.
-
-### Desenvolvedor Web @**[Procon](https://itajuba.proconvoce.com.br/)**
-
-`Set 2021 - Dez 2021`
-
-Atividades realizadas: Web interface design development, development of web interfaces faithful to the design.
-
-Linguagens e tecnologias: `HTML`, `CSS`, `JavaScript`, `Angular`, `TypeScript`, `Bootstrap`
-
-## Educação
-
-### Bacharel em Sistemas de Informação @[FEPI](https://fepi.br/)
-
-`2020 - 2023`
-
-O curso conta com disciplinas que me ensinaram a realizar a gestão dos sistemas informatizados de um negócio, administrando e garantindo a segurança do fluxo informacional da empresa desde o planejamento à organização dos dados.
-
-Criar, instalar e adaptar sistemas que auxiliam nos processos empresariais, como a configuração redes internas. Projetar, desenvolver e administrar banco de dados e aplicações em múltiplas plataformas. Gerenciar a infraestrutura de TI.
-
-E, além disso, criar minha própria startup, desenvolvendo seu projeto de negócio desde a ideia ao protótipo funcional para o mercado.
-
-Competências: `C (linguagem de programação)` · `MySQL` · `SQL` · `Competências interpessoais` · `Programação orientada a objetos (POO)` · `Metodologias Ágeis` · `Desenvolvimento de software` · `JavaScript` · `Dart` · `Flutter` · `Inteligência Artificial`
-
-## Habilidades
-
-### Hard Skills:
-
-- 🇺🇸 Inglês
-- 🧑‍💻 Arquitetura de software
-- 💻 Flutter
-- ⚛️ React
-- 🎨 UI/UX Design
-
-### Soft Skills:
-
-- 🎨 Criatividade
-- 📚 Curiosidade
-- 🤝🏼 Espírito de equipe
-
-## Interesses
-
-### Esportes:
-
-- 🚴‍♂️ Andar de bicicleta
-- 🏃 Correr
-- 🏋️‍♂️ Praticar musculação
-
-### Outros:
-
-- ✈️ Viajar
-- 📷 Fotografia
-- 🎶 Música
-
-### Outras experiências:
-
-- _2020:_ User Experience Writer na Hotmart
+---
