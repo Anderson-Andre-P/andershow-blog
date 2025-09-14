@@ -1,18 +1,17 @@
 /* eslint-disable prettier/prettier */
 import {
-  SiReact,
   SiJavascript,
-  SiTypescript,
-  SiNextdotjs,
-  SiMysql,
   SiFirebase,
   SiGit,
   SiFlutter,
   SiDart,
-  SiMobx,
+  SiAngular,
+  SiGooglemaps,
+  SiKotlin,
+  SiSwift,
 } from 'react-icons/si'
 
-import { AiFillFolderOpen, AiOutlineMobile } from 'react-icons/ai'
+import { AiFillFolderOpen, AiOutlineAreaChart, AiOutlineMobile } from 'react-icons/ai'
 
 import { motion } from 'framer-motion'
 import { showHoverAnimation, removeHoverAnimation } from '../lib/windowAnimation'
@@ -20,65 +19,67 @@ import { FadeContainer, popUp } from '../lib/framerMotionVariants'
 
 const skills = [
   {
-    name: 'Flutter',
+    name: 'Flutter (Cross-Platform)',
     logo: SiFlutter,
   },
   {
-    name: 'React',
-    logo: SiReact,
+    name: 'Swift',
+    logo: SiSwift,
   },
-  {
-    name: 'Firebase',
-    logo: SiFirebase,
-  },
-
-  {
-    name: 'Gerenciamento de Estado',
-    logo: SiMobx,
-  },
-  {
-    name: 'Nextjs',
-    logo: SiNextdotjs,
-  },
-
-  {
-    name: 'MySql',
-    logo: SiMysql,
-  },
-
   {
     name: 'Dart',
     logo: SiDart,
   },
   {
-    name: 'JavaScript',
+    name: 'Kotlin',
+    logo: SiKotlin,
+  },
+  {
+    name: 'Angular',
+    logo: SiAngular,
+  },
+  {
+    name: 'JavaScript & TypeScript',
     logo: SiJavascript,
   },
   {
-    name: 'TypeScript',
-    logo: SiTypescript,
-  },
-
-  {
-    name: 'Arquitetura',
-    logo: AiFillFolderOpen,
+    name: 'Firebase / WebSockets',
+    logo: SiFirebase,
   },
   {
-    name: 'Git',
+    name: 'Maps & Geolocation',
+    logo: SiGooglemaps,
+  },
+  {
+    name: 'Performance & Otimization',
+    logo: AiOutlineAreaChart,
+  },
+  {
+    name: 'Publish in Stores',
+    logo: AiOutlineMobile,
+  },
+  {
+    name: 'Code Management (Git & Perforce)',
     logo: SiGit,
   },
   {
-    name: 'Desenvolvimento Mobile',
-    logo: AiOutlineMobile,
+    name: 'Architecture & Feature Design',
+    logo: AiFillFolderOpen,
   },
 ]
 
 const Skills = () => {
   return (
     <>
-      <span className="font-poppins title-font text-3xl font-bold">
-        Minhas Principais Habilidades
-      </span>
+      <h2 className="font-poppins title-font text-3xl font-bold">
+        My Main Skills
+      </h2>
+      <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
+        I specialize in cross-platform mobile app development with Flutter, delivering fast, scalable, and intuitive experiences for both iOS and Android.
+        I also work on native app maintenance, integrating features like maps, geolocation, and WebSockets, optimizing performance, and managing app releases on the App Stores.
+        Additionally, I complement my mobile work with web development in TypeScript and Angular, providing integrated, high-quality solutions for users.
+      </p>
+
       <motion.div
         initial="hidden"
         whileInView="visible"
