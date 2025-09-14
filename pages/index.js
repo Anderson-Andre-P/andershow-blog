@@ -143,18 +143,18 @@ export default function Home({ posts }) {
       <div className="content mt-12 sm:mt-24">
         <h2 className="font-poppins title-font text-3xl font-bold">Main Experiences</h2>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          I have extensive experience in cross-platform mobile development with Flutter, delivering fast, scalable, and user-friendly apps for both iOS and Android.
-
-
-          I also work on native mobile applications using Swift and Kotlin, implementing new features, optimizing performance, and integrating real-time communication with WebSockets.
+          I have extensive experience in cross-platform mobile development with Flutter, delivering
+          fast, scalable, and user-friendly apps for both iOS and Android. I also work on native
+          mobile applications using Swift and Kotlin, implementing new features, optimizing
+          performance, and integrating real-time communication with WebSockets.
         </p>
 
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          My experience includes integrating maps and geolocation for real-time tracking, managing data efficiently with DAOs, and ensuring app stability through migration to null safety.
-
-          Additionally, I contribute to web projects using TypeScript and Angular, providing integrated solutions that enhance user experience and business value.
+          My experience includes integrating maps and geolocation for real-time tracking, managing
+          data efficiently with DAOs, and ensuring app stability through migration to null safety.
+          Additionally, I contribute to web projects using TypeScript and Angular, providing
+          integrated solutions that enhance user experience and business value.
         </p>
-
 
         <ul className="mt-8">
           {/* DDMX */}

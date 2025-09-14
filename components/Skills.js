@@ -71,13 +71,14 @@ const skills = [
 const Skills = () => {
   return (
     <>
-      <h2 className="font-poppins title-font text-3xl font-bold">
-        My Main Skills
-      </h2>
+      <h2 className="font-poppins title-font text-3xl font-bold">My Main Skills</h2>
       <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-        I specialize in cross-platform mobile app development with Flutter, delivering fast, scalable, and intuitive experiences for both iOS and Android.
-        I also work on native app maintenance, integrating features like maps, geolocation, and WebSockets, optimizing performance, and managing app releases on the App Stores.
-        Additionally, I complement my mobile work with web development in TypeScript and Angular, providing integrated, high-quality solutions for users.
+        I specialize in cross-platform mobile app development with Flutter, delivering fast,
+        scalable, and intuitive experiences for both iOS and Android. I also work on native app
+        maintenance, integrating features like maps, geolocation, and WebSockets, optimizing
+        performance, and managing app releases on the App Stores. Additionally, I complement my
+        mobile work with web development in TypeScript and Angular, providing integrated,
+        high-quality solutions for users.
       </p>
 
       <motion.div

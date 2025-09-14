@@ -13,7 +13,9 @@ export default function Projects() {
             Projects
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400">
-            Explore my portfolio of mobile and web projects, showcasing my expertise in cross-platform development, performance optimization, and delivering intuitive, high-quality user experiences.
+            Explore my portfolio of mobile and web projects, showcasing my expertise in
+            cross-platform development, performance optimization, and delivering intuitive,
+            high-quality user experiences.
           </p>
         </div>
         <div className="container py-12">
