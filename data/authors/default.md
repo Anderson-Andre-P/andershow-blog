@@ -1,6 +1,6 @@
 ---
 name: Anderson Eleutério
-avatar: /static/images/profile_pic.jpeg
+avatar: /static/images/profile_pic.png
 occupation: Software Engineer
 company: CLOSE TO WORK
 email: eleu.ander@gmail.com

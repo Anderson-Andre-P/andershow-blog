@@ -9,7 +9,7 @@ const siteMetadata = {
   siteUrl: 'https://anderson-andre.netlify.app/',
   siteRepo: 'https://github.com/Anderson-Andre-P',
   siteLogo: '/static/images/logo.png',
-  image: '/static/images/profile_pic.jpeg',
+  image: '/static/images/profile_pic.png',
   socialBanner: '/static/images/banner-card.png',
   email: 'eleu.ander@gmail.com',
   github: 'https://github.com/Anderson-Andre-P',

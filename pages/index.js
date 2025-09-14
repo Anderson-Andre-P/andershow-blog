@@ -35,7 +35,7 @@ export default function Home({ posts }) {
           </div>
           {/* <div className="relative mb-8 mr-auto w-[100px] sm:mb-0 sm:w-[200px]">
             <Image
-              src="/static/images/profile_pic.jpeg"
+              src="/static/images/profile_pic.png"
               alt="avatar"
               width="200px"
               height="200px"

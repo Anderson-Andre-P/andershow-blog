@@ -24,7 +24,7 @@ export default function AuthorLayout({ children, frontMatter }) {
           {/* Avatar */}
           <div className="flex-shrink-0">
             <Image
-              src={avatar || '/static/images/profile_pic.jpeg'}
+              src={avatar || '/static/images/profile_pic.png'}
               alt="avatar"
               width="170"
               height="170"
