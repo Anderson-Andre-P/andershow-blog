@@ -29,14 +29,12 @@ export default function HexSkillRadar({
       return Array.from({ length: 6 }).map((_, i) => ({ label: `Habilidade ${i + 1}`, value: 0 }))
     }
     // if fewer than count, fill
-    return skills
-      .slice(0, count)
-      .concat(
-        Array.from({ length: Math.max(0, count - skills.length) }).map((_, i) => ({
-          label: `Habilidade ${skills.length + i + 1}`,
-          value: 0,
-        }))
-      )
+    return skills.slice(0, count).concat(
+      Array.from({ length: Math.max(0, count - skills.length) }).map((_, i) => ({
+        label: `Habilidade ${skills.length + i + 1}`,
+        value: 0,
+      }))
+    )
   }, [skills, count])
 
   // compute points for a given normalized value (0..1)
