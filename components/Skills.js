@@ -1,4 +1,4 @@
-/* eslint-disable prettier/prettier */
+import React from 'react'
 import {
   SiJavascript,
   SiFirebase,
@@ -16,6 +16,8 @@ import { AiFillFolderOpen, AiOutlineAreaChart, AiOutlineMobile } from 'react-ico
 import { motion } from 'framer-motion'
 import { showHoverAnimation, removeHoverAnimation } from '../lib/windowAnimation'
 import { FadeContainer, popUp } from '../lib/framerMotionVariants'
+
+import HexSkillRadar from './HexSkillRadar'
 
 const skills = [
   {
@@ -68,6 +70,21 @@ const skills = [
   },
 ]
 
+const radarSkills = [
+  { label: 'Flutter', value: 90 },
+  { label: 'Swift', value: 35 },
+  { label: 'Dart', value: 75 },
+  { label: 'Kotlin', value: 45 },
+  { label: 'React', value: 40 },
+  { label: 'Js/Ts', value: 50 },
+  { label: 'Firebase/wsk', value: 55 },
+  { label: 'Maps', value: 35 },
+  { label: 'Performance', value: 25 },
+  { label: 'Deploy', value: 70 },
+  { label: 'Git', value: 65 },
+  { label: 'Archtecture', value: 20 },
+]
+
 const Skills = () => {
   return (
     <>
@@ -81,6 +98,7 @@ const Skills = () => {
         high-quality solutions for users.
       </p>
 
+      {/* Grid de ícones */}
       <motion.div
         initial="hidden"
         whileInView="visible"
@@ -108,6 +126,12 @@ const Skills = () => {
           )
         })}
       </motion.div>
+
+      <h2 className="font-poppins title-font text-3xl font-bold">Skills Radar</h2>
+
+      <div className="my-10 flex justify-center">
+        <HexSkillRadar skills={radarSkills} size={440} />
+      </div>
     </>
   )
 }
