@@ -11,9 +11,7 @@ const Image = ({ themeAware, src, alt, ...rest }) => {
   if (themeAware && !mounted) return null
 
   const finalSrc =
-    themeAware && theme === 'dark'
-      ? src.replace(/(\.png|\.jpg|\.jpeg)$/, '-dark$1')
-      : src
+    themeAware && theme === 'dark' ? src.replace(/(\.png|\.jpg|\.jpeg)$/, '-dark$1') : src
 
   return <NextImage src={finalSrc} alt={alt} {...rest} />
 }
