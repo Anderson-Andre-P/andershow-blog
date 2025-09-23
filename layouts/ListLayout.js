@@ -63,6 +63,7 @@ export default function ListLayout({ posts, title, initialDisplayPosts = [], pag
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',
+                          timeZone: 'UTC',
                         })}
                       </time>
                     </dd>

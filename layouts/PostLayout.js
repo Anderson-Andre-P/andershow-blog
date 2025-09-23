@@ -39,6 +39,7 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',
+                      timeZone: 'UTC',
                     })}
                   </time>
                 </dd>
