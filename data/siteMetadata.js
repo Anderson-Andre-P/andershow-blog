@@ -6,7 +6,7 @@ const siteMetadata = {
     'Seja protagonista no desenvolvimento front-end. Aprenda as habilidades essenciais de um desenvolvedor e transforme suas ideias em interfaces visuais atraentes e funcionais.',
   language: 'pt-br',
   theme: 'system', // system, dark or light
-  siteUrl: 'https://anderson-andre.netlify.app/',
+  siteUrl: 'https://anderson-andre.netlify.app',
   siteRepo: 'https://github.com/Anderson-Andre-P',
   siteLogo: '/static/images/logo.png',
   image: '/static/images/profile_pic.png',
