@@ -3,7 +3,7 @@ const siteMetadata = {
   author: 'Anderson Eleutério',
   headerTitle: 'Andershow',
   description:
-    'Seja protagonista no desenvolvimento front-end. Aprenda as habilidades essenciais de um desenvolvedor e transforme suas ideias em interfaces visuais atraentes e funcionais.',
+    'Articles on Flutter, mobile and web development, and software architecture: practical lessons from building scalable software for the real world.',
   language: 'en',
   theme: 'system', // system, dark or light
   siteUrl: 'https://anderson-andre.netlify.app',
