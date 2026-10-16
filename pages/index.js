@@ -90,7 +90,7 @@ export default function Home({ posts }) {
           </a>
           <a
             className="focusable flex flex-none cursor-pointer items-center justify-center gap-2 rounded-md bg-green-600 px-2.5 py-2 font-medium text-white shadow-lg shadow-green-600/10 transition selection:bg-white/30 hover:bg-green-600/80 hover:shadow-green-600/5 focus:ring-green-500/40 dark:bg-green-400 dark:text-zinc-900 dark:shadow-green-400/10 dark:selection:bg-zinc-900/30 dark:hover:bg-green-400/80 dark:hover:shadow-green-400/5 dark:focus:ring-green-400/40 sm:w-auto sm:px-3 sm:pl-2.5"
-            href="mailto:eleu.ander@gmail.com"
+            href={`mailto:${siteMetadata.email}`}
           >
             <svg height="24" role="presentation" width="24" xmlns="http://www.w3.org/2000/svg">
               <path
