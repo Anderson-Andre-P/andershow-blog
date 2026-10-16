@@ -9,8 +9,6 @@ import projectsData from '@/data/projectsData'
 import Card from '@/components/Card'
 import Skills from '@/components/Skills'
 
-// import NewsletterForm from '@/components/NewsletterForm'
-
 const MAX_DISPLAY = 6
 
 export async function getStaticProps() {
