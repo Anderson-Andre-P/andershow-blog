@@ -116,7 +116,7 @@ export default function Home({ posts }) {
           Here you’ll find a curated selection of projects that showcase my expertise in mobile and
           web development. Each project reflects my focus on delivering high-quality code, scalable
           solutions, and seamless user experiences, while applying modern technologies such as
-          Flutter, Angular, and RESTful APIs.
+          Flutter, Dart, and RESTful APIs.
         </p>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
           These projects range from real-world professional work to personal initiatives that
@@ -149,9 +149,8 @@ export default function Home({ posts }) {
 
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
           My experience includes integrating maps and geolocation for real-time tracking, managing
-          data efficiently with DAOs, and ensuring app stability through migration to null safety.
-          Additionally, I contribute to web projects using TypeScript and Angular, providing
-          integrated solutions that enhance user experience and business value.
+          data efficiently with DAOs, ensuring app stability through migration to null safety, and
+          publishing and maintaining apps on the Google Play Store and Apple App Store.
         </p>
 
         <ul className="mt-8">
