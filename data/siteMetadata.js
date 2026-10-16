@@ -4,7 +4,7 @@ const siteMetadata = {
   headerTitle: 'Andershow',
   description:
     'Seja protagonista no desenvolvimento front-end. Aprenda as habilidades essenciais de um desenvolvedor e transforme suas ideias em interfaces visuais atraentes e funcionais.',
-  language: 'pt-br',
+  language: 'en',
   theme: 'system', // system, dark or light
   siteUrl: 'https://anderson-andre.netlify.app',
   siteRepo: 'https://github.com/Anderson-Andre-P',
@@ -14,7 +14,7 @@ const siteMetadata = {
   email: 'eleu.ander@gmail.com',
   github: 'https://github.com/Anderson-Andre-P',
   linkedin: 'https://www.linkedin.com/in/anderson-andre-pereira/',
-  locale: 'pt-BR',
+  locale: 'en-US',
   analytics: {
     // If you want to use an analytics provider you have to add it to the
     // content security policy in the `next.config.js` file.
