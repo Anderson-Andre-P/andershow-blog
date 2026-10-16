@@ -428,7 +428,7 @@ export default function Home({ posts }) {
               </div>
 
               <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Set 2021 — Dec 2021
+                Sep 2021 — Dec 2021
               </span>
 
               <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
