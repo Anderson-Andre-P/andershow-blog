@@ -5,6 +5,7 @@ date: '2026-01-19'
 lastmod: '2026-01-19'
 tags: ['Mobile Development', 'Observability', 'Java', 'Legacy Systems', 'Reliability Engineering']
 draft: false
+lang: 'en'
 summary: 'In a legacy Java mobile app, I implemented an offline-first observability pipeline that persists user-action logs locally using a DAO-backed queue and syncs them to an API only when the device is online. Logs survive restarts, are shipped in batches of 50 every 3 minutes to reduce network and battery impact, and work as a “user action stacktrace” to reconstruct flows leading to bugs. Combined with Sentry, this creates a powerful two-layer system: exceptions plus a step-by-step history of what the user did right before the issue.'
 authors: ['default']
 images: ['/static/images/Banner-offline-first-observability-legacy-java.png']

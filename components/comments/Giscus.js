@@ -3,7 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useTheme } from 'next-themes'
 import siteMetadata from '@/data/siteMetadata'
 
-const Giscus = () => {
+// Giscus uses 'pt' for Portuguese instead of the BCP 47 'pt-BR' used in post frontmatter
+const toGiscusLang = (postLang) => (postLang?.startsWith('pt') ? 'pt' : postLang)
+
+const Giscus = ({ postLang }) => {
   const [enableLoadComments, setEnabledLoadComments] = useState(true)
   const { theme, resolvedTheme } = useTheme()
   const commentsTheme =
@@ -40,7 +43,7 @@ const Giscus = () => {
     script.setAttribute('data-reactions-enabled', reactions)
     script.setAttribute('data-emit-metadata', metadata)
     script.setAttribute('data-input-position', inputPosition)
-    script.setAttribute('data-lang', lang)
+    script.setAttribute('data-lang', toGiscusLang(postLang) || lang)
     script.setAttribute('data-theme', commentsTheme)
     script.setAttribute('crossorigin', 'anonymous')
     script.async = true
@@ -52,7 +55,7 @@ const Giscus = () => {
       const comments = document.getElementById(COMMENTS_ID)
       if (comments) comments.innerHTML = ''
     }
-  }, [commentsTheme])
+  }, [commentsTheme, postLang])
 
   // Reload on theme change
   useEffect(() => {

@@ -17,7 +17,7 @@ const discussUrl = (slug) =>
 const postDateTemplate = { year: 'numeric', month: 'long', day: 'numeric' }
 
 export default function PostLayout({ frontMatter, authorDetails, next, prev, children }) {
-  const { slug, fileName, date, title, images, tags } = frontMatter
+  const { slug, fileName, date, title, images, tags, lang = siteMetadata.language } = frontMatter
 
   return (
     <SectionContainer>
@@ -27,7 +27,7 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
         {...frontMatter}
       />
       <ScrollTopAndComment />
-      <article>
+      <article lang={lang}>
         <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
           <header className="pt-6 xl:pb-6">
             <div className="space-y-1 text-center">
@@ -35,7 +35,7 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                 <dt className="sr-only">Published in</dt>
                 <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
                   <time dateTime={date}>
-                    {new Date(date).toLocaleDateString('en-US', {
+                    {new Date(date).toLocaleDateString(lang, {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',
