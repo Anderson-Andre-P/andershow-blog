@@ -13,8 +13,6 @@ const siteMetadata = {
   socialBanner: '/static/images/banner-card.png',
   email: 'eleu.ander@gmail.com',
   github: 'https://github.com/Anderson-Andre-P',
-  facebook: 'https://facebook.com',
-  youtube: 'https://youtube.com',
   linkedin: 'https://www.linkedin.com/in/anderson-andre-pereira/',
   locale: 'pt-BR',
   analytics: {
