@@ -31,7 +31,7 @@ const projectsData = [
   },
   {
     title: 'Zaffre Imóveis',
-    description: `Projeto para uma imobiliária virtual sendo desenvolvida com Flutter com o objetivo de resolver um problema do mundo real`,
+    description: `A virtual real estate agency app being built with Flutter, aimed at solving a real-world problem.`,
     imgSrc: '/static/images/projects/zaffre/Zaffre-banner.png',
     href: 'https://github.com/Anderson-Andre-P/Imobis-Flutter',
   },
