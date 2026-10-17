@@ -4,8 +4,7 @@ import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import { getAllFilesFrontMatter } from '@/lib/mdx'
 import formatDate from '@/lib/utils/formatDate'
-import projectsData from '@/data/projectsData'
-import Card from '@/components/Card'
+import ProjectGrid from '@/components/ProjectGrid'
 import ExperienceCard from '@/components/ExperienceCard'
 import experienceData from '@/data/experienceData'
 import Skills from '@/components/Skills'
@@ -126,19 +125,7 @@ export default function Home({ posts }) {
         </p>
       </div>
 
-      <div className="container py-12">
-        <div className="-m-4 flex flex-wrap">
-          {projectsData.map((d) => (
-            <Card
-              key={d.title}
-              title={d.title}
-              description={d.description}
-              imgSrc={d.imgSrc}
-              href={d.href}
-            />
-          ))}
-        </div>
-      </div>
+      <ProjectGrid />
       <div className="content mt-12 sm:mt-24">
         <h2 className="font-poppins title-font text-3xl font-bold">Main Experiences</h2>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
