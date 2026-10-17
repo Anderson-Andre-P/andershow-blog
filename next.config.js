@@ -80,6 +80,8 @@ module.exports = withBundleAnalyzer({
         permanent: true,
       },
       { source: '/blog/ison-27000', destination: '/blog/iso-27000', permanent: true },
+      // The blog no longer has numbered pages; filters and sorting happen on /blog
+      { source: '/blog/page/:page', destination: '/blog', permanent: true },
       {
         source: '/blog/dio-http-flutter',
         destination: '/blog/consuming-apis-in-flutter-with-dio-and-http',

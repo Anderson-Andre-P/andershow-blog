@@ -52,7 +52,7 @@ export default function Tag({ posts, tagName }) {
         title={`${tagName} - ${siteMetadata.author}`}
         description={t.blog.tagDescription(tagName)}
       />
-      <ListLayout posts={posts} title={tagName} />
+      <ListLayout posts={posts} title={tagName} description={t.blog.tagDescription(tagName)} />
     </>
   )
 }
