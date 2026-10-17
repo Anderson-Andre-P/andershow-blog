@@ -1,16 +1,32 @@
 import Image from './Image'
 
+const CompanyLogo = ({ logo, company }) => (
+  <Image
+    src={logo}
+    alt={company}
+    width="56"
+    height="56"
+    className="rounded-md border border-zinc-200 dark:border-zinc-700"
+  />
+)
+
 const ExperienceCard = ({ company, href, logo, role, level, period, highlights, description }) => (
   <li className="group relative my-5 flex items-start gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-    <a className="shrink-0" href={href} rel="noreferrer" target="_blank">
-      <Image
-        src={logo}
-        alt={company}
-        width="56"
-        height="56"
-        className="rounded-md border border-zinc-200 dark:border-zinc-700"
-      />
-    </a>
+    {href ? (
+      <a
+        className="shrink-0"
+        href={href}
+        rel="noreferrer"
+        target="_blank"
+        aria-label={`${company} website`}
+      >
+        <CompanyLogo logo={logo} company={company} />
+      </a>
+    ) : (
+      <div className="shrink-0">
+        <CompanyLogo logo={logo} company={company} />
+      </div>
+    )}
 
     <div className="flex min-w-0 flex-col">
       <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">{company}</h3>

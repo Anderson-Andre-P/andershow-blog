@@ -1,9 +1,10 @@
 // Ordered from most recent to oldest.
 // Use `highlights` for a bullet list and/or `description` for paragraphs.
+// `href` is optional: leave it out when the company has no working website.
 const experienceData = [
   {
     company: 'DDMX',
-    href: 'https://www.ddmx.com/',
+    href: 'https://ddmx.com.br/',
     logo: '/static/images/logos/ddmx_logo.png',
     role: 'Mobile Developer',
     level: 'Mid-Level',
@@ -66,7 +67,6 @@ const experienceData = [
   },
   {
     company: 'Procon',
-    href: 'https://itajuba.proconvoce.com.br/',
     logo: '/static/images/logos/procon_logo.png',
     role: 'Web Developer',
     level: 'Intern',
