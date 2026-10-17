@@ -1,0 +1,60 @@
+---
+year: 2023
+type: Personal project
+stack: ['Flutter', 'MVVM', 'MobX', 'GetIt', 'Firebase Cloud Messaging']
+---
+
+{/* Worth adding: who the app is for, the real-world problem that inspired it, and what is still in progress. */}
+
+## Overview
+
+Zaffre Imóveis is a real estate app for finding and managing properties. It was built to practice a scalable structure on a real-world problem: helping people search for a place to live and keep track of the ones they like.
+
+## What the app does
+
+- **Onboarding** that introduces the app.
+- **Sign in, sign up and password recovery**, all with field validation.
+- **Property search with filters.**
+- **Publishing listings** with the property's location.
+- **Favorites** to save properties for later.
+- **Profile page.**
+- **Push notifications** with Firebase Cloud Messaging.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/zaffre-imoveis/screens/onboarding.webp',
+      alt: 'Onboarding',
+      width: 540,
+      height: 1028,
+    },
+    {
+      src: '/static/images/projects/zaffre-imoveis/screens/sign-in.webp',
+      alt: 'Sign in',
+      width: 540,
+      height: 1028,
+    },
+    {
+      src: '/static/images/projects/zaffre-imoveis/screens/home.webp',
+      alt: 'Home',
+      width: 540,
+      height: 1172,
+    },
+    {
+      src: '/static/images/projects/zaffre-imoveis/screens/home-dark.webp',
+      alt: 'Home, dark theme',
+      width: 540,
+      height: 1172,
+    },
+  ]}
+/>
+
+## Technical decisions
+
+- **MVVM architecture** following Clean Code and Clean Architecture practices, so the project can grow without the screens getting tangled with business rules.
+- **MobX** for reactive state, generated with **mobx_codegen** and **build_runner**.
+- **GetIt** for dependency injection.
+- **Firebase Cloud Messaging** with **overlay_support** to show notifications while the app is open.
+- **mask_text_input_formatter** and **email_validator** for form input and validation.
+- **flutter_staggered_grid_view**, **carousel_slider** and **animations** for the listing layouts and transitions.
+- Light and semi-dark themes.
