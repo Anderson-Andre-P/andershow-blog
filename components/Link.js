@@ -13,7 +13,8 @@ const CustomLink = ({ href, ...rest }) => {
     )
   }
 
-  if (isAnchorLink) {
+  // Anchors and mailto: links stay in the same tab (a new tab for mailto: just opens blank)
+  if (isAnchorLink || href?.startsWith('mailto:')) {
     return <a href={href} {...rest} />
   }
 

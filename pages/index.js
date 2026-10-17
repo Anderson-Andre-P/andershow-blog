@@ -10,6 +10,7 @@ import ExperienceCard from '@/components/ExperienceCard'
 import experienceData from '@/data/experienceData'
 import Skills from '@/components/Skills'
 import ResumeButton from '@/components/ResumeButton'
+import EmailButton from '@/components/EmailButton'
 import { secondaryButton } from '@/components/buttonStyles'
 import { hasPublicFile } from '@/lib/utils/files'
 
@@ -105,23 +106,25 @@ export default function Home({ posts, hasResume }) {
             </svg>
             <span>GitHub</span>
           </a>
-          <a className={secondaryButton} href={`mailto:${siteMetadata.email}`}>
-            <svg
-              height="20"
-              width="20"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                clipRule="evenodd"
-                d="M7.727 2.959A10 10 0 0 1 22 11.999v.9a3.7 3.7 0 0 1-6.642 2.244 4.6 4.6 0 1 1-.741-6.928A1 1 0 0 1 16.6 8.4v4.5a1.7 1.7 0 1 0 3.4 0V12a8 8 0 1 0-3.136 6.353 1 1 0 1 1 1.216 1.587A10 10 0 1 1 7.727 2.96Zm6.873 9.04a2.6 2.6 0 1 0-5.2 0 2.6 2.6 0 0 0 5.2 0Z"
-                fill="currentColor"
-                fillRule="evenodd"
-              />
-            </svg>
-            <span>Email</span>
-          </a>
+          <EmailButton
+            className={secondaryButton}
+            icon={
+              <svg
+                height="20"
+                width="20"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  clipRule="evenodd"
+                  d="M7.727 2.959A10 10 0 0 1 22 11.999v.9a3.7 3.7 0 0 1-6.642 2.244 4.6 4.6 0 1 1-.741-6.928A1 1 0 0 1 16.6 8.4v4.5a1.7 1.7 0 1 0 3.4 0V12a8 8 0 1 0-3.136 6.353 1 1 0 1 1 1.216 1.587A10 10 0 1 1 7.727 2.96Zm6.873 9.04a2.6 2.6 0 1 0-5.2 0 2.6 2.6 0 0 0 5.2 0Z"
+                  fill="currentColor"
+                  fillRule="evenodd"
+                />
+              </svg>
+            }
+          />
         </div>
       </div>
 

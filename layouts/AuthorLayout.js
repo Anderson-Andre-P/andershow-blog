@@ -1,6 +1,7 @@
 import SocialIcon from '@/components/social-icons'
 import Image from '@/components/Image'
 import ResumeButton from '@/components/ResumeButton'
+import EmailButton from '@/components/EmailButton'
 import { primaryButton, secondaryButton } from '@/components/buttonStyles'
 import { PageSEO } from '@/components/SEO'
 import experienceData from '@/data/experienceData'
@@ -9,7 +10,7 @@ import experienceData from '@/data/experienceData'
 const startYear = (period) => period.match(/\d{4}/)?.[0]
 
 export default function AuthorLayout({ children, frontMatter, hasResume }) {
-  const { name, avatar, occupation, company, email, linkedin, github } = frontMatter
+  const { name, avatar, occupation, company, linkedin, github } = frontMatter
 
   return (
     <>
@@ -38,9 +39,7 @@ export default function AuthorLayout({ children, frontMatter, hasResume }) {
 
           <div className="mt-6 flex flex-wrap gap-3">
             {hasResume && <ResumeButton />}
-            <a href={`mailto:${email}`} className={hasResume ? secondaryButton : primaryButton}>
-              Email me
-            </a>
+            <EmailButton className={hasResume ? secondaryButton : primaryButton} label="Email me" />
           </div>
           <div className="mt-5 flex gap-4">
             <SocialIcon kind="github" href={github} size={6} />
