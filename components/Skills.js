@@ -1,72 +1,38 @@
 import React from 'react'
-import {
-  SiFirebase,
-  SiGit,
-  SiFlutter,
-  SiDart,
-  SiGooglemaps,
-  SiKotlin,
-  SiSwift,
-} from 'react-icons/si'
+import { SiFlutter, SiDart, SiKotlin, SiSwift, SiSentry, SiGooglemaps } from 'react-icons/si'
 
-import { AiFillFolderOpen, AiOutlineAreaChart, AiOutlineMobile } from 'react-icons/ai'
+import {
+  AiFillFolderOpen,
+  AiOutlineApi,
+  AiOutlineCheckCircle,
+  AiOutlineMobile,
+} from 'react-icons/ai'
 
 import { motion } from 'framer-motion'
 import { showHoverAnimation, removeHoverAnimation } from '../lib/windowAnimation'
 import { FadeContainer, popUp } from '../lib/framerMotionVariants'
 
 const skills = [
-  {
-    name: 'Flutter (Cross-Platform)',
-    logo: SiFlutter,
-  },
-  {
-    name: 'Swift',
-    logo: SiSwift,
-  },
-  {
-    name: 'Dart',
-    logo: SiDart,
-  },
-  {
-    name: 'Kotlin',
-    logo: SiKotlin,
-  },
-  {
-    name: 'Firebase / WebSockets',
-    logo: SiFirebase,
-  },
-  {
-    name: 'Maps & Geolocation',
-    logo: SiGooglemaps,
-  },
-  {
-    name: 'Performance & Optimization',
-    logo: AiOutlineAreaChart,
-  },
-  {
-    name: 'Publish in Stores',
-    logo: AiOutlineMobile,
-  },
-  {
-    name: 'Code Management (Git & Perforce)',
-    logo: SiGit,
-  },
-  {
-    name: 'Architecture & Feature Design',
-    logo: AiFillFolderOpen,
-  },
+  { name: 'Flutter', logo: SiFlutter },
+  { name: 'Dart', logo: SiDart },
+  { name: 'Kotlin', logo: SiKotlin },
+  { name: 'Swift', logo: SiSwift },
+  { name: 'BLoC & Clean Architecture', logo: AiFillFolderOpen },
+  { name: 'Real-time with WebSockets', logo: AiOutlineApi },
+  { name: 'Testing & TDD', logo: AiOutlineCheckCircle },
+  { name: 'Observability (Sentry, Graylog)', logo: SiSentry },
+  { name: 'CI/CD & store releases', logo: AiOutlineMobile },
+  { name: 'Maps & Geolocation', logo: SiGooglemaps },
 ]
 
 const Skills = () => {
   return (
     <>
-      <h2 className="font-poppins title-font text-3xl font-bold">My Main Skills</h2>
+      <h2 className="font-poppins title-font text-3xl font-bold">Skills</h2>
       <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-        I specialize in cross-platform mobile app development with Flutter, delivering fast,
-        scalable, and intuitive experiences for both iOS and Android. I also work on native app
-        maintenance, integrating features like maps, geolocation, and WebSockets, optimizing
-        performance, and managing app releases on the App Stores.
+        Most of my work has been in logistics and industrial IoT: real-time features with
+        WebSockets, native Kotlin and Swift SDKs integrated into Flutter, and legacy Android code
+        modernized with Clean Architecture and BLoC.
       </p>
 
       {/* Grid de ícones */}

@@ -9,6 +9,7 @@ const experienceData = [
     level: 'Mid-Level',
     period: 'Nov 2024 — Current',
     highlights: [
+      'Maintain and evolve seven B2B apps in production on Google Play and the App Store, from architecture and new features to testing, builds, and releases.',
       'Cross-platform mobile application development with Flutter (iOS and Android), delivering smooth, responsive, and scalable user experiences.',
       'Maintenance and enhancement of native Android applications in Java, as well as hybrid development integrating Flutter, Kotlin, and Swift to maximize performance and compatibility.',
       'Implementation of real-time video monitoring using external SDKs, ensuring stability and high performance in video streaming.',
@@ -19,7 +20,6 @@ const experienceData = [
       'DAO (Data Access Object) integration for efficient data management and persistence.',
       'Use of WebSockets for real-time communication and dynamic map updates.',
       'Application of usability heuristics to improve user experience and streamline interaction flows.',
-      'Publishing and managing applications on Google Play Store and Apple App Store.',
       'Additional experience with Angular and TypeScript, applied to web projects integrated with mobile solutions.',
     ],
   },

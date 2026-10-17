@@ -3,7 +3,7 @@ const siteMetadata = {
   author: 'Anderson Eleutério',
   headerTitle: 'Andershow',
   description:
-    'Articles on Flutter, mobile and web development, and software architecture: practical lessons from building scalable software for the real world.',
+    'Anderson Eleutério is a mobile and forward deployed engineer building Flutter, Kotlin and Swift apps for logistics and industrial IoT. Projects, case studies and articles on mobile development and software architecture.',
   language: 'en',
   theme: 'system', // system, dark or light
   siteUrl: 'https://anderson-andre.netlify.app',
