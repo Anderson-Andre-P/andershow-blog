@@ -1,19 +1,10 @@
-import projectsData from '@/data/projectsData'
-import Card from '@/components/Card'
+import ProjectCard from '@/components/ProjectCard'
 
-const ProjectGrid = () => (
-  <div className="container py-12">
-    <div className="-m-4 flex flex-wrap">
-      {projectsData.map((d) => (
-        <Card
-          key={d.title}
-          title={d.title}
-          description={d.description}
-          imgSrc={d.imgSrc}
-          href={d.href}
-        />
-      ))}
-    </div>
+const ProjectGrid = ({ projects }) => (
+  <div className="grid gap-6 py-8 sm:grid-cols-2">
+    {projects.map((project) => (
+      <ProjectCard key={project.title} {...project} />
+    ))}
   </div>
 )
 

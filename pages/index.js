@@ -5,6 +5,7 @@ import siteMetadata from '@/data/siteMetadata'
 import { getAllFilesFrontMatter } from '@/lib/mdx'
 import formatDate from '@/lib/utils/formatDate'
 import ProjectGrid from '@/components/ProjectGrid'
+import projectsData from '@/data/projectsData'
 import ExperienceCard from '@/components/ExperienceCard'
 import experienceData from '@/data/experienceData'
 import Skills from '@/components/Skills'
@@ -108,7 +109,15 @@ export default function Home({ posts, hasResume }) {
         </p>
       </div>
 
-      <ProjectGrid />
+      <ProjectGrid projects={projectsData.filter((project) => project.featured)} />
+      <div className="flex justify-end text-base font-medium leading-6">
+        <Link
+          href="/projects"
+          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+        >
+          All projects &rarr;
+        </Link>
+      </div>
       <div className="content mt-12 sm:mt-24">
         <h2 className="font-poppins title-font text-3xl font-bold">Experience</h2>
         <ul className="mt-8">
