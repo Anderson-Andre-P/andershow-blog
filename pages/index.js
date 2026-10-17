@@ -9,7 +9,7 @@ import ExperienceCard from '@/components/ExperienceCard'
 import experienceData from '@/data/experienceData'
 import Skills from '@/components/Skills'
 
-const MAX_DISPLAY = 6
+const MAX_DISPLAY = 3
 
 export async function getStaticProps() {
   const posts = await getAllFilesFrontMatter('blog')
@@ -42,17 +42,8 @@ export default function Home({ posts }) {
           </div> */}
         </div>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          Software developer with a degree in Information Systems and a passion for creating
-          efficient and effective solutions. My technical skills cover a wide range of technologies,
-          including object-oriented programming, version control, database management, and software
-          development with scalable architectures such as Model-View-Controller (MVC) and
-          Model-View-ViewModel (MVVM).
-        </p>
-        <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          I have extensive experience as a mobile and web application developer, performing tasks
-          such as bug fixing and problem-solving in legacy software systems. In addition to my
-          professional experience, I am constantly working on personal projects to improve my skills
-          and stay up to date with the latest trends and advancements in the field.
+          Mobile developer focused on Flutter, with native Kotlin and Swift experience, building
+          fast and reliable apps for iOS and Android.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-4 text-center">
@@ -103,49 +94,69 @@ export default function Home({ posts }) {
             <span className="hidden sm:inline">E-mail</span>
           </a>
         </div>
-        <div className="flex w-full justify-center">
-          <div className="mt-2 justify-center"></div>
-        </div>
       </div>
-
-      <Skills />
 
       <div className="content mb-8">
         <h2 className="font-poppins title-font text-3xl font-bold">Projects</h2>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          Here you’ll find a curated selection of projects that showcase my expertise in mobile and
-          web development. Each project reflects my focus on delivering high-quality code, scalable
-          solutions, and seamless user experiences, while applying modern technologies such as
-          Flutter, Dart, and RESTful APIs.
-        </p>
-        <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          These projects range from real-world professional work to personal initiatives that
-          highlight my ability to solve problems, optimize performance, and create intuitive
-          applications aligned with business goals and user needs.
+          A selection of mobile apps, from real-world professional work to personal projects.
         </p>
       </div>
 
       <ProjectGrid />
       <div className="content mt-12 sm:mt-24">
-        <h2 className="font-poppins title-font text-3xl font-bold">Main Experiences</h2>
-        <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          I have extensive experience in cross-platform mobile development with Flutter, delivering
-          fast, scalable, and user-friendly apps for both iOS and Android. I also work on native
-          mobile applications using Swift and Kotlin, implementing new features, optimizing
-          performance, and integrating real-time communication with WebSockets.
-        </p>
-
-        <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          My experience includes integrating maps and geolocation for real-time tracking, managing
-          data efficiently with DAOs, ensuring app stability through migration to null safety, and
-          publishing and maintaining apps on the Google Play Store and Apple App Store.
-        </p>
-
+        <h2 className="font-poppins title-font text-3xl font-bold">Experience</h2>
         <ul className="mt-8">
           {experienceData.map((experience) => (
             <ExperienceCard key={`${experience.company}-${experience.period}`} {...experience} />
           ))}
         </ul>
+      </div>
+
+      <div className="mt-12 sm:mt-24">
+        <Skills />
+      </div>
+
+      <div className="content mt-12 sm:mt-24">
+        <h2 className="font-poppins title-font text-3xl font-bold">Latest Posts</h2>
+        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+          {posts.slice(0, MAX_DISPLAY).map(({ slug, date, title, summary, tags }) => (
+            <li key={slug} className="py-8">
+              <article className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
+                <dl>
+                  <dt className="sr-only">Published on</dt>
+                  <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
+                    <time dateTime={date}>{formatDate(date)}</time>
+                  </dd>
+                </dl>
+                <div className="space-y-3 xl:col-span-3">
+                  <h3 className="text-2xl font-bold leading-8 tracking-tight">
+                    <Link href={`/blog/${slug}`} className="text-gray-900 dark:text-gray-100">
+                      {title}
+                    </Link>
+                  </h3>
+                  <div className="flex flex-wrap">
+                    {tags.map((tag) => (
+                      <Tag key={tag} text={tag} />
+                    ))}
+                  </div>
+                  <p className="line-clamp-3 text-gray-500 dark:text-gray-400">{summary}</p>
+                </div>
+              </article>
+            </li>
+          ))}
+        </ul>
+        {posts.length > MAX_DISPLAY && (
+          <div className="flex justify-end text-base font-medium leading-6">
+            <Link
+              href="/blog"
+              className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+              aria-label="All posts"
+            >
+              All posts &rarr;
+            </Link>
+          </div>
+        )}
       </div>
     </>
   )
