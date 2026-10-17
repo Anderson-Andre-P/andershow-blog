@@ -1,117 +1,70 @@
 import React from 'react'
-import {
-  SiJavascript,
-  SiFirebase,
-  SiGit,
-  SiFlutter,
-  SiDart,
-  SiAngular,
-  SiGooglemaps,
-  SiKotlin,
-  SiSwift,
-} from 'react-icons/si'
+import { SiFlutter, SiDart, SiKotlin, SiSwift, SiSentry, SiGooglemaps } from 'react-icons/si'
 
-import { AiFillFolderOpen, AiOutlineAreaChart, AiOutlineMobile } from 'react-icons/ai'
+import {
+  AiFillFolderOpen,
+  AiOutlineApi,
+  AiOutlineCheckCircle,
+  AiOutlineMobile,
+} from 'react-icons/ai'
 
 import { motion } from 'framer-motion'
+import { localize, useLocale, useT } from '@/lib/i18n'
 import { showHoverAnimation, removeHoverAnimation } from '../lib/windowAnimation'
 import { FadeContainer, popUp } from '../lib/framerMotionVariants'
 
-import HexSkillRadar from './HexSkillRadar'
-
 const skills = [
+  { name: 'Flutter', logo: SiFlutter },
+  { name: 'Dart', logo: SiDart },
+  { name: 'Kotlin', logo: SiKotlin },
+  { name: 'Swift', logo: SiSwift },
+  { name: 'BLoC & Clean Architecture', logo: AiFillFolderOpen },
   {
-    name: 'Flutter (Cross-Platform)',
-    logo: SiFlutter,
+    name: { 'en-US': 'Real-time with WebSockets', 'pt-BR': 'Tempo real com WebSockets' },
+    logo: AiOutlineApi,
+  },
+  { name: { 'en-US': 'Testing & TDD', 'pt-BR': 'Testes e TDD' }, logo: AiOutlineCheckCircle },
+  {
+    name: {
+      'en-US': 'Observability (Sentry, Graylog)',
+      'pt-BR': 'Observabilidade (Sentry, Graylog)',
+    },
+    logo: SiSentry,
   },
   {
-    name: 'Swift',
-    logo: SiSwift,
-  },
-  {
-    name: 'Dart',
-    logo: SiDart,
-  },
-  {
-    name: 'Kotlin',
-    logo: SiKotlin,
-  },
-  {
-    name: 'Angular',
-    logo: SiAngular,
-  },
-  {
-    name: 'JavaScript & TypeScript',
-    logo: SiJavascript,
-  },
-  {
-    name: 'Firebase / WebSockets',
-    logo: SiFirebase,
-  },
-  {
-    name: 'Maps & Geolocation',
-    logo: SiGooglemaps,
-  },
-  {
-    name: 'Performance & Otimization',
-    logo: AiOutlineAreaChart,
-  },
-  {
-    name: 'Publish in Stores',
+    name: { 'en-US': 'CI/CD & store releases', 'pt-BR': 'CI/CD e publicação nas lojas' },
     logo: AiOutlineMobile,
   },
   {
-    name: 'Code Management (Git & Perforce)',
-    logo: SiGit,
+    name: { 'en-US': 'Maps & Geolocation', 'pt-BR': 'Mapas e geolocalização' },
+    logo: SiGooglemaps,
   },
-  {
-    name: 'Architecture & Feature Design',
-    logo: AiFillFolderOpen,
-  },
-]
-
-const radarSkills = [
-  { label: 'Flutter', value: 90 },
-  { label: 'Swift', value: 35 },
-  { label: 'Dart', value: 75 },
-  { label: 'Kotlin', value: 45 },
-  { label: 'React', value: 40 },
-  { label: 'Js/Ts', value: 50 },
-  { label: 'Firebase/wsk', value: 55 },
-  { label: 'Maps', value: 35 },
-  { label: 'Performance', value: 25 },
-  { label: 'Deploy', value: 70 },
-  { label: 'Git', value: 65 },
-  { label: 'Archtecture', value: 20 },
 ]
 
 const Skills = () => {
+  const t = useT()
+  const locale = useLocale()
   return (
     <>
-      <h2 className="font-poppins title-font text-3xl font-bold">My Main Skills</h2>
+      <h2 className="font-poppins title-font text-3xl font-bold">{t.skills.title}</h2>
       <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-        I specialize in cross-platform mobile app development with Flutter, delivering fast,
-        scalable, and intuitive experiences for both iOS and Android. I also work on native app
-        maintenance, integrating features like maps, geolocation, and WebSockets, optimizing
-        performance, and managing app releases on the App Stores. Additionally, I complement my
-        mobile work with web development in TypeScript and Angular, providing integrated,
-        high-quality solutions for users.
+        {t.skills.intro}
       </p>
 
-      {/* Grid de ícones */}
       <motion.div
         initial="hidden"
         whileInView="visible"
         variants={FadeContainer}
         viewport={{ once: true }}
-        className="my-10 grid grid-cols-3 gap-4"
+        className="my-10 grid grid-cols-3 gap-4 sm:grid-cols-2"
       >
-        {skills.map((skill, index) => {
+        {skills.map((skill) => {
+          const name = localize(skill.name, locale)
           return (
             <motion.div
-              title={skill.name}
+              title={name}
               variants={popUp}
-              key={skill.name}
+              key={name}
               onMouseMove={(e) => showHoverAnimation(e)}
               onMouseLeave={(e) => removeHoverAnimation(e)}
               className="dark:bg-darkPrimary hover:dark:bg-darkSecondary group flex origin-center transform items-center justify-center gap-4 rounded-sm border border-gray-300 p-4 hover:border-gray-400 dark:border-neutral-700 sm:justify-start md:origin-top"
@@ -120,18 +73,12 @@ const Skills = () => {
                 <skill.logo className="h-8 w-8" />
               </div>
               <p className="pointer-events-none hidden select-none text-sm font-semibold sm:inline-flex md:text-base">
-                {skill.name}
+                {name}
               </p>
             </motion.div>
           )
         })}
       </motion.div>
-
-      <h2 className="font-poppins title-font text-3xl font-bold">Skills Radar</h2>
-
-      <div className="my-10 flex justify-center">
-        <HexSkillRadar skills={radarSkills} size={440} />
-      </div>
     </>
   )
 }

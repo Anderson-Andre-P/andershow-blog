@@ -1,0 +1,46 @@
+---
+year: 2023
+type: Personal project
+stack: ['Flutter', 'Form validation']
+---
+
+## Overview
+
+A Flutter app focused on the first minutes of a user's experience: an onboarding that introduces the product, followed by a sign-in screen with clear validation. These two flows appear in almost every app, so getting them right is worth practicing on their own.
+
+## What the app does
+
+- **Onboarding presentation** introducing the app and its main features.
+- **Navigation to sign in** once onboarding is complete.
+- **Field validation** on email and password:
+  - valid email format;
+  - password requirements;
+  - clear error messages pointing to what needs fixing.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/onboarding-and-sign-in/screens/onboarding.webp',
+      alt: 'Onboarding',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/onboarding-and-sign-in/screens/sign-in.webp',
+      alt: 'Sign in',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/onboarding-and-sign-in/screens/sign-in-validation.webp',
+      alt: 'Sign in with validation',
+      width: 540,
+      height: 1170,
+    },
+  ]}
+/>
+
+## Technical decisions
+
+- Built with plain **Flutter** and no extra dependencies, to keep the focus on layout, navigation and validation logic.
+- Written following Clean Code principles, with a user-friendly design as a goal from the start.

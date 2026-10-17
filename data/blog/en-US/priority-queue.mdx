@@ -1,0 +1,495 @@
+---
+title: Priority Queues
+date: '2023-02-28'
+tags: ['C/C++', 'Data Structures']
+draft: false
+summary: 'In this post, we look at how a data structure called a "priority queue" works and how to implement it.'
+---
+
+# Introduction
+
+A `priority queue` is a data structure that maintains a set S of elements, each with an associated value called a key.
+
+One of the most popular ways to implement a priority queue is with a heap (a heap is a binary tree): using a heap gives you an efficient priority queue.
+
+## Heap
+
+A heap is a binary tree defined by two properties:
+
+1. The value of a node is greater than or equal to the values of its children;
+2. The heap is a complete, or almost complete, binary tree filled from left to right.
+
+A complete tree is one where every node except the leaves has two children and all leaves are on the same level. If it isn't complete, every level is filled except the last, which must be filled from left to right up to a certain point.
+
+It has to be almost complete from left to right because that makes it easy to implement this data structure with an array.
+
+By construction, the height of a heap is Θ(log n), since it is complete or almost complete from left to right. This property makes insertion and removal efficient.
+
+## Implementation
+
+### Arrays
+
+Because a heap is a complete or almost complete tree, we can represent it with an array.
+
+<div className="-mx-2 flex flex-wrap overflow-hidden xl:-mx-2">
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+    <img src="/static/images/priority_queue/heap_01.png" alt="Heap 01" className="w-full" />
+  </div>
+</div>
+
+In the figure above, the array that represents the heap is:
+
+$$
+\mathbf{A} = \left[\begin{array}
+  {c}
+  90, 87, 18, 2, 68, 6, 15
+\end{array}\right]
+$$
+
+As we can see, the root is at position 0 in the array, its left child is at position 1, its right child is at position 2, and so on until the end of the heap.
+
+The last node in the heap is also called the tail. The tail tracks the index of the last element in the array.
+
+### Left, right and parent
+
+To walk a tree, from any node we need to reach its left child, its right child and its parent. In binary search tree implementations, we use left, right and parent references. Since we're using an array to store the elements, we need methods that return a node's left child, right child and parent based on its index.
+
+### Examples
+
+As an example, I'll use the heap in the previous figure to do the math and find the indexes.
+
+#### Left
+
+To find the index of a node's left child, we use the equation below:
+
+$$
+\mathbf{X} = 2 * index + 1
+$$
+
+Left of index 0:
+
+$$
+\mathbf{X} = 2 * 0 + 1
+$$
+
+$$
+\mathbf{X} = 1
+$$
+
+Left of index 1:
+
+$$
+\mathbf{X} = 2 * 1 + 1
+$$
+
+$$
+\mathbf{X} = 3
+$$
+
+Left of index 2:
+
+$$
+\mathbf{X} = 2 * 2+ 1
+$$
+
+$$
+\mathbf{X} = 5
+$$
+
+#### Right
+
+To find the index of a node's right child, we use the equation:
+
+$$
+\mathbf{Y} = 2 * (index + 1)
+$$
+
+Right of index 0:
+
+$$
+\mathbf{Y} = 2 * (0 + 1)
+$$
+
+$$
+\mathbf{Y} = 2
+$$
+
+Right of index 1:
+
+$$
+\mathbf{Y} = 2 * (1 + 1)
+$$
+
+$$
+\mathbf{Y} = 4
+$$
+
+Right of index 2:
+
+$$
+\mathbf{Y} = 2 * (2+ 1)
+$$
+
+$$
+\mathbf{Y} = 6
+$$
+
+#### Parent
+
+To find the index of a node's parent, we use the equation $$\mathbf{Z} = \frac{(index−1)}{2}$$. When the index is even, the result isn't a whole number, so we cast it from float to int. The final equation is:
+
+$$
+\mathbf{Z} = int(\frac{index−1}{2})
+$$
+
+Parent of index 1:
+
+$$
+\mathbf{Z} = int(\frac{1 − 1}{2})
+
+
+$$
+
+$$
+\mathbf{Z} = int(0)
+$$
+
+$$
+\mathbf{Z} = 0
+$$
+
+Parent of index 4:
+
+$$
+\mathbf{Z} = int(\frac{4 − 1}{2})
+$$
+
+$$
+\mathbf{Z} = int(1.5)
+$$
+
+$$
+\mathbf{Z} = 1
+$$
+
+Parent of index 5:
+
+$$
+\mathbf{Z} = int(\frac{5 − 1}{2})
+$$
+
+$$
+\mathbf{Z} = int(2)
+$$
+
+$$
+\mathbf{Z} = 2
+$$
+
+### Insert, remove and maximum, efficiently
+
+A new element is always added at the next free position in the array (regardless of its key), at tail + 1. This guarantees the heap is always complete or almost complete from left to right.
+
+After an element is inserted at the last position of the heap, it's compared with its parent: if its key is greater, it swaps places with the parent. Then it's compared with its new parent, and if its key is still greater, they swap again. This repeats until the heap property is satisfied.
+
+<div className="-mx-2 flex flex-wrap overflow-hidden xl:-mx-2">
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+            <img
+      src="/static/images/priority_queue/heap_06.png"
+      alt="Heap 06"
+      className="w-full"
+    />
+  </div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+
+              <img
+      src="/static/images/priority_queue/heap_07.png"
+      alt="Heap 07"
+      className="w-full"
+    />
+
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  <img src="/static/images/priority_queue/heap_08.png" alt="Heap 08" className="w-full" />
+</div>
+
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  
+                  <img
+      src="/static/images/priority_queue/heap_09.png"
+      alt="Heap 09"
+      className="w-full"
+    />
+  </div>
+</div>
+
+The worst case for insertion is an element whose key is greater than every element in the heap, because it has to swap places with all of its parents, which makes it O(log n).
+
+An element is always removed from the root, because that's where the largest (or smallest) key in the heap is. To keep the heap complete or almost complete from left to right, we swap the root's value with the last leaf and remove that leaf. Since an element was removed, the tail goes down by 1.
+
+<div className="-mx-2 flex flex-wrap overflow-hidden xl:-mx-2">
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+ 
+                  <img
+      src="/static/images/priority_queue/heap_10.png"
+      alt="Heap 10"
+      className="w-full"
+    />
+  </div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+
+  <img
+      src="/static/images/priority_queue/heap_11.png"
+      alt="Heap 11"
+      className="w-full"
+    />
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+
+  <img
+      src="/static/images/priority_queue/heap_12.png"
+      alt="Heap 12"
+      className="w-full"
+    />
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+
+    <img
+      src="/static/images/priority_queue/heap_13.png"
+      alt="Heap 13"
+      className="w-full"
+    />
+
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  <img src="/static/images/priority_queue/heap_14.png" alt="Heap 14" className="w-full" />
+</div>
+
+{' '}
+
+<div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+  <img src="/static/images/priority_queue/heap_15.png" alt="Heap 15" className="w-full" />
+</div>
+
+  <div className="my-1 w-full overflow-hidden px-2 xl:my-1 xl:w-1/2 xl:px-2">
+      <img
+      src="/static/images/priority_queue/heap_16.png"
+      alt="Heap 16"
+      className="w-full"
+    />
+  </div>
+</div>
+
+In the worst case, the path walked is as long as the height of the heap, which is always O(log n) because the heap is complete or almost complete from left to right.
+
+### Applications
+
+Priority queues can be built on heaps in two ways:
+
+1. Max-heap
+
+Max-priority queues can schedule jobs on a shared computer: the queue keeps track of the jobs to run and their relative priorities.
+
+When a job finishes or is interrupted, the scheduler picks the highest-priority pending job by calling Extract-Max. The scheduler can also add new jobs to the queue at any time by calling Insert.
+
+2. Min-heap
+
+A min-priority queue can be used in an event-driven simulator. The elements in the queue are events to simulate, each with a time of occurrence that serves as its key. Events must be simulated in order of their time of occurrence, because simulating one event can trigger other events to simulate in the future.
+
+At each step, the program calls Extract-Min to choose the next event to simulate. As new events are produced, the simulator inserts them into the min-priority queue by calling Insert.
+
+## Example algorithm
+
+Below is the C++ code I used to write this article. Copy it into an IDE to run it.
+
+```cpp
+/*
+╔═════════════════════════════════════════╗
+║ Author: Anderson André Pereira Eleutério ║
+╚═════════════════════════════════════════╝
+╔═════╦══════════════════╗
+║  n  ║ heap positions   ║
+║═════╬═════════════════ ╣
+║ *n  ║      tail        ║
+║═════╬═════════════════ ╣
+║  a  ║      array       ║
+║═════╬═════════════════ ╣
+║  i  ║      index       ║
+╚═════╩══════════════════╝
+*/
+
+#include <stdio.h>
+
+#define MAX_SIZE 7
+
+// returns the index of the parent node
+int parent(int i) {
+    return (i - 1) / 2;
+}
+
+// returns the index of the left child
+int left_child(int i) {
+    return 2*i + 1;
+}
+
+// returns the index of the right child
+int right_child(int i) {
+    return 2*i + 2;
+}
+
+void swap(int *x, int *y) {
+    int temp = *x;
+    *x = *y;
+    *y = temp;
+}
+
+// inserts the item at the right position
+void insert(int a[], int data, int *n) {
+    if (*n >= MAX_SIZE) {
+        printf("%s\n", "The heap is full. Not all values were inserted.");
+        return;
+    }
+    // first insert the value at the last position of the array
+    // and move it up
+    a[*n] = data;
+    *n = *n + 1;
+
+    // move it until the heap property is satisfied
+    int i = *n - 1;
+    while (i != 0 && a[parent(i)] < a[i]) {
+        swap(&a[parent(i)], &a[i]);
+        i = parent(i);
+    }
+}
+
+// moves the item at position i of array a
+// to its right position
+void max_heapify(int a[], int i, int n){
+    // find the left child
+    int left = left_child(i);
+
+    // find the right child
+    int right = right_child(i);
+
+    // find the largest of the 3 nodes
+    int largest = i;
+
+    // check whether the left node is larger than the current node
+    if (left <= n && a[left] > a[largest]) {
+        largest = left;
+    }
+
+    // check whether the right node is larger than the current node
+    if (right <= n && a[right] > a[largest]) {
+        largest = right;
+    }
+
+    // swap the largest node with the current node
+    // and repeat until the current node is larger than
+    // both its right and left nodes
+    if (largest != i) {
+        int temp = a[i];
+        a[i] = a[largest];
+        a[largest] = temp;
+        max_heapify(a, largest, n);
+    }
+
+}
+/*
+// turns an array into a heap
+void build_max_heap(int a[], int n) {
+    int i;
+    for (i = n/2; i >= 0; i--) {
+        max_heapify(a, i, n);
+    }
+}
+*/
+// returns the largest item in the heap
+int get_max(int a[], int *n) {
+ printf("Value at the root: %d\n", a[0]);
+    return a[0];
+}
+
+// returns the last item in the heap
+int get_min(int a[], int *n) {
+ printf("Last value in the heap: %d\n", a[*n - 1]);
+    return a[0];
+}
+
+// removes the largest item and returns it
+int extract_max(int a[], int *n) {
+    int max_item = a[0];
+
+    // Shows the largest item
+    //printf("Value at the root: %d\n\n", max_item = a[0]);
+
+    // replace the first item with the last item
+    a[0] = a[*n - 1];
+    *n = *n - 1;
+
+    // keep the heap property by heapifying the
+    // first item
+    max_heapify(a, 0, *n);
+    return max_item;
+}
+
+// prints the heap
+void print_heap(int a[], int n) {
+    int i;
+    for (i = 0; i < n; i++) {
+        printf("Position %d: %d\n", i ,a[i]);
+    }
+    printf("\n");
+}
+
+int main() {
+    int n = 0;
+    int a[MAX_SIZE];
+    /*
+    //a[0] = 0;
+    //a[1] = 66; a[2] = 10; a[3] = 103;
+    //build_max_heap(a, n);
+    //2, 6, 68, 90, 87, 15, 18.
+    * */
+    insert(a, 2, &n);
+    insert(a, 6, &n);
+    insert(a, 68, &n);
+    insert(a, 90, &n);
+    insert(a, 87, &n);
+    insert(a, 15, &n);
+    insert(a, 18, &n);
+
+    print_heap(a, n);
+    get_max(a, &n);
+    get_min(a, &n);
+    extract_max(a , &n);
+    print_heap(a, n);
+    get_max(a, &n);
+
+    return 0;
+}
+```
+
+## References
+
+[Estruturas de Dados e Algoritmos (in Portuguese)](https://joaoarthurbm.github.io/eda/posts/heap/)
+
+[Power of Heap](https://www.youtube.com/watch?v=RU08pp_VPSs)

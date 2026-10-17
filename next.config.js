@@ -54,9 +54,45 @@ const securityHeaders = [
 
 module.exports = withBundleAnalyzer({
   reactStrictMode: true,
+  // English is the default (no URL prefix); Portuguese lives under /pt-BR.
+  // The browser language is detected on the client (components/LocaleRedirect.js),
+  // so only pt-BR browsers get Portuguese, as Next's own detection also matches pt-PT.
+  i18n: {
+    locales: ['en-US', 'pt-BR'],
+    defaultLocale: 'en-US',
+    localeDetection: false,
+  },
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
   eslint: {
     dirs: ['pages', 'components', 'lib', 'layouts', 'scripts'],
+  },
+  // Old post URLs, kept so links shared before the rename keep working
+  async redirects() {
+    return [
+      {
+        source: '/blog/implementing_offline_first_observability_in_a_legacy_mobile_project_java',
+        destination: '/blog/offline-first-observability-legacy-java-app',
+        permanent: true,
+      },
+      {
+        source: '/blog/introduction_sql',
+        destination: '/blog/introduction-to-sql',
+        permanent: true,
+      },
+      { source: '/blog/ison-27000', destination: '/blog/iso-27000', permanent: true },
+      // The blog no longer has numbered pages; filters and sorting happen on /blog
+      { source: '/blog/page/:page', destination: '/blog', permanent: true },
+      {
+        source: '/blog/dio-http-flutter',
+        destination: '/blog/consuming-apis-in-flutter-with-dio-and-http',
+        permanent: true,
+      },
+      {
+        source: '/blog/difference-between-stl-and-stf',
+        destination: '/blog/stateful-vs-stateless-widgets-in-flutter',
+        permanent: true,
+      },
+    ]
   },
   async headers() {
     return [

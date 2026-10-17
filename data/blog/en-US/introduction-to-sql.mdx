@@ -1,0 +1,131 @@
+---
+title: Introduction to SQL - what it is, how it works and why it matters for managing data
+date: '2023-02-23'
+tags: ['SQL', 'Databases']
+draft: false
+summary: 'SQL is a standard language for accessing and manipulating databases, and this post is a short introduction to it.'
+---
+
+# Introduction
+
+SQL (Structured Query Language) is a language used to manage relational databases. It lets users perform a variety of operations, such as inserting, updating and retrieving data in a database.
+
+It's a declarative language, which means you specify what you want to do with the data, not how to do it. This makes SQL easy to use and read, especially for people without a programming background.
+
+SQL is used in many applications, including inventory management, financial transaction processing, sales data analysis, marketing data analysis, customer relationship management and much more. It's a fundamental part of most data storage technologies, including relational databases and many big data platforms.
+
+Many different kinds of data can be stored in a database, including numbers, dates, text, images and more. SQL lets you work with this data in many ways, including sorting, grouping, filtering and calculating statistics.
+
+## SQL command categories
+
+There are four main categories of SQL commands:
+
+- DDL (Data Definition Language) commands: let users define and change the structure of database objects, such as tables, indexes and views. Examples include CREATE TABLE, DROP TABLE and ALTER TABLE.
+
+- DML (Data Manipulation Language) commands: let users manipulate the data stored in the database. Examples include SELECT, INSERT, UPDATE and DELETE.
+
+- DCL (Data Control Language) commands: let users control access to database objects. Examples include GRANT and REVOKE.
+
+- TCL (Transaction Control Language) commands: let users control transactions in a database. Examples include COMMIT and ROLLBACK.
+
+SQL is set-based, which means database operations are treated as operations on mathematical sets. For example, when you run a SELECT query, the result is a set of rows that meet the conditions in the query. Union, intersection and difference operations are also supported, so you can combine data from several tables in a single query.
+
+SQL also supports aggregate functions, such as SUM, COUNT, AVG, MAX and MIN, to calculate statistics over sets of data. SQL can also create views, which are stored queries that can be used like tables in later queries. This is very useful for simplifying complex queries or creating an abstraction layer over existing tables.
+
+## So what are SQL reserved words?
+
+Each SQL reserved word has a specific purpose for manipulating data and structures in databases. Below are some of the most used keywords, with a short description of what they do:
+
+**SELECT**: selects data from one or more tables.
+
+**INSERT**: inserts new data into a table.
+
+**UPDATE**: updates existing data in a table.
+
+**DELETE**: deletes data from a table.
+
+**CREATE**: creates a new table or database.
+
+**ALTER**: changes an existing table or database.
+
+**DROP**: deletes an existing table or database.
+
+**WHERE**: filters the results of a query based on one or more conditions.
+
+**JOIN**: combines data from two or more tables in a single query.
+
+**GROUP BY**: groups data based on one or more columns.
+
+**ORDER BY**: sorts the results of a query based on one or more columns.
+
+**HAVING**: filters the results of a query that includes a GROUP BY clause.
+
+You can find other reserved words and keywords [here](https://www.ibm.com/docs/en/psfa/7.1.0?topic=guide-sql-reserved-words-keywords).
+
+## Some basic operations you can do with SQL
+
+Here's a short introduction to some of the most common operations beginners can do with SQL:
+
+1. Create a table: CREATE TABLE lets users create a table with one or more fields. For example, a Cars table can be created with the fields CarsID, Name, Year, Class and Price.
+
+```sql
+CREATE TABLE Cars(
+    CarsID int,
+    Name varchar(50),
+    Year int,
+    Class varchar(50),
+    Price float
+);
+```
+
+2. Insert data into a table: INSERT INTO lets users insert data into an existing table. For example, to add a new car to the Cars table:
+
+```sql
+INSERT INTO Cars (CarsID, Name, Year, Class, Price)
+VALUES (1, 'Ferrari', 2023, 'Supercar', 5000000.00);
+```
+
+3. Select data from a table: SELECT lets users select data from an existing table. For example, to select all the data in the Cars table:
+
+```sql
+SELECT * FROM Cars;
+```
+
+4. Filter data with WHERE: the WHERE clause lets users filter a table's data based on a condition. For example, to select only cars released from 2020 onwards:
+
+```sql
+SELECT * FROM Cars
+WHERE Year >= 2020;
+```
+
+5. Update data in a table: UPDATE lets users update data in an existing table. For example, to update the class of the car with ID 1:
+
+```sql
+UPDATE Cars
+SET Class = 'Supercar'
+WHERE CarsID = 1;
+```
+
+6. Delete data from a table: DELETE lets users delete data from an existing table. For example, to delete a car from the Cars table:
+
+```sql
+DELETE FROM Cars
+WHERE CarsID = 1;
+```
+
+These are just some of the basic operations you can do with SQL. The language also includes advanced functions to work with dates, text, math and much more. SQL is also supported by a wide variety of relational databases, including MySQL, PostgreSQL, Oracle and Microsoft SQL Server.
+
+For more SQL examples, see these links (in Portuguese):
+[Link 1](https://www.freecodecamp.org/portuguese/news/os-melhores-exemplos-de-sql/), [Link 2](https://www.luis.blog.br/exemplos-de-sql-select.html), [Link 3](https://kenzie.com.br/blog/comandos-sql/).
+
+## Summary
+
+In short, SQL is an essential language for managing and manipulating data in relational databases. It offers a variety of powerful commands to select, insert, update and delete data efficiently and safely. Knowing SQL lets you work with a wide variety of data and applications, which makes you a valuable professional in many industries.
+
+### References
+
+- Silberschatz, A., Korth, H. F., & Sudarshan, S. Database System Concepts. McGraw-Hill.
+- Date, C. J. An Introduction to Database Systems. Pearson.
+- Beaulieu, A. (2009). Learning SQL. O'Reilly.
+- Clarke, J. (2012). SQL Injection Attacks and Defense. Syngress.
+- W3Schools. SQL Tutorial. Available at: https://www.w3schools.com/sql/default.asp. Accessed on February 23, 2023.

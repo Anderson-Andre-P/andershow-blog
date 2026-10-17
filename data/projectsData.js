@@ -1,82 +1,74 @@
+// Each project can link to GitHub, the stores and/or a live demo (shown on its case study page):
+// links: { github, playStore, appStore, demo }
+// `slug` must match the case study file in data/projects/<slug>.mdx
+// `featured: true` projects show up on the homepage (an even number fills the 2-column grid);
+// the first one is highlighted on /projects.
+// `description` has one text per language (see lib/locales.js).
 const projectsData = [
   {
     title: 'Vibraguard',
-    description: `VibraGuard is an advanced mobile platform designed to simplify asset and service management. With a user-friendly interface and powerful features, the application is the definitive tool for maintenance teams, engineers and asset managers.`,
+    slug: 'vibraguard',
+    featured: true,
+    description: {
+      'en-US': `Asset and work order management for maintenance teams. Link devices by QR code, monitor their status and track maintenance work in one app.`,
+      'pt-BR': `Gestão de ativos e ordens de serviço para equipes de manutenção. Vincula dispositivos por QR code, monitora o status deles e acompanha a manutenção em um só app.`,
+    },
     imgSrc: '/static/images/projects/vibraguard-banner.png',
-    href: 'https://github.com/Anderson-Andre-P/vibraguard',
+    links: { github: 'https://github.com/Anderson-Andre-P/vibraguard' },
   },
   {
     title: 'Onboarding and Sign In',
-    description: `This Flutter app combines informative Onboarding with secure login, providing a smooth introduction and reliable authentication for users.`,
+    slug: 'onboarding-and-sign-in',
+    featured: true,
+    description: {
+      'en-US': `An onboarding flow followed by a sign-in screen, with email and password validation and clear error messages.`,
+      'pt-BR': `Um fluxo de onboarding seguido de uma tela de login, com validação de e-mail e senha e mensagens de erro claras.`,
+    },
     imgSrc: '/static/images/projects/onboarding-and-sign-in-banner.png',
-    href: 'https://github.com/Anderson-Andre-P/onboarding_and_signin',
+    links: { github: 'https://github.com/Anderson-Andre-P/onboarding_and_signin' },
   },
   {
     title: 'IMC Flutter',
-    description: `"IMC_Flutter" is your definitive app to track and improve your health in a simple and effective way. With a modern and user-friendly interface, "IMC_Flutter" allows you to calculate your Body Mass Index (BMI) in a matter of seconds, providing valuable insights into your physical condition.`,
+    slug: 'imc-flutter',
+    description: {
+      'en-US': `A BMI calculator that explains the result, suggests an ideal weight and keeps a history of past measurements.`,
+      'pt-BR': `Uma calculadora de IMC que explica o resultado, sugere um peso ideal e guarda o histórico das medições.`,
+    },
     imgSrc: '/static/images/projects/imc-banner.png',
-    href: 'https://github.com/Anderson-Andre-P/imc_flutter',
+    links: { github: 'https://github.com/Anderson-Andre-P/imc_flutter' },
   },
   {
     title: 'QR Code Scanner',
-    description: `QR Code App is a powerful QR code reading and generating tool, developed with Flutter technology to provide an efficient and versatile experience to its users. This app allows you to easily read QR Codes on labels, flyers, websites and more, providing relevant information instantly.`,
+    slug: 'qr-code-scanner',
+    featured: true,
+    description: {
+      'en-US': `Reads QR codes with the camera and creates custom ones for links, contacts, locations and Wi-Fi, ready to share or save.`,
+      'pt-BR': `Lê QR codes com a câmera e cria códigos personalizados para links, contatos, localizações e Wi-Fi, prontos para compartilhar ou salvar.`,
+    },
     imgSrc: '/static/images/projects/qrcode-banner.png',
-    href: 'https://github.com/Anderson-Andre-P/qr_code_scanner',
+    links: { github: 'https://github.com/Anderson-Andre-P/qr_code_scanner' },
   },
   {
     title: 'Strong Password',
-    description: `This app is an personal project I created to show a user in a friendly way whether their password is strong or weak.`,
+    slug: 'strong-password',
+    description: {
+      'en-US': `Tells users whether their password is strong or weak, with field validation and clear error messages.`,
+      'pt-BR': `Mostra se a senha é forte ou fraca, com validação dos campos e mensagens de erro claras.`,
+    },
     imgSrc: '/static/images/projects/strong-password-banner.png',
-    href: 'https://github.com/Anderson-Andre-P/strong_password',
+    links: { github: 'https://github.com/Anderson-Andre-P/strong_password' },
   },
   {
     title: 'Zaffre Imóveis',
-    description: `Projeto para uma imobiliária virtual sendo desenvolvida com Flutter com o objetivo de resolver um problema do mundo real`,
+    slug: 'zaffre-imoveis',
+    featured: true,
+    description: {
+      'en-US': `A real estate app to search properties with filters, publish listings, save favorites and receive push notifications.`,
+      'pt-BR': `Um app imobiliário para buscar imóveis com filtros, publicar anúncios, salvar favoritos e receber notificações push.`,
+    },
     imgSrc: '/static/images/projects/zaffre/Zaffre-banner.png',
-    href: 'https://github.com/Anderson-Andre-P/Imobis-Flutter',
+    links: { github: 'https://github.com/Anderson-Andre-P/Imobis-Flutter' },
   },
-  // {
-  //   title: 'Coffee App',
-  //   description: `Esse é um projeto de estudos que consistia em criar um aplicativo para uma cafeterial virtual. Eu tinha como objetivo aprender o máximo que eu pudesse de estilação de componentes utilizando Styled Components no React Native.`,
-  //   imgSrc: '/static/images/projects/coffee/Coffee.png',
-  //   href: 'https://github.com/Anderson-Andre-P/coffee',
-  // },
-  // {
-  //   title: 'Clone Twitter',
-  //   description: `Esse é um projeto de estudos que consistia em criar um clone da rede social Twitter. Eu tinha como objetivo deixar o mais parecido possível e implementar algumas funcionalidades que a rede social também possui.`,
-  //   imgSrc: '/static/images/projects/twitter/twitter.png',
-  //   href: 'https://github.com/Anderson-Andre-P/clone-twitter',
-  // },
-  // {
-  //   title: 'YouTube',
-  //   description: `Esse é um clone do Youtube que foi feito sem a utilização de frameworks e bibliotecas JS, ou seja, foi utiizado apenas HTML, CSS e JavaScript.`,
-  //   imgSrc: '/static/images/projects/youtube/YoutubeClone.png',
-  //   href: 'https://github.com/Anderson-Andre-P/cloneYoutube',
-  // },
-  // {
-  //   title: 'Starbucks',
-  //   description: `Esse é um clone da landing page do Starbucks que foi feito utilizando apenas as tecnologias base do desenvolvimento web.`,
-  //   imgSrc: '/static/images/projects/starbucks/StarbucksClone.png',
-  //   href: 'https://github.com/Anderson-Andre-P/cloneStarbucks',
-  // },
-  // {
-  //   title: 'Google Ui',
-  //   description: `Com o objetivo de aperfeiçoar meus conhecimentos em responsividade e clen code foi desenvolvido um clone da página de buscas do Google.`,
-  //   imgSrc: '/static/images/projects/google/GoogleClone.png',
-  //   href: 'https://github.com/Anderson-Andre-P/clone-google',
-  // },
-  // {
-  //   title: 'Currículo Website',
-  //   description: `Esse é um antigo projeto que gostei bastante de desenvolver, ele consiste em um website no formato de currículo.`,
-  //   imgSrc: '/static/images/projects/resume/resume.png',
-  //   href: 'https://github.com/Anderson-Andre-P/curriculo',
-  // },
-  // {
-  //   title: 'Christmas Website',
-  //   description: `Esse é um projeto de estudos de fim de semana que consistia em criar um website utilizando clean code e boas práticas de desenvolvimento com HTML, CSS e Js.`,
-  //   imgSrc: '/static/images/projects/christmas/christmas.png',
-  //   href: 'https://github.com/Anderson-Andre-P/christmas-website',
-  // },
 ]
 
 export default projectsData

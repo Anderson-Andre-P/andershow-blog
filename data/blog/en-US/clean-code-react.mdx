@@ -1,0 +1,89 @@
+---
+title: Clean Code Principles in ReactJS
+date: '2023-07-08'
+tags: ['React', 'Clean Code', 'Front-end']
+draft: false
+summary: 'In this article, we explore some Clean Code principles and how to apply them when building ReactJS applications.'
+---
+
+# Introduction
+
+Software development is a complex process that involves not only making code work correctly, but also making sure it stays readable and maintainable. Clean Code, a set of principles and practices developed by Robert C. Martin, also known as Uncle Bob, is an approach to writing code that is clear, concise and easy to understand.
+
+## 1. Meaningful names
+
+Choosing the right names for variables, functions and components is key to readable code. When naming things, be descriptive and use terms that clearly convey their purpose. Avoid obscure abbreviations or generic names that don't give enough information.
+
+```jsx
+// Example of a meaningful name in a React component
+function ArticleList({ articles }) {
+  return (
+    <div>
+      {articles.map((article) => (
+        <ArticleItem key={article.id} article={article} />
+      ))}
+    </div>
+  )
+}
+```
+
+## 2. Small, cohesive functions
+
+Small functions are easier to understand, test and maintain. They should focus on doing a single task and have a clear responsibility. Splitting code into smaller, more specific functions improves readability and reuse.
+
+```jsx
+// Example of a small, cohesive function in a React component
+function ArticleItem({ article }) {
+  const { title, author, content } = article
+
+  return (
+    <div>
+      <h2>{title}</h2>
+      <p>Author: {author}</p>
+      <p>{content}</p>
+    </div>
+  )
+}
+```
+
+## 3. Avoid repetition (DRY - Don't Repeat Yourself)
+
+Repeated code increases complexity and the chance of introducing bugs. Whenever possible, extract duplicated code into reusable functions, components or utilities. This reduces coupling between parts of the code and leads to a more modular structure.
+
+```jsx
+// Example of avoiding repetition in a React component
+function ArticleList({ articles }) {
+  return (
+    <div>
+      {articles.map((article) => (
+        <ArticleItem key={article.id} article={article} />
+      ))}
+    </div>
+  )
+}
+
+function UserProfile({ user }) {
+  const { name, email } = user
+
+  return (
+    <div>
+      <h2>{name}</h2>
+      <p>Email: {email}</p>
+    </div>
+  )
+}
+```
+
+## 4. Comments and documentation
+
+Use comments to explain code when it isn't self-explanatory. Still, avoid redundant or unnecessary comments. The code itself should be as clear as possible, and comments should add relevant information.
+
+Good documentation is also essential for understanding the code and working as a team. Use tools like JSDoc to document interfaces, parameters and return values, especially in reusable libraries and components.
+
+## Conclusion
+
+Applying Clean Code principles to ReactJS development improves code quality, making it more readable, reusable and easier to maintain. This makes teamwork easier and reduces the time spent fixing problems and building new features.
+
+Remember that Clean Code is an ongoing process that takes practice and discipline. By following these principles, you're on the right track to building more robust, high-quality ReactJS applications.
+
+I hope this article was useful! If you have any questions or suggestions, feel free to share them in the comments.

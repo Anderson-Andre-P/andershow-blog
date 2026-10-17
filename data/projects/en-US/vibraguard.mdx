@@ -1,0 +1,79 @@
+---
+year: 2023
+type: Technical challenge
+stack:
+  ['Flutter', 'MVVM', 'MobX', 'Provider', 'GetIt', 'Dio', 'mobile_scanner', 'Syncfusion Charts']
+---
+
+## Overview
+
+VibraGuard is an asset and service management app for maintenance teams, engineers and asset managers. It brings monitored devices and work orders into one place, so a technician can check an asset's status and act on it from their phone.
+
+## The problem
+
+Maintenance teams lose time when asset data and work orders live in different places, and manual device registration leads to typing errors. The app focuses on three things: seeing the state of every monitored asset, tracking maintenance work, and linking devices quickly and without mistakes.
+
+## What the app does
+
+- **QR code linking:** scan a device's QR code to link it to the platform, with no manual entry.
+- **Device monitoring:** a list of every monitored asset with its status, history and location.
+- **Device details:** real-time metrics, maintenance history and documentation for each asset.
+- **Work orders:** track open and completed orders and prioritize maintenance tasks.
+- **Work order details:** description, status, people responsible and action history.
+- **Onboarding, sign in and sign up**, with form validation.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/vibraguard/screens/onboarding.webp',
+      alt: 'Onboarding',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/sign-in.webp',
+      alt: 'Sign in',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/assets.webp',
+      alt: 'Monitored assets',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/asset-details.webp',
+      alt: 'Asset details',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/qr-scanner.webp',
+      alt: 'QR code scanner',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/work-order-details.webp',
+      alt: 'Work order details',
+      width: 540,
+      height: 1170,
+    },
+  ]}
+/>
+
+## Technical decisions
+
+- **MVVM architecture:** business logic, UI and data representation live in separate layers. Each layer can change on its own, which lowers the risk of side effects when updating a screen.
+- **MobX for reactive state**, with **GetIt** for dependency injection, keeping view models independent from the widgets that use them.
+- **Dio** for HTTP requests, with **logger** to make network issues easier to trace.
+- **mobile_scanner** and **qr_flutter** for reading and generating QR codes.
+- **Syncfusion Flutter Charts** to show device metrics.
+- **Husky** git hooks and **flutter_lints** to keep the codebase consistent.
+
+The [design was made in Figma](https://www.figma.com/file/ASMDdAUXSnRKAo3ch6vPAQ/VibraGuard?type=design&node-id=1%3A2&mode=design&t=18IICEUM5IEuoqDM-1) before implementation.
+
+## Outcome
+
+The result is a modular codebase that follows Clean Code principles, where new screens and features can be added without touching unrelated layers.

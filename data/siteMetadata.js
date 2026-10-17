@@ -1,22 +1,34 @@
 const siteMetadata = {
-  title: 'Andershow Blog',
+  title: 'Anderson Eleutério',
+  // Shown in the browser tab and search results for the homepage.
+  // Text that changes per language uses { 'en-US': ..., 'pt-BR': ... } (see lib/locales.js)
+  tagline: {
+    'en-US': 'Mobile & Forward Deployed Engineer',
+    'pt-BR': 'Engenheiro Mobile e Forward Deployed Engineer',
+  },
   author: 'Anderson Eleutério',
   headerTitle: 'Andershow',
-  description:
-    'Seja protagonista no desenvolvimento front-end. Aprenda as habilidades essenciais de um desenvolvedor e transforme suas ideias em interfaces visuais atraentes e funcionais.',
-  language: 'pt-br',
+  description: {
+    'en-US':
+      'Anderson Eleutério is a mobile and forward deployed engineer building Flutter, Kotlin and Swift apps for logistics and industrial IoT. Projects, case studies and articles on mobile development and software architecture.',
+    'pt-BR':
+      'Anderson Eleutério é engenheiro mobile e forward deployed engineer, e desenvolve apps em Flutter, Kotlin e Swift para logística e IoT industrial. Projetos, estudos de caso e artigos sobre desenvolvimento mobile e arquitetura de software.',
+  },
   theme: 'system', // system, dark or light
-  siteUrl: 'https://anderson-andre.netlify.app/',
+  siteUrl: 'https://anderson-andre.netlify.app',
   siteRepo: 'https://github.com/Anderson-Andre-P',
   siteLogo: '/static/images/logo.png',
-  image: '/static/images/profile_pic.png',
+  image: '/static/images/profile-photo.jpg',
+  // PDFs in public/static/files/. The download button only shows up when the file exists;
+  // a locale without its own resume (null) uses the English one.
+  resume: {
+    'en-US': '/static/files/andershow_master_resume.pdf',
+    'pt-BR': null,
+  },
   socialBanner: '/static/images/banner-card.png',
   email: 'eleu.ander@gmail.com',
   github: 'https://github.com/Anderson-Andre-P',
-  facebook: 'https://facebook.com',
-  youtube: 'https://youtube.com',
   linkedin: 'https://www.linkedin.com/in/anderson-andre-pereira/',
-  locale: 'pt-BR',
   analytics: {
     // If you want to use an analytics provider you have to add it to the
     // content security policy in the `next.config.js` file.
@@ -26,11 +38,6 @@ const siteMetadata = {
     umamiWebsiteId: '', // e.g. 123e4567-e89b-12d3-a456-426614174000
     googleAnalyticsId: '', // e.g. UA-000000-2 or G-XXXXXXX
     posthogAnalyticsId: '', // posthog.init e.g. phc_5yXvArzvRdqtZIsHkEm3Fkkhm3d0bEYUXCaFISzqPSQ
-  },
-  newsletter: {
-    // supports mailchimp, buttondown, convertkit, klaviyo, revue, emailoctopus
-    // Please add your .env file and modify it according to your selection
-    provider: 'buttondown',
   },
   comment: {
     // If you want to use a commenting system other than giscus you have to add it to the

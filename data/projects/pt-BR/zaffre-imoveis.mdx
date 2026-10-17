@@ -1,0 +1,58 @@
+---
+year: 2023
+type: Projeto pessoal
+stack: ['Flutter', 'MVVM', 'MobX', 'GetIt', 'Firebase Cloud Messaging']
+---
+
+## Visão geral
+
+O Zaffre Imóveis é um app imobiliário para encontrar e gerenciar imóveis. Foi construído para praticar uma estrutura escalável em um problema real: ajudar as pessoas a procurar um lugar para morar e acompanhar os que elas gostaram.
+
+## O que o app faz
+
+- **Onboarding** que apresenta o app.
+- **Login, cadastro e recuperação de senha**, todos com validação dos campos.
+- **Busca de imóveis com filtros.**
+- **Publicação de anúncios** com a localização do imóvel.
+- **Favoritos** para salvar imóveis e ver depois.
+- **Página de perfil.**
+- **Notificações push** com Firebase Cloud Messaging.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/zaffre-imoveis/screens/onboarding.webp',
+      alt: 'Onboarding',
+      width: 540,
+      height: 1028,
+    },
+    {
+      src: '/static/images/projects/zaffre-imoveis/screens/sign-in.webp',
+      alt: 'Login',
+      width: 540,
+      height: 1028,
+    },
+    {
+      src: '/static/images/projects/zaffre-imoveis/screens/home.webp',
+      alt: 'Início',
+      width: 540,
+      height: 1172,
+    },
+    {
+      src: '/static/images/projects/zaffre-imoveis/screens/home-dark.webp',
+      alt: 'Início, tema escuro',
+      width: 540,
+      height: 1172,
+    },
+  ]}
+/>
+
+## Decisões técnicas
+
+- **Arquitetura MVVM** seguindo práticas de Clean Code e Clean Architecture, para que o projeto possa crescer sem misturar as telas com as regras de negócio.
+- **MobX** para estado reativo, gerado com **mobx_codegen** e **build_runner**.
+- **GetIt** para injeção de dependência.
+- **Firebase Cloud Messaging** com **overlay_support** para mostrar notificações com o app aberto.
+- **mask_text_input_formatter** e **email_validator** para máscaras e validação dos formulários.
+- **flutter_staggered_grid_view**, **carousel_slider** e **animations** para os layouts dos anúncios e as transições.
+- Temas claro e semiescuro.

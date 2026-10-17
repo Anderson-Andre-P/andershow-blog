@@ -1,0 +1,54 @@
+---
+year: 2023
+type: Projeto pessoal
+stack: ['Flutter', 'Provider', 'SharedPreferences', 'Firebase Crashlytics', 'Firebase Analytics']
+---
+
+## Visão geral
+
+O IMC Flutter é uma calculadora de Índice de Massa Corporal (IMC). Você informa peso e altura e recebe o IMC em segundos, junto com o que ele significa para a sua saúde e o peso ideal para o seu corpo.
+
+## O que o app faz
+
+- **Cálculo rápido do IMC** a partir do peso e da altura.
+- **Interpretação do resultado:** mostra em qual faixa de peso o IMC se encaixa e o que isso significa.
+- **Peso ideal** com base no resultado.
+- **Configurações:** tema claro ou escuro e unidades de medida.
+- **Histórico** da evolução do IMC ao longo do tempo.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/imc-flutter/screens/splash.webp',
+      alt: 'Tela de abertura',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/imc-flutter/screens/home.webp',
+      alt: 'Início',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/imc-flutter/screens/result.webp',
+      alt: 'Resultado',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/imc-flutter/screens/settings.webp',
+      alt: 'Configurações, tema claro',
+      width: 540,
+      height: 1170,
+    },
+  ]}
+/>
+
+## Decisões técnicas
+
+- **Provider** para gerenciamento de estado, incluindo as preferências de tema e unidade.
+- **SharedPreferences** para salvar as configurações e o histórico no aparelho.
+- **Firebase Crashlytics e Analytics** para capturar falhas e entender o uso, como em um app de produção.
+- **share_plus**, **url_launcher** e **launch_review** para compartilhar resultados e pedir avaliação na loja.
+- **icons_launcher** para gerar os ícones do app para cada plataforma.

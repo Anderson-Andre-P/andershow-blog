@@ -7,22 +7,18 @@ import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import Comments from '@/components/comments'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
-
-const editUrl = (fileName) => `${siteMetadata.siteRepo}/blob/master/data/blog/${fileName}`
-const discussUrl = (slug) =>
-  `https://mobile.twitter.com/search?q=${encodeURIComponent(
-    `${siteMetadata.siteUrl}/blog/${slug}`
-  )}`
-
-const postDateTemplate = { year: 'numeric', month: 'long', day: 'numeric' }
+import PrevNextNav from '@/components/PrevNextNav'
+import { localePath, useLocale, useT } from '@/lib/i18n'
 
 export default function PostLayout({ frontMatter, authorDetails, next, prev, children }) {
-  const { slug, fileName, date, title, images, tags } = frontMatter
+  const t = useT()
+  const locale = useLocale()
+  const { slug, date, title, tags, readingMinutes } = frontMatter
 
   return (
     <SectionContainer>
       <BlogSEO
-        url={`${siteMetadata.siteUrl}/blog/${slug}`}
+        url={`${siteMetadata.siteUrl}${localePath(`/blog/${slug}`, locale)}`}
         authorDetails={authorDetails}
         {...frontMatter}
       />
@@ -31,11 +27,11 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
         <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
           <header className="pt-6 xl:pb-6">
             <div className="space-y-1 text-center">
-              <dl>
-                <dt className="sr-only">Published in</dt>
-                <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
+              <dl className="flex justify-center gap-4 text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
+                <dt className="sr-only">{t.common.publishedOn}</dt>
+                <dd>
                   <time dateTime={date}>
-                    {new Date(date).toLocaleDateString('en-US', {
+                    {new Date(date).toLocaleDateString(locale, {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',
@@ -43,6 +39,12 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                     })}
                   </time>
                 </dd>
+                {readingMinutes && (
+                  <>
+                    <dt className="sr-only">{t.common.readingTime}</dt>
+                    <dd>{t.common.minRead(readingMinutes)}</dd>
+                  </>
+                )}
               </dl>
 
               <div>
@@ -77,7 +79,7 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                           {author.github && (
                             <Link
                               href={author.github}
-                              className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                              className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
                             >
                               {author.github.replace('https://github.com/', '@')}
                             </Link>
@@ -91,56 +93,39 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
             </dl>
             <div className="divide-y divide-gray-200 dark:divide-gray-700 xl:col-span-3 xl:row-span-2 xl:pb-0">
               <div className="prose max-w-none pb-8 pt-10 dark:prose-dark">{children}</div>
-              {/* <div className="pb-6 pt-6 text-sm text-gray-700 dark:text-gray-300">
-                <Link href={editUrl(fileName)}>{'Ver no GitHub'}</Link>
-              </div> */}
+              {/* prev = older post, next = newer post (posts are sorted newest first) */}
+              <div className="py-8">
+                <PrevNextNav
+                  prev={prev && { href: `/blog/${prev.slug}`, title: prev.title }}
+                  next={next && { href: `/blog/${next.slug}`, title: next.title }}
+                  prevLabel={t.blog.older}
+                  nextLabel={t.blog.newer}
+                  ariaLabel={t.blog.more}
+                />
+              </div>
               <Comments frontMatter={frontMatter} />
             </div>
             <footer>
               <div className="divide-gray-200 text-sm font-medium leading-5 dark:divide-gray-700 xl:col-start-1 xl:row-start-2 xl:divide-y">
                 {tags && (
                   <div className="py-4 xl:py-8">
-                    <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Tags
+                    <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                      {t.blog.tags}
                     </h2>
-                    <div className="flex flex-wrap">
+                    <div className="mt-2 flex flex-wrap">
                       {tags.map((tag) => (
                         <Tag key={tag} text={tag} />
                       ))}
                     </div>
                   </div>
                 )}
-                {(next || prev) && (
-                  <div className="flex justify-between py-4 xl:block xl:space-y-8 xl:py-8">
-                    {prev && (
-                      <div>
-                        <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Last articles
-                        </h2>
-                        <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/blog/${prev.slug}`}>{prev.title}</Link>
-                        </div>
-                      </div>
-                    )}
-                    {next && (
-                      <div>
-                        <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Next article
-                        </h2>
-                        <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/blog/${next.slug}`}>{next.title}</Link>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
               <div className="pt-4 xl:pt-8">
                 <Link
                   href="/blog"
-                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                  className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
                 >
-                  &larr; Return
+                  &larr; {t.blog.backToBlog}
                 </Link>
               </div>
             </footer>

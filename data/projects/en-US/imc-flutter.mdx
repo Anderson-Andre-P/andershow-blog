@@ -1,0 +1,54 @@
+---
+year: 2023
+type: Personal project
+stack: ['Flutter', 'Provider', 'SharedPreferences', 'Firebase Crashlytics', 'Firebase Analytics']
+---
+
+## Overview
+
+IMC Flutter is a Body Mass Index (BMI) calculator. You enter your weight and height and get your BMI in seconds, along with what it means for your health and the ideal weight for your body.
+
+## What the app does
+
+- **Quick BMI calculation** from weight and height.
+- **Result interpretation:** shows which weight range the BMI falls into and what it means.
+- **Ideal weight** based on the result.
+- **Settings:** light or dark theme and units of measurement.
+- **History** of BMI changes over time.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/imc-flutter/screens/splash.webp',
+      alt: 'Splash screen',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/imc-flutter/screens/home.webp',
+      alt: 'Home',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/imc-flutter/screens/result.webp',
+      alt: 'Result',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/imc-flutter/screens/settings.webp',
+      alt: 'Settings, light theme',
+      width: 540,
+      height: 1170,
+    },
+  ]}
+/>
+
+## Technical decisions
+
+- **Provider** for state management, including the theme and unit preferences.
+- **SharedPreferences** to persist settings and history on the device.
+- **Firebase Crashlytics and Analytics** to catch crashes and understand usage, as you would in a production app.
+- **share_plus**, **url_launcher** and **launch_review** for sharing results and asking for a store review.
+- **icons_launcher** to generate the app icons for each platform.

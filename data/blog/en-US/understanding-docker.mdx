@@ -1,0 +1,29 @@
+---
+title: Understanding Docker - the container platform that changed how apps are built
+date: '2023-02-20'
+tags: ['Docker', 'Virtualization']
+draft: false
+summary: 'Docker is an open platform for developing, shipping and running applications. It lets you separate your applications from your infrastructure so you can deliver software quickly.'
+---
+
+# Introduction
+
+Docker is a container platform that lets you package and run applications in isolated environments. Each Docker container is a complete, portable unit of software that includes every dependency the application needs to run, such as libraries, frameworks and other tools.
+
+Creating containers with Docker is not the same as creating a virtual machine on your computer. One of the differences is that Docker uses processing power on demand, while with a virtual machine you have to allocate up front how much you want to use. This is an advantage for Docker: if you create a virtual machine with 30 GB of memory but only use 20 GB, the other 10 GB sit "left over" and unused.
+
+Docker containers are created from images, which are like preconfigured container templates with all the files and settings needed to run an application in a Docker environment. Images are stored in a registry, such as Docker Hub, and can be shared and reused by other developers. You can see an example of running a Python image in a container [here](https://docs.docker.com/language/python/run-containers/).
+
+One of Docker's main advantages is that it makes developing and deploying applications much simpler and more efficient. With Docker, developers can build applications in any local environment and then package them into Docker containers that run in any compatible Docker environment. This means applications can easily move between development, test and production environments without changing the code or reconfiguring the environments.
+
+Docker also helps make sure applications behave the same way in every environment, regardless of differences in configuration or dependencies. This is possible because each Docker container is isolated from other containers and from the host operating system, so the application only has access to the dependencies and resources it needs.
+
+Docker is widely used in the software industry to build, deploy and manage applications in distributed environments. It works with many programming languages, operating systems and cloud platforms, which makes it a popular choice for development and operations teams.
+
+### References
+
+- [Docker official documentation](https://www.docker.com/)
+- [O que é Docker e como utilizar a plataforma? (in Portuguese)](https://blog.xpeducacao.com.br/o-que-e-docker/)
+- [Container docker: o que é e quais são as vantagens de usar? (in Portuguese)](https://www.meupositivo.com.br/panoramapositivo/container-docker/)
+- [Docker: Do Zero a Marinheiro (in Portuguese)](https://medium.com/data-hackers/docker-do-zero-a-marinheiro-adf4d9087f76)
+- [Docker explained in simple terms!!](https://blog.devgenius.io/docker-explained-in-simple-terms-178748e28e99)

@@ -1,0 +1,46 @@
+---
+year: 2023
+type: Projeto pessoal
+stack: ['Flutter', 'Validação de formulários']
+---
+
+## Visão geral
+
+Um app Flutter focado nos primeiros minutos da experiência do usuário: um onboarding que apresenta o produto, seguido de uma tela de login com validação clara. Esses dois fluxos aparecem em quase todo app, então vale a pena praticá-los separadamente.
+
+## O que o app faz
+
+- **Apresentação de onboarding** com o app e suas principais funcionalidades.
+- **Navegação para o login** ao final do onboarding.
+- **Validação dos campos** de e-mail e senha:
+  - formato de e-mail válido;
+  - requisitos de senha;
+  - mensagens de erro claras indicando o que precisa ser corrigido.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/onboarding-and-sign-in/screens/onboarding.webp',
+      alt: 'Onboarding',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/onboarding-and-sign-in/screens/sign-in.webp',
+      alt: 'Login',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/onboarding-and-sign-in/screens/sign-in-validation.webp',
+      alt: 'Login com validação',
+      width: 540,
+      height: 1170,
+    },
+  ]}
+/>
+
+## Decisões técnicas
+
+- Feito só com **Flutter**, sem dependências extras, para manter o foco no layout, na navegação e na lógica de validação.
+- Escrito seguindo os princípios de Clean Code, com um design amigável como objetivo desde o início.

@@ -28,7 +28,7 @@ module.exports = {
         sans: ['InterVariable', ...defaultTheme.fontFamily.sans],
       },
       colors: {
-        primary: colors.sky,
+        primary: colors.blue, // primary-600 = #2563EB, the site's accent color
         gray: colors.neutral,
       },
       typography: (theme) => ({
@@ -36,9 +36,9 @@ module.exports = {
           css: {
             color: theme('colors.gray.700'),
             a: {
-              color: theme('colors.primary.500'),
+              color: theme('colors.primary.600'),
               '&:hover': {
-                color: `${theme('colors.primary.600')} !important`,
+                color: `${theme('colors.primary.700')} !important`,
               },
               code: { color: theme('colors.primary.400') },
             },

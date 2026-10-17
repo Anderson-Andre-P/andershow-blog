@@ -1,0 +1,54 @@
+---
+year: 2023
+type: Projeto pessoal
+stack: ['Flutter', 'BLoC', 'mobile_scanner', 'qr_flutter', 'permission_handler']
+---
+
+## Visão geral
+
+Um app que lê e gera QR codes. Ele lê códigos em etiquetas, panfletos e sites com a câmera, e cria códigos personalizados para compartilhar links, textos, contatos, localizações ou acesso ao Wi-Fi.
+
+## O que o app faz
+
+- **Leitura rápida de QR codes** com a câmera do aparelho, para URLs, contatos, eventos, localizações, Wi-Fi e mais.
+- **Geração de QR codes personalizados** para links, textos, contatos, localizações e Wi-Fi.
+- **Compartilhamento** dos códigos gerados direto do app.
+- **Salvamento** dos códigos na galeria.
+- **Temas claro e escuro**, sem anúncios.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/qr-code-scanner/screens/home.webp',
+      alt: 'Início',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/qr-code-scanner/screens/scan.webp',
+      alt: 'Lendo um QR code',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/qr-code-scanner/screens/generated.webp',
+      alt: 'QR code gerado',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/qr-code-scanner/screens/theme.webp',
+      alt: 'Configuração de tema',
+      width: 540,
+      height: 1170,
+    },
+  ]}
+/>
+
+## Decisões técnicas
+
+- **BLoC** (flutter_bloc) para gerenciamento de estado, mantendo a lógica da câmera e da geração fora dos widgets.
+- **mobile_scanner** para a leitura com a câmera e **qr_flutter** para a geração.
+- **permission_handler** para pedir acesso à câmera e ao armazenamento só quando necessário.
+- **image_picker**, **image** e **image_gallery_saver** para trabalhar com imagens e salvar os códigos gerados na galeria.
+- **share_plus** para o compartilhamento.

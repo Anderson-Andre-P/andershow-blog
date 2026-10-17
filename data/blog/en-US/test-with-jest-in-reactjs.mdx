@@ -1,0 +1,186 @@
+---
+title: Testing ReactJS with Jest
+date: '2023-07-02'
+tags: ['React', 'Testing', 'Front-end']
+draft: false
+summary: 'In this post, we look at using Jest to test ReactJS apps: installation, example tests for basic components, components with state and props, and asynchronous calls. Jest simplifies testing and helps make sure the code works correctly.'
+---
+
+# Introduction
+
+Tests play a fundamental role in software development, making sure code works correctly and behaves as expected. In ReactJS, Jest is one of the most popular testing tools. With its intuitive syntax and powerful features, Jest simplifies testing and lets developers write robust, reliable test cases for their React applications. In this article, we cover the basics of testing ReactJS with Jest and how to start using it to test your components.
+
+## Installation and setup
+
+First, you need to install Jest in your React project. Open the terminal, go to your project's directory and run the following command:
+
+```bash
+npm install --save-dev jest
+```
+
+After installation, Jest is ready to use. By default, Jest looks for test files ending in `.test.js` or `.spec.js` inside the src directory, so follow this convention when creating your test files.
+
+# Writing unit tests
+
+Unit tests check the behavior of individual components, functions or classes in isolation. Let's start with a simple test for a basic React component. Consider the following component called Button:
+
+```jsx
+// src/components/Button.js
+import React from 'react'
+
+const Button = ({ onClick, text }) => <button onClick={onClick}>{text}</button>
+
+export default Button
+```
+
+Now, create a test file for the Button component called `Button.test.js` inside the `src/components` directory, with the following code:
+
+```jsx
+// src/components/Button.test.js
+import React from 'react'
+import { render, fireEvent } from '@testing-library/react'
+import Button from './Button'
+
+test('renders button with correct text', () => {
+  const handleClick = jest.fn()
+  const { getByText } = render(<Button onClick={handleClick} text="Click me" />)
+
+  const button = getByText('Click me')
+  fireEvent.click(button)
+
+  expect(handleClick).toHaveBeenCalledTimes(1)
+})
+```
+
+## How it works
+
+In this test, we use the `render` and `fireEvent` functions from `@testing-library/react` to render the Button component and interact with it. We simulate a click on the button and check that the `handleClick` function was called.
+
+# Running the tests
+
+Now that we've written our first test, let's run it. Open the terminal and run the following command at the root of your project:
+
+```bash
+npx jest
+```
+
+Jest runs every test in the `src` directory that matches the naming convention above. You should see the output in the terminal, showing whether each test passed or failed.
+
+# Testing components with state and props
+
+Many React components have internal state and receive props as input. Jest offers several useful tools and techniques for testing them. Here's an example test for a `Counter` component with internal state to control the counter value:
+
+```jsx
+// src/components/Counter.js
+import React, { useState } from 'react'
+
+const Counter = () => {
+  const [count, setCount] = useState(0)
+
+  const increment = () => {
+    setCount(count + 1)
+  }
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={increment}>Increment</button>
+    </div>
+  )
+}
+
+export default Counter
+```
+
+Now, let's write a test that checks the counter is incremented when the button is clicked:
+
+```jsx
+// src/components/Counter.test.js
+import React from 'react'
+import { render, fireEvent } from '@testing-library/react'
+import Counter from './Counter'
+
+test('increments counter when button is clicked', () => {
+  const { getByText } = render(<Counter />)
+
+  const incrementButton = getByText('Increment')
+  fireEvent.click(incrementButton)
+
+  const countText = getByText('Count: 1')
+  expect(countText).toBeInTheDocument()
+})
+```
+
+## How it works
+
+In this test, we use `fireEvent.click` to simulate a click on the increment button. Then we check that the text "Count: 1" is rendered on the screen.
+
+# Testing asynchronous requests
+
+React applications often make asynchronous calls to APIs or external services. Jest provides tools to test these calls easily and reliably. Consider a `UserList` component that fetches a list of users from an API:
+
+```jsx
+// src/components/UserList.js
+import React, { useState, useEffect } from 'react'
+
+const UserList = () => {
+  const [users, setUsers] = useState([])
+
+  useEffect(() => {
+    fetch('https://api.example.com/users')
+      .then((response) => response.json())
+      .then((data) => setUsers(data))
+  }, [])
+
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  )
+}
+
+export default UserList
+```
+
+Now, let's write a test that checks the user list is rendered after the asynchronous call:
+
+```jsx
+// src/components/UserList.test.js
+import React from 'react'
+import { render, waitFor } from '@testing-library/react'
+import UserList from './UserList'
+
+test('renders user list after fetching data', async () => {
+  const { getByText } = render(<UserList />)
+
+  await waitFor(() => {
+    expect(getByText('John')).toBeInTheDocument()
+    expect(getByText('Jane')).toBeInTheDocument()
+    expect(getByText('Bob')).toBeInTheDocument()
+  })
+})
+```
+
+## How it works
+
+In this test, we use the `waitFor` function from `@testing-library/react` to wait for the asynchronous call to resolve before checking that the users are on the screen.
+
+# Other testing packages for React
+
+Although Jest is the most popular option for testing in the React ecosystem, other tools may be useful depending on your project's needs. Let's briefly look at some of them:
+
+1. **React Testing Library:** besides providing utilities to render components and interact with them, React Testing Library (RTL) focuses on testing a component's behavior based on how users actually use it. RTL offers a friendly API for writing tests that resemble the real user experience.
+
+2. **Enzyme:** Enzyme is a popular testing library with powerful utilities to manipulate, query and simulate interactions in React components. It offers an intuitive API for testing components, including shallow and mount rendering, finding elements and simulating events.
+
+3. **Cypress:** Cypress is an end-to-end testing tool for writing tests that simulate real user interactions with React apps. You write tests in JavaScript and run them in a real browser, with advanced features like recording and replaying tests, interactive debugging and observability.
+
+4. **Testing Library for React Native:** if you build React Native apps, Testing Library for React Native takes an approach similar to React Testing Library, with rendering and interaction utilities specific to React Native.
+
+Each of these tools has its strengths and fits different scenarios. It's worth exploring them and choosing the one that best fits your testing needs and preferences.
+
+# Conclusion
+
+In this article, we saw how to start writing tests with Jest in ReactJS: installing Jest in your project, writing unit tests for components, and handling internal state, props and asynchronous calls. We also mentioned other testing packages, such as React Testing Library, Enzyme, Cypress and Testing Library for React Native. Jest offers a wide range of features for testing in the React ecosystem, so you can write reliable, effective tests that protect the quality of your code. Start using Jest in your React projects and enjoy a simpler, more reliable testing process.

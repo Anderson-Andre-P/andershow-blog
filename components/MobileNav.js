@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import Link from './Link'
 import headerNavLinks from '@/data/headerNavLinks'
-
-import useTranslation from 'next-translate/useTranslation'
+import { useT } from '@/lib/i18n'
 
 const MobileNav = () => {
-  const { t } = useTranslation()
+  const t = useT()
   const [navShow, setNavShow] = useState(false)
 
   const onToggleNav = () => {
@@ -25,7 +24,7 @@ const MobileNav = () => {
       <button
         type="button"
         className="ml-1 mr-1 h-8 w-8 rounded py-1"
-        aria-label="Toggle Menu"
+        aria-label={t.common.toggleMenu}
         onClick={onToggleNav}
       >
         <svg
@@ -50,7 +49,7 @@ const MobileNav = () => {
           <button
             type="button"
             className="mr-5 mt-11 h-8 w-8 rounded"
-            aria-label="Toggle Menu"
+            aria-label={t.common.toggleMenu}
             onClick={onToggleNav}
           >
             <svg
@@ -69,14 +68,13 @@ const MobileNav = () => {
         </div>
         <nav className="fixed mt-8 h-full">
           {headerNavLinks.map((link) => (
-            <div key={link.title} className="px-12 py-4">
+            <div key={link.key} className="px-12 py-4">
               <Link
                 href={link.href}
                 className="text-2xl font-bold tracking-widest text-gray-900 dark:text-gray-100"
                 onClick={onToggleNav}
               >
-                {link.title}
-                {/* {t(`headerNavLinks:${link.title.toLowerCase()}`)} */}
+                {t.nav[link.key]}
               </Link>
             </div>
           ))}
