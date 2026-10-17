@@ -14,7 +14,11 @@ const isPublished = (file) => {
   return !data.draft && !data.canonicalUrl
 }
 
-const slugOf = (file) => file.split('/').pop().replace(/\.mdx?$/, '')
+const slugOf = (file) =>
+  file
+    .split('/')
+    .pop()
+    .replace(/\.mdx?$/, '')
 
 ;(async () => {
   const prettierConfig = await prettier.resolveConfig('./.prettierrc.js')
