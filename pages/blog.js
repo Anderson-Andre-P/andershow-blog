@@ -24,6 +24,7 @@ export default function Blog({ posts, initialDisplayPosts, pagination }) {
         posts={posts}
         initialDisplayPosts={initialDisplayPosts}
         pagination={pagination}
+        showTopicFilter
         title="All posts"
       />
     </>
