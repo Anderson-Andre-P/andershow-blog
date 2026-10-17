@@ -5,6 +5,7 @@ import 'katex/dist/katex.css'
 import '@fontsource/inter/variable-full.css'
 
 import { ThemeProvider } from 'next-themes'
+import { MotionConfig } from 'framer-motion'
 import Head from 'next/head'
 
 import siteMetadata from '@/data/siteMetadata'
@@ -23,9 +24,12 @@ export default function App({ Component, pageProps }) {
       </Head>
       {isDevelopment && isSocket && <ClientReload />}
       <Analytics />
-      <LayoutWrapper>
-        <Component {...pageProps} />
-      </LayoutWrapper>
+      {/* Skip entrance animations for people who ask their OS to reduce motion */}
+      <MotionConfig reducedMotion="user">
+        <LayoutWrapper>
+          <Component {...pageProps} />
+        </LayoutWrapper>
+      </MotionConfig>
     </ThemeProvider>
   )
 }
