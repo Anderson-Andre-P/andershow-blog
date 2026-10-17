@@ -1,6 +1,7 @@
 import Link from '@/components/Link'
 import Image from '@/components/Image'
 import { PageSEO } from '@/components/SEO'
+import PrevNextNav from '@/components/PrevNextNav'
 import siteMetadata from '@/data/siteMetadata'
 
 const LINK_LABELS = {
@@ -10,7 +11,7 @@ const LINK_LABELS = {
   demo: 'Open live demo',
 }
 
-export default function ProjectLayout({ project, frontMatter = {}, next, children }) {
+export default function ProjectLayout({ project, frontMatter = {}, prev, next, children }) {
   const { title, description, imgSrc, links = {} } = project
   const { year, type, stack = [] } = frontMatter
   const availableLinks = Object.keys(LINK_LABELS).filter((key) => links[key])
@@ -94,17 +95,15 @@ export default function ProjectLayout({ project, frontMatter = {}, next, childre
           </div>
         </div>
 
-        {next && (
-          <nav className="mt-16 border-t border-zinc-200 pt-8 dark:border-zinc-800">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Next project</p>
-            <Link
-              href={`/projects/${next.slug}`}
-              className="mt-1 inline-block text-2xl font-bold tracking-tight text-zinc-800 hover:text-primary-600 dark:text-zinc-100 dark:hover:text-primary-400"
-            >
-              {next.title}
-            </Link>
-          </nav>
-        )}
+        <div className="mt-16 border-t border-zinc-200 pt-8 dark:border-zinc-800">
+          <PrevNextNav
+            prev={prev}
+            next={next}
+            prevLabel="Previous project"
+            nextLabel="Next project"
+            ariaLabel="More projects"
+          />
+        </div>
       </article>
     </>
   )

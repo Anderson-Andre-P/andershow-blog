@@ -7,6 +7,7 @@ import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import Comments from '@/components/comments'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
+import PrevNextNav from '@/components/PrevNextNav'
 
 const editUrl = (fileName) => `${siteMetadata.siteRepo}/blob/main/data/blog/${fileName}`
 const postDateTemplate = { year: 'numeric', month: 'long', day: 'numeric' }
@@ -123,6 +124,16 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
             </dl>
             <div className="divide-y divide-gray-200 dark:divide-gray-700 xl:col-span-3 xl:row-span-2 xl:pb-0">
               <div className="prose max-w-none pb-8 pt-10 dark:prose-dark">{children}</div>
+              {/* prev = older post, next = newer post (posts are sorted newest first) */}
+              <div className="py-8">
+                <PrevNextNav
+                  prev={prev && { href: `/blog/${prev.slug}`, title: prev.title }}
+                  next={next && { href: `/blog/${next.slug}`, title: next.title }}
+                  prevLabel="Older post"
+                  nextLabel="Newer post"
+                  ariaLabel="More posts"
+                />
+              </div>
               {/* <div className="pb-6 pt-6 text-sm text-gray-700 dark:text-gray-300">
                 <Link href={editUrl(fileName)}>{'View on GitHub'}</Link>
               </div> */}
@@ -143,36 +154,6 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                         <Tag key={tag} text={tag} />
                       ))}
                     </div>
-                  </div>
-                )}
-                {(next || prev) && (
-                  <div className="flex justify-between py-4 xl:block xl:space-y-8 xl:py-8">
-                    {prev && (
-                      <div>
-                        <h2
-                          lang="en"
-                          className="text-sm font-semibold text-zinc-800 dark:text-zinc-100"
-                        >
-                          Previous article
-                        </h2>
-                        <div className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400">
-                          <Link href={`/blog/${prev.slug}`}>{prev.title}</Link>
-                        </div>
-                      </div>
-                    )}
-                    {next && (
-                      <div>
-                        <h2
-                          lang="en"
-                          className="text-sm font-semibold text-zinc-800 dark:text-zinc-100"
-                        >
-                          Next article
-                        </h2>
-                        <div className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400">
-                          <Link href={`/blog/${next.slug}`}>{next.title}</Link>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

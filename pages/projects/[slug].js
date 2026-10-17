@@ -20,21 +20,24 @@ export async function getStaticProps({ params }) {
   const projects = sortProjects(projectsData)
   const index = projects.findIndex((p) => p.slug === params.slug)
   const project = projects[index]
-  const next = projects[(index + 1) % projects.length]
+  const toLink = (p) => ({ href: `/projects/${p.slug}`, title: p.title })
+  const prev = index > 0 ? toLink(projects[index - 1]) : null
+  const next = index < projects.length - 1 ? toLink(projects[index + 1]) : null
   const caseStudy = hasCaseStudy(params.slug) ? await getFileBySlug('projects', params.slug) : null
 
   return {
     props: {
       project,
-      next: next.slug !== project.slug ? { slug: next.slug, title: next.title } : null,
+      prev,
+      next,
       caseStudy,
     },
   }
 }
 
-export default function Project({ project, next, caseStudy }) {
+export default function Project({ project, prev, next, caseStudy }) {
   if (!caseStudy) {
-    return <ProjectLayout project={project} next={next} />
+    return <ProjectLayout project={project} prev={prev} next={next} />
   }
 
   return (
@@ -43,6 +46,7 @@ export default function Project({ project, next, caseStudy }) {
       mdxSource={caseStudy.mdxSource}
       frontMatter={caseStudy.frontMatter}
       project={project}
+      prev={prev}
       next={next}
     />
   )
