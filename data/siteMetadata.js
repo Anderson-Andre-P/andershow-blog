@@ -10,8 +10,8 @@ const siteMetadata = {
   siteRepo: 'https://github.com/Anderson-Andre-P',
   siteLogo: '/static/images/logo.png',
   image: '/static/images/profile_pic.png',
-  // Put the PDF at public/static/files/ — the "Download CV" button only shows up when the file exists
-  resume: '/static/files/anderson-eleuterio-cv.pdf',
+  // Put the PDF at public/static/files/ — the "Download resume" button only shows up when the file exists
+  resume: '/static/files/andershow_master_resume.pdf',
   socialBanner: '/static/images/banner-card.png',
   email: 'eleu.ander@gmail.com',
   github: 'https://github.com/Anderson-Andre-P',
