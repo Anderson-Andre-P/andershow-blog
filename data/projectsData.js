@@ -1,7 +1,8 @@
 // Each project can link to GitHub, the stores and/or a live demo:
 // links: { github, playStore, appStore, demo }
 // `slug` must match the case study file in data/projects/<slug>.mdx
-// `featured: true` projects show up on the homepage; the first one is highlighted on /projects.
+// `featured: true` projects show up on the homepage (an even number fills the 2-column grid);
+// the first one is highlighted on /projects.
 const projectsData = [
   {
     title: 'Vibraguard',
@@ -29,6 +30,7 @@ const projectsData = [
   {
     title: 'QR Code Scanner',
     slug: 'qr-code-scanner',
+    featured: true,
     description: `QR Code App is a powerful QR code reading and generating tool, developed with Flutter technology to provide an efficient and versatile experience to its users. This app allows you to easily read QR Codes on labels, flyers, websites and more, providing relevant information instantly.`,
     imgSrc: '/static/images/projects/qrcode-banner.png',
     links: { github: 'https://github.com/Anderson-Andre-P/qr_code_scanner' },
