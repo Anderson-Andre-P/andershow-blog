@@ -26,7 +26,10 @@ export async function getStaticProps() {
 export default function Home({ posts, hasResume }) {
   return (
     <>
-      <PageSEO title={siteMetadata.title} description={siteMetadata.description} />
+      <PageSEO
+        title={`${siteMetadata.title} - ${siteMetadata.tagline}`}
+        description={siteMetadata.description}
+      />
       <div className="space-y-2 pb-4 pt-6 md:space-y-5">
         <div className="flex flex-col-reverse items-start sm:flex-row">
           <div className="flex flex-col pr-8">

@@ -1,5 +1,7 @@
 const siteMetadata = {
-  title: 'Andershow Blog',
+  title: 'Anderson Eleutério',
+  // Shown in the browser tab and search results for the homepage
+  tagline: 'Mobile & Forward Deployed Engineer',
   author: 'Anderson Eleutério',
   headerTitle: 'Andershow',
   description:
