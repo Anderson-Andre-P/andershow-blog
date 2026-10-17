@@ -19,7 +19,7 @@ Most of my work has been in logistics and industrial IoT:
 - **Real-time features** with WebSockets.
 - **Native integrations:** Kotlin and Swift SDKs integrated into Flutter apps.
 - **Modernizing legacy code:** Android apps moved to Clean Architecture and BLoC.
-- **Observability:** Sentry, Graylog and Elasticsearch to understand what happens in the field. I wrote about [offline-first observability in a legacy app](/blog/implementing_offline_first_observability_in_a_legacy_mobile_project_java).
+- **Observability:** Sentry, Graylog and Elasticsearch to understand what happens in the field. I wrote about [offline-first observability in a legacy app](/blog/offline-first-observability-legacy-java-app).
 
 ## How I work
 

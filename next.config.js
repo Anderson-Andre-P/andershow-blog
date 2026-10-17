@@ -58,6 +58,22 @@ module.exports = withBundleAnalyzer({
   eslint: {
     dirs: ['pages', 'components', 'lib', 'layouts', 'scripts'],
   },
+  // Old post URLs, kept so links shared before the rename keep working
+  async redirects() {
+    return [
+      {
+        source: '/blog/implementing_offline_first_observability_in_a_legacy_mobile_project_java',
+        destination: '/blog/offline-first-observability-legacy-java-app',
+        permanent: true,
+      },
+      {
+        source: '/blog/introduction_sql',
+        destination: '/blog/introduction-to-sql',
+        permanent: true,
+      },
+      { source: '/blog/ison-27000', destination: '/blog/iso-27000', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {
