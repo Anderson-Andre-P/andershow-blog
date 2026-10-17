@@ -7,7 +7,14 @@ const Screenshots = ({ images = [] }) => (
     {images.map(({ src, alt, width, height }) => (
       <figure key={src} className="w-40 shrink-0 snap-start sm:w-48">
         <div className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
-          <NextImage src={src} alt={alt} width={width} height={height} layout="responsive" />
+          <NextImage
+            src={src}
+            alt={alt}
+            width={width}
+            height={height}
+            layout="responsive"
+            unoptimized // see components/Image.js
+          />
         </div>
         <figcaption className="mt-2 text-center text-sm text-zinc-500 dark:text-zinc-400">
           {alt}
