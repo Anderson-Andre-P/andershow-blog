@@ -1,0 +1,108 @@
+---
+title: Exploring React Hooks - State, Effects and Context in Function Components
+date: '2023-07-10'
+tags: ['React', 'Hooks', 'Front-end']
+draft: false
+summary: 'In this post, we go through practical examples of the useState, useEffect and useContext Hooks for managing state, side effects and context, respectively.'
+---
+
+# Introduction
+
+React Hooks changed how we deal with state, side effects and context in function components. In this post, we look at the main React Hooks, useState, useEffect and useContext, with practical examples of how to use them to manage these essential parts of a React application.
+
+## useState: managing state
+
+The useState Hook adds state to function components. With it, we can declare and update state variables in a simple, efficient way.
+
+Example of useState:
+
+```jsx
+import React, { useState } from 'react'
+
+function Counter() {
+  const [count, setCount] = useState(0)
+
+  const increment = () => {
+    setCount(count + 1)
+  }
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={increment}>Increment</button>
+    </div>
+  )
+}
+```
+
+In the example above, useState declares the state variable "count" with an initial value of 0. The "setCount" function updates the state. Clicking the "Increment" button calls the "increment" function, which updates "count" and reflects the change in the UI.
+
+## useEffect: managing side effects
+
+The useEffect Hook handles side effects in function components, such as asynchronous requests, event subscriptions and DOM manipulation. It runs after the component renders.
+
+Example of useEffect:
+
+```jsx
+import React, { useState, useEffect } from 'react'
+
+function DataFetching() {
+  const [data, setData] = useState([])
+
+  useEffect(() => {
+    fetch('https://api.example.com/data')
+      .then((response) => response.json())
+      .then((data) => setData(data))
+  }, [])
+
+  return (
+    <div>
+      <ul>
+        {data.map((item) => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+In the example above, useEffect fetches data from an API using the fetch function. The empty array [] passed as the second argument means the effect runs only once, after the component first mounts. When the data arrives, it is stored in the "data" state and rendered in the UI.
+
+## useContext: managing context
+
+The useContext Hook reads context in function components. It lets components at different levels of the component tree communicate without passing props down manually.
+
+Example of useContext:
+
+```jsx
+import React, { useContext } from 'react'
+
+const ThemeContext = React.createContext('light')
+
+function ThemeSwitcher() {
+  const theme = useContext(ThemeContext)
+
+  return (
+    <div>
+      <p>Current theme: {theme}</p>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <ThemeSwitcher />
+    </ThemeContext.Provider>
+  )
+}
+```
+
+In the example above, a context called "ThemeContext" is created with the default value "light". The "ThemeSwitcher" component then uses useContext to read the theme from the context. The "App" component wraps "ThemeSwitcher" in the "ThemeContext.Provider" provider and sets the theme to "dark", so "ThemeSwitcher" reads the value defined by the provider.
+
+## Conclusion
+
+React Hooks are powerful tools that make building function components simpler and more efficient. useState makes state management intuitive, useEffect handles side effects cleanly, and useContext makes it easy to share context between components. With these Hooks, you can build function components that are more reusable, readable and maintainable.
+
+In this post, we went through practical examples of useState, useEffect and useContext for managing state, side effects and context, respectively. I hope you can make the most of these tools in your React projects and improve the quality and efficiency of your code.

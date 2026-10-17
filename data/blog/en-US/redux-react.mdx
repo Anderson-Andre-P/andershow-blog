@@ -1,0 +1,153 @@
+---
+title: Introduction to Redux in React
+date: '2023-07-11'
+tags: ['React', 'Redux', 'Front-end']
+draft: false
+summary: 'In this article, we take an introductory look at Redux in React development.'
+---
+
+# Introduction
+
+React is a popular JavaScript library for building interactive user interfaces. As React applications grow in size and complexity, managing application state can become a challenge. That's where Redux comes in: a state management library that helps simplify and organize state logic in React applications.
+
+## What is Redux?
+
+Redux is a JavaScript library for managing application state in a predictable, consistent way. It follows the Flux design pattern and is widely used in React applications, although it also works with other JavaScript frameworks.
+
+Redux works with a single, centralized state object called the **store**, which holds all the information relevant to the application. Any change to the state goes through actions, which are plain objects describing what happened. Actions are sent to **reducers**, pure functions that update the state based on the actions they receive.
+
+## Key Redux concepts
+
+There are a few key concepts to understand when working with Redux:
+
+1. **Actions**: objects that describe changes to the application state. They have a type that identifies the action and can carry other relevant data.
+2. **Reducers**: pure functions that take the current state and an action, and return a new, updated state. Reducers are responsible for updating the application state based on the actions they receive.
+3. **Store**: the object that holds the application state. It is created with Redux's `createStore()` function and is responsible for keeping the state up to date and notifying components about changes.
+4. **Provider**: a component from the `react-redux` package that makes the store available to every component in the React application.
+5. **Connect**: a function from the `react-redux` package that connects React components to Redux, letting them read the state and dispatch actions.
+
+## A basic example of Redux in React
+
+Here's a basic example of how to use Redux in a React application:
+
+1. **Install the packages**: run the following command in the terminal to install the dependencies:
+
+```shell
+npm install redux react-redux
+```
+
+2. **Define the actions**: create an `actions.js` file to define the application's actions:
+
+```jsx
+// actions.js
+export const incrementCounter = () => ({
+  type: 'INCREMENT_COUNTER',
+})
+
+export const decrementCounter = () => ({
+  type: 'DECREMENT_COUNTER',
+})
+```
+
+3. **Create the reducer**: create a `reducer.js` file to define the application's reducer:
+
+```jsx
+// reducer.js
+const initialState = {
+  counter: 0,
+}
+
+const reducer = (state = initialState, action) => {
+  switch (action.type) {
+    case 'INCREMENT_COUNTER':
+      return {
+        ...state,
+        counter: state.counter + 1,
+      }
+    case 'DECREMENT_COUNTER':
+      return {
+        ...state,
+        counter: state.counter - 1,
+      }
+    default:
+      return state
+  }
+}
+
+export default reducer
+```
+
+4. **Create the store**: create a `store.js` file to create the application's store:
+
+```jsx
+// store.js
+import { createStore } from 'redux'
+import reducer from './reducer'
+
+const store = createStore(reducer)
+
+export default store
+```
+
+5. **Set up the Provider**: in your application's root component, wrap the components with the Redux Provider so they can read the state and dispatch actions:
+
+```jsx
+// index.js
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { Provider } from 'react-redux'
+import store from './store'
+import App from './App'
+
+ReactDOM.render(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  document.getElementById('root')
+)
+```
+
+6. **Connect components**: in the component that needs to read the state or dispatch actions, use the `connect` function to connect it to Redux:
+
+```jsx
+// Counter.js
+import React from 'react'
+import { connect } from 'react-redux'
+import { incrementCounter, decrementCounter } from './actions'
+
+const Counter = ({ counter, increment, decrement }) => {
+  return (
+    <div>
+      <h1>Counter: {counter}</h1>
+      <button onClick={increment}>Increment</button>
+      <button onClick={decrement}>Decrement</button>
+    </div>
+  )
+}
+
+const mapStateToProps = (state) => ({
+  counter: state.counter,
+})
+
+const mapDispatchToProps = {
+  increment: incrementCounter,
+  decrement: decrementCounter,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Counter)
+```
+
+In this example, the `Counter` component is connected to Redux with the `connect` function. It receives the counter state from Redux through `mapStateToProps`, and the increment and decrement actions are dispatched through `mapDispatchToProps`.
+
+## Conclusion
+
+I hope this introduction to Redux in React gave you an overview of this powerful state management library. With Redux, you can build React applications that are more scalable and easier to maintain.
+
+To go deeper into Redux, I recommend the official documentation and exploring more projects and tutorials.
+
+Feel free to leave your questions and comments below. I'm here to help!
+
+_References:_
+
+- [Redux](https://redux.js.org/)
+- [React Redux Documentation](https://react-redux.js.org/introduction/getting-started)
