@@ -1,6 +1,6 @@
 ---
 name: Anderson Eleutério
-avatar: /static/images/profile_pic.png
+avatar: /static/images/profile-photo.jpg
 occupation: Mobile & Forward Deployed Engineer
 company: DDMX
 email: eleu.ander@gmail.com

@@ -22,7 +22,7 @@ export default function AuthorLayout({ children, frontMatter, hasResume }) {
           <div className="w-32 overflow-hidden rounded-xl md:w-full md:max-w-[220px]">
             <Image
               src={avatar}
-              alt={`Photo of ${name}`}
+              alt={`${name} profile picture`}
               width="440"
               height="440"
               className="object-cover"

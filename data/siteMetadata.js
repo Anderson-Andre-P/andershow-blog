@@ -9,7 +9,7 @@ const siteMetadata = {
   siteUrl: 'https://anderson-andre.netlify.app',
   siteRepo: 'https://github.com/Anderson-Andre-P',
   siteLogo: '/static/images/logo.png',
-  image: '/static/images/profile_pic.png',
+  image: '/static/images/profile-photo.jpg',
   // Put the PDF at public/static/files/ — the "Download resume" button only shows up when the file exists
   resume: '/static/files/andershow_master_resume.pdf',
   socialBanner: '/static/images/banner-card.png',
