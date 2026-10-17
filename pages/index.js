@@ -1,9 +1,8 @@
 import Link from '@/components/Link'
 import { PageSEO } from '@/components/SEO'
-import Tag from '@/components/Tag'
+import PostRow from '@/components/blog/PostRow'
 import siteMetadata from '@/data/siteMetadata'
 import { getAllFilesFrontMatter } from '@/lib/mdx'
-import formatDate from '@/lib/utils/formatDate'
 import ProjectGrid from '@/components/ProjectGrid'
 import projectsData from '@/data/projectsData'
 import ExperienceCard from '@/components/ExperienceCard'
@@ -165,30 +164,10 @@ export default function Home({ posts, hasResume }) {
             </Link>
           )}
         </div>
-        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-          {posts.slice(0, MAX_DISPLAY).map(({ slug, date, title, summary, tags }) => (
-            <li key={slug} className="py-8">
-              <article className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
-                <dl>
-                  <dt className="sr-only">{t.common.publishedOn}</dt>
-                  <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                    <time dateTime={date}>{formatDate(date, locale)}</time>
-                  </dd>
-                </dl>
-                <div className="space-y-3 xl:col-span-3">
-                  <h3 className="text-2xl font-bold leading-8 tracking-tight">
-                    <Link href={`/blog/${slug}`} className="text-gray-900 dark:text-gray-100">
-                      {title}
-                    </Link>
-                  </h3>
-                  <div className="flex flex-wrap">
-                    {tags.map((tag) => (
-                      <Tag key={tag} text={tag} />
-                    ))}
-                  </div>
-                  <p className="line-clamp-3 text-gray-500 dark:text-gray-400">{summary}</p>
-                </div>
-              </article>
+        <ul className="mt-6 space-y-1">
+          {posts.slice(0, MAX_DISPLAY).map((post) => (
+            <li key={post.slug}>
+              <PostRow {...post} />
             </li>
           ))}
         </ul>
