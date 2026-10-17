@@ -1,5 +1,4 @@
 ---
-
 title: 'Offline-First Observability in a Legacy Java Mobile App'
 date: '2026-01-19'
 lastmod: '2026-01-19'
@@ -17,14 +16,14 @@ In this post, I’ll describe an **offline-first observability** feature I imple
 
 ## The Problem: Crashes Aren’t the Whole Story
 
-The app had bugs and unexpected behaviors that didn’t always produce a crash. Even when an exception happened, a stacktrace alone often didn’t explain *why*—because we lacked the user journey that led to that state.
+The app had bugs and unexpected behaviors that didn’t always produce a crash. Even when an exception happened, a stacktrace alone often didn’t explain _why_—because we lacked the user journey that led to that state.
 
 What we needed:
 
-* A durable record of **user actions** and key app events
-* **Offline persistence** and **guaranteed delivery** when the device reconnects
-* Minimal impact on **performance**, **battery**, and **network usage**
-* A solution that fits a **legacy Java codebase**
+- A durable record of **user actions** and key app events
+- **Offline persistence** and **guaranteed delivery** when the device reconnects
+- Minimal impact on **performance**, **battery**, and **network usage**
+- A solution that fits a **legacy Java codebase**
 
 ## The Solution: Offline-First Logging with a Local Queue (DAO)
 
@@ -32,20 +31,20 @@ The core idea is simple: treat logs as first-class data and manage them like a r
 
 ### How it Works
 
-* The app writes a structured log entry for relevant events (screen views, taps, actions, state changes).
-* Each log is stored in a local internal database using a **DAO** layer.
-* Logs form a queue of “pending” items waiting to be delivered.
-* Sending happens **only when the device is connected to the internet**.
-* If the device is offline, logs remain stored locally.
-* If the user restarts the phone, the logs are still there—and the queue resumes sending automatically on the next connection.
+- The app writes a structured log entry for relevant events (screen views, taps, actions, state changes).
+- Each log is stored in a local internal database using a **DAO** layer.
+- Logs form a queue of “pending” items waiting to be delivered.
+- Sending happens **only when the device is connected to the internet**.
+- If the device is offline, logs remain stored locally.
+- If the user restarts the phone, the logs are still there—and the queue resumes sending automatically on the next connection.
 
 ## Delivery Strategy: Efficient, Predictable, Low Impact
 
 To avoid spamming the network and wasting battery, the sync strategy is controlled:
 
-* Logs are sent in **batches of 50**
-* Sync runs **every 3 minutes**
-* If there’s no internet, sending is skipped and retried later
+- Logs are sent in **batches of 50**
+- Sync runs **every 3 minutes**
+- If there’s no internet, sending is skipped and retried later
 
 This design keeps the pipeline predictable and prevents a “send storm” after reconnecting, while still ensuring logs flow to the backend consistently.
 
@@ -55,9 +54,9 @@ A key design decision was treating these logs as a **stacktrace of user actions*
 
 Instead of isolated events, the logs represent a chronological chain that can answer questions like:
 
-* What did the user do right before the issue?
-* Which screens and actions led to this state?
-* Where did the user flow start to diverge from expected behavior?
+- What did the user do right before the issue?
+- Which screens and actions led to this state?
+- Where did the user flow start to diverge from expected behavior?
 
 This “action stacktrace” is often the missing piece that transforms a vague production bug report into something actionable.
 
@@ -65,13 +64,13 @@ This “action stacktrace” is often the missing piece that transforms a vague 
 
 After building the offline-first pipeline, we combined it with **Sentry**:
 
-* **Sentry** captures exceptions and crash stacktraces
-* The **log action stacktrace** provides the step-by-step user journey leading up to the problem
+- **Sentry** captures exceptions and crash stacktraces
+- The **log action stacktrace** provides the step-by-step user journey leading up to the problem
 
 Now, when something breaks in production, we can analyze:
 
-* The technical failure (exception + stacktrace)
-* The behavioral context (what the user did right before)
+- The technical failure (exception + stacktrace)
+- The behavioral context (what the user did right before)
 
 This reduces investigation time significantly and improves the accuracy of fixes—especially in cases where crashes are symptoms of earlier state issues.
 
@@ -79,10 +78,10 @@ This reduces investigation time significantly and improves the accuracy of fixes
 
 Even without rewriting the app, this feature delivered meaningful improvements:
 
-* Faster root-cause analysis in production
-* Less reliance on manual bug reproduction
-* Better visibility into real user behavior
-* Increased confidence when changing legacy areas
+- Faster root-cause analysis in production
+- Less reliance on manual bug reproduction
+- Better visibility into real user behavior
+- Increased confidence when changing legacy areas
 
 Most importantly, it added reliability to a codebase that needed stability more than novelty.
 
@@ -90,4 +89,4 @@ Most importantly, it added reliability to a codebase that needed stability more 
 
 Observability isn’t exclusive to modern stacks. With a careful design—**local persistence**, **offline-first behavior**, **controlled batching**, and **connectivity-aware syncing**—it’s possible to achieve production-grade visibility even in legacy Java applications.
 
-And when you combine that with Sentry, you don’t just get “what crashed”—you get *why it happened*, with a clear sequence of user actions leading to the failure.
+And when you combine that with Sentry, you don’t just get “what crashed”—you get _why it happened_, with a clear sequence of user actions leading to the failure.

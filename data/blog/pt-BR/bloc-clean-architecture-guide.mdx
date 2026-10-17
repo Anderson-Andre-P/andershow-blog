@@ -79,13 +79,13 @@ Quando você abre o app e a página carrega os estudos:
 
 ### 3. Por que separar em camadas?
 
-| Benefício | Explicação |
-|---------|-------------|
-| **Testabilidade** | Cada camada pode ser testada isoladamente, sem a interface |
-| **Reutilização** | A lógica de domínio pode ser usada na web, no mobile e no desktop |
-| **Manutenibilidade** | Mudanças em uma camada não quebram as outras |
-| **Flexibilidade** | Troque a fonte de dados (API → banco de dados) sem mudar a interface |
-| **Escalabilidade** | Fica fácil adicionar funcionalidades sem quebrar tudo |
+| Benefício            | Explicação                                                           |
+| -------------------- | -------------------------------------------------------------------- |
+| **Testabilidade**    | Cada camada pode ser testada isoladamente, sem a interface           |
+| **Reutilização**     | A lógica de domínio pode ser usada na web, no mobile e no desktop    |
+| **Manutenibilidade** | Mudanças em uma camada não quebram as outras                         |
+| **Flexibilidade**    | Troque a fonte de dados (API → banco de dados) sem mudar a interface |
+| **Escalabilidade**   | Fica fácil adicionar funcionalidades sem quebrar tudo                |
 
 ---
 
@@ -96,6 +96,7 @@ BLoC = **Business Logic Component** (componente de lógica de negócio)
 ### As 3 partes do BLoC
 
 #### 1. **Eventos** (entrada)
+
 - Representam ações do usuário: "carregar estudos", "favoritar este item" etc.
 - São enviados PARA o BLoC
 - Ficam em `study_event.dart`
@@ -107,6 +108,7 @@ class StudyLoadRequested extends StudyEvent {
 ```
 
 #### 2. **Estados** (saída)
+
 - Representam o estado da interface: carregando, carregado, erro etc.
 - São emitidos PELO BLoC
 - Ficam em `study_state.dart`
@@ -119,6 +121,7 @@ class StudyLoaded extends StudyState {
 ```
 
 #### 3. **BLoC** (lógica)
+
 - Escuta os eventos
 - Usa a lógica de negócio (camada de domínio)
 - Emite estados
@@ -159,7 +162,9 @@ UI rebuilds when state changes
 ## Estrutura de arquivos e responsabilidades
 
 ### `/presentation/bloc/`
+
 **Objetivo**: gerenciamento de estado com o padrão BLoC
+
 - `study_event.dart` - Eventos (ações do usuário)
 - `study_state.dart` - Estados (estados da interface)
 - `study_bloc.dart` - BLoC (orquestração da lógica de negócio)
@@ -167,14 +172,18 @@ UI rebuilds when state changes
 **Conceito-chave**: o BLoC é o intermediário entre a interface e a camada de domínio
 
 ### `/presentation/pages/`
+
 **Objetivo**: telas com as quais o usuário interage
+
 - `study_home_page.dart` - Tela principal, usa BlocBuilder
 - `layout_study_page.dart` - Tela de detalhe
 
 **Conceito-chave**: as páginas escutam os estados do BLoC e reconstroem a interface de acordo
 
 ### `/domain/`
+
 **Objetivo**: lógica de negócio (independente de framework)
+
 - `entities/study.dart` - Modelo de dados
 - `usecases/get_studies.dart` - Lógica de negócio ("buscar todos os estudos")
 - `repositories/study_repository.dart` - Interface
@@ -182,14 +191,18 @@ UI rebuilds when state changes
 **Conceito-chave**: o domínio não sabe nada de Flutter, banco de dados ou APIs
 
 ### `/data/`
+
 **Objetivo**: buscar e transformar dados
+
 - `datasources/study_local_datasource.dart` - Fonte de dados (fixa no código, API, banco de dados etc.)
 - `repositories/study_repository_impl.dart` - Implementa a interface do domínio
 
 **Conceito-chave**: converte dados brutos em entidades de domínio
 
 ### `/app/`
+
 **Objetivo**: configuração da injeção de dependência
+
 - `study_hub_injection.dart` - Cria e conecta todas as dependências
 
 **Conceito-chave**: o lugar central onde todas as camadas se conectam
@@ -261,26 +274,31 @@ final testBloc = StudyBloc(
 ## Conceitos-chave para lembrar
 
 ### 1. **Fluxo de dados unidirecional**
+
 - Os dados descem pelas camadas (Apresentação → Domínio → Dados)
 - Os eventos sobem da interface para o BLoC
 - Os estados descem do BLoC para a interface
 
 ### 2. **Separação de responsabilidades**
+
 - Camada de domínio: lógica pura, sem código de Flutter ou de banco de dados
 - Camada de dados: busca e armazenamento, sem lógica de negócio
 - Camada de apresentação: só interface, delega a lógica ao BLoC
 
 ### 3. **Entidade vs modelo vs view**
+
 - **Entidade** (domínio): `Study` - modelo de negócio
 - **Modelo** (dados): o `Map` bruto vindo da fonte de dados
 - **View** (apresentação): `StudyItemView` - o que a interface precisa
 
 ### 4. **Interface reativa**
+
 - Não chame setState() manualmente
 - Não atualize widgets manualmente
 - Só emita mudanças de estado, e a interface reage automaticamente pelo BlocBuilder
 
 ### 5. **Independência de framework**
+
 - A camada de domínio tem ZERO imports de `package:flutter`
 - A lógica de domínio poderia rodar no backend, numa CLI, na web, em qualquer lugar
 - Só a camada de apresentação importa o Flutter
@@ -292,22 +310,27 @@ final testBloc = StudyBloc(
 ### Adicionando uma nova funcionalidade
 
 1. **Adicione a entidade de domínio** (se for um novo tipo de dado)
+
    - Crie `Feature.dart` em domain/entities
 
 2. **Adicione o caso de uso de domínio**
+
    - Crie `GetFeatures.dart` em domain/usecases
    - Defina a lógica de negócio
 
 3. **Adicione a camada de dados**
+
    - Crie a fonte de dados em data/datasources
    - Crie a implementação do repositório em data/repositories
 
 4. **Adicione o BLoC**
+
    - Crie feature_event.dart
    - Crie feature_state.dart
    - Crie feature_bloc.dart
 
 5. **Adicione a apresentação**
+
    - Crie páginas e widgets usando BlocBuilder
    - Conecte no main.dart com BlocProvider
 
@@ -321,6 +344,7 @@ final testBloc = StudyBloc(
 Quando abrir um arquivo, procure estes padrões:
 
 ### No BLoC
+
 ```dart
 // Event handler - listens for events and processes them
 Future<void> _onStudyLoadRequested(...) async {
@@ -335,6 +359,7 @@ Future<void> _onStudyLoadRequested(...) async {
 ```
 
 ### Nas páginas
+
 ```dart
 // Trigger events in initState or callbacks
 @override
@@ -368,12 +393,14 @@ BlocBuilder<StudyBloc, StudyState>(
 ## Arquivos com comentários
 
 Todos os arquivos principais têm comentários detalhados explicando:
+
 - O que cada classe ou método faz
 - Por que está estruturado desse jeito
 - Como se encaixa na arquitetura
 - Exemplos de código e explicações
 
 **Comece a leitura por aqui:**
+
 1. `lib/src/app/study_hub_injection.dart` - Veja todas as camadas conectadas
 2. `lib/src/features/study_hub/presentation/bloc/study_bloc.dart` - Lógica central
 3. `lib/src/features/study_hub/presentation/pages/study_home_page.dart` - Integração com a interface

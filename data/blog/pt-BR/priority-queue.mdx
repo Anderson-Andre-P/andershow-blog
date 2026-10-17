@@ -14,7 +14,7 @@ Uma das aplicações mais populares para uma fila de prioridade é a implementa�
 
 ## Heap
 
-Um heap é uma árvore binária, duas propriedades o desinem:
+Um heap é uma árvore binária, duas propriedades o definem:
 
 1. O valor de um nó é maior ou igual ao valor de seus filhos;
 2. O heap é uma árvore binária completa ou quase-completa da esquerda para a direita
@@ -395,7 +395,7 @@ void max_heapify(int a[], int i, int n){
     // verifique se o nó left é maior do que o nó atual
     if (left <= n && a[left] > a[largest]) {
         largest = left;
-    }utiliza
+    }
 
     // verifique se o nó right é maior do que o nó atual
     if (right <= n && a[right] > a[largest]) {
@@ -467,7 +467,6 @@ int main() {
     //a[0] = 0;
     //a[1] = 66; a[2] = 10; a[3] = 103;
     //build_max_heap(a, n);
-utiliza
     //2, 6, 68, 90, 87, 15, 18.
     * */
     insert(a, 2, &n);
