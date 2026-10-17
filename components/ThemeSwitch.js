@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
+import { useT } from '@/lib/i18n'
 
 const ThemeSwitch = () => {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const t = useT()
 
   // When mounted on client, now we can show the UI
   useEffect(() => setMounted(true), [])
 
   return (
     <button
-      aria-label="Toggle Dark Mode"
+      aria-label={t.common.toggleTheme}
       type="button"
       className="ml-1 mr-1 h-8 w-8 rounded p-1 sm:ml-4"
       onClick={() => setTheme(theme === 'dark' || resolvedTheme === 'dark' ? 'light' : 'dark')}

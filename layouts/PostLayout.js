@@ -8,40 +8,30 @@ import siteMetadata from '@/data/siteMetadata'
 import Comments from '@/components/comments'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 import PrevNextNav from '@/components/PrevNextNav'
-
-const editUrl = (fileName) => `${siteMetadata.siteRepo}/blob/main/data/blog/${fileName}`
-const postDateTemplate = { year: 'numeric', month: 'long', day: 'numeric' }
+import { localePath, useLocale, useT } from '@/lib/i18n'
 
 export default function PostLayout({ frontMatter, authorDetails, next, prev, children }) {
-  const {
-    slug,
-    fileName,
-    date,
-    title,
-    tags,
-    readingMinutes,
-    translation,
-    lang = siteMetadata.language,
-  } = frontMatter
-  const isPortuguese = lang.startsWith('pt')
+  const t = useT()
+  const locale = useLocale()
+  const { slug, date, title, tags, readingMinutes } = frontMatter
 
   return (
     <SectionContainer>
       <BlogSEO
-        url={`${siteMetadata.siteUrl}/blog/${slug}`}
+        url={`${siteMetadata.siteUrl}${localePath(`/blog/${slug}`, locale)}`}
         authorDetails={authorDetails}
         {...frontMatter}
       />
       <ScrollTopAndComment />
-      <article lang={lang}>
+      <article>
         <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
           <header className="pt-6 xl:pb-6">
             <div className="space-y-1 text-center">
               <dl className="flex justify-center gap-4 text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                <dt className="sr-only">Published on</dt>
+                <dt className="sr-only">{t.common.publishedOn}</dt>
                 <dd>
                   <time dateTime={date}>
-                    {new Date(date).toLocaleDateString(lang, {
+                    {new Date(date).toLocaleDateString(locale, {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',
@@ -51,8 +41,8 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                 </dd>
                 {readingMinutes && (
                   <>
-                    <dt className="sr-only">Reading time</dt>
-                    <dd lang="en">{readingMinutes} min read</dd>
+                    <dt className="sr-only">{t.common.readingTime}</dt>
+                    <dd>{t.common.minRead(readingMinutes)}</dd>
                   </>
                 )}
               </dl>
@@ -60,27 +50,6 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
               <div>
                 <PageTitle>{title}</PageTitle>
               </div>
-              {translation && (
-                <p className="pt-2 text-sm text-gray-500 dark:text-gray-400">
-                  {isPortuguese ? (
-                    <Link
-                      href={`/blog/${translation}`}
-                      lang="en"
-                      className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
-                    >
-                      Read this post in English
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/blog/${translation}`}
-                      lang="pt-BR"
-                      className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
-                    >
-                      Leia este post em português
-                    </Link>
-                  )}
-                </p>
-              )}
             </div>
           </header>
           <div
@@ -129,25 +98,19 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                 <PrevNextNav
                   prev={prev && { href: `/blog/${prev.slug}`, title: prev.title }}
                   next={next && { href: `/blog/${next.slug}`, title: next.title }}
-                  prevLabel="Older post"
-                  nextLabel="Newer post"
-                  ariaLabel="More posts"
+                  prevLabel={t.blog.older}
+                  nextLabel={t.blog.newer}
+                  ariaLabel={t.blog.more}
                 />
               </div>
-              {/* <div className="pb-6 pt-6 text-sm text-gray-700 dark:text-gray-300">
-                <Link href={editUrl(fileName)}>{'View on GitHub'}</Link>
-              </div> */}
               <Comments frontMatter={frontMatter} />
             </div>
             <footer>
               <div className="divide-gray-200 text-sm font-medium leading-5 dark:divide-gray-700 xl:col-start-1 xl:row-start-2 xl:divide-y">
                 {tags && (
                   <div className="py-4 xl:py-8">
-                    <h2
-                      lang="en"
-                      className="text-sm font-semibold text-zinc-800 dark:text-zinc-100"
-                    >
-                      Tags
+                    <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                      {t.blog.tags}
                     </h2>
                     <div className="mt-2 flex flex-wrap">
                       {tags.map((tag) => (
@@ -160,10 +123,9 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
               <div className="pt-4 xl:pt-8">
                 <Link
                   href="/blog"
-                  lang="en"
                   className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
                 >
-                  &larr; Back to blog
+                  &larr; {t.blog.backToBlog}
                 </Link>
               </div>
             </footer>

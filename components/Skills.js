@@ -9,6 +9,7 @@ import {
 } from 'react-icons/ai'
 
 import { motion } from 'framer-motion'
+import { localize, useLocale, useT } from '@/lib/i18n'
 import { showHoverAnimation, removeHoverAnimation } from '../lib/windowAnimation'
 import { FadeContainer, popUp } from '../lib/framerMotionVariants'
 
@@ -18,24 +19,38 @@ const skills = [
   { name: 'Kotlin', logo: SiKotlin },
   { name: 'Swift', logo: SiSwift },
   { name: 'BLoC & Clean Architecture', logo: AiFillFolderOpen },
-  { name: 'Real-time with WebSockets', logo: AiOutlineApi },
-  { name: 'Testing & TDD', logo: AiOutlineCheckCircle },
-  { name: 'Observability (Sentry, Graylog)', logo: SiSentry },
-  { name: 'CI/CD & store releases', logo: AiOutlineMobile },
-  { name: 'Maps & Geolocation', logo: SiGooglemaps },
+  {
+    name: { 'en-US': 'Real-time with WebSockets', 'pt-BR': 'Tempo real com WebSockets' },
+    logo: AiOutlineApi,
+  },
+  { name: { 'en-US': 'Testing & TDD', 'pt-BR': 'Testes e TDD' }, logo: AiOutlineCheckCircle },
+  {
+    name: {
+      'en-US': 'Observability (Sentry, Graylog)',
+      'pt-BR': 'Observabilidade (Sentry, Graylog)',
+    },
+    logo: SiSentry,
+  },
+  {
+    name: { 'en-US': 'CI/CD & store releases', 'pt-BR': 'CI/CD e publicação nas lojas' },
+    logo: AiOutlineMobile,
+  },
+  {
+    name: { 'en-US': 'Maps & Geolocation', 'pt-BR': 'Mapas e geolocalização' },
+    logo: SiGooglemaps,
+  },
 ]
 
 const Skills = () => {
+  const t = useT()
+  const locale = useLocale()
   return (
     <>
-      <h2 className="font-poppins title-font text-3xl font-bold">Skills</h2>
+      <h2 className="font-poppins title-font text-3xl font-bold">{t.skills.title}</h2>
       <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-        Most of my work has been in logistics and industrial IoT: real-time features with
-        WebSockets, native Kotlin and Swift SDKs integrated into Flutter, and legacy Android code
-        modernized with Clean Architecture and BLoC.
+        {t.skills.intro}
       </p>
 
-      {/* Grid de ícones */}
       <motion.div
         initial="hidden"
         whileInView="visible"
@@ -43,12 +58,13 @@ const Skills = () => {
         viewport={{ once: true }}
         className="my-10 grid grid-cols-3 gap-4 sm:grid-cols-2"
       >
-        {skills.map((skill, index) => {
+        {skills.map((skill) => {
+          const name = localize(skill.name, locale)
           return (
             <motion.div
-              title={skill.name}
+              title={name}
               variants={popUp}
-              key={skill.name}
+              key={name}
               onMouseMove={(e) => showHoverAnimation(e)}
               onMouseLeave={(e) => removeHoverAnimation(e)}
               className="dark:bg-darkPrimary hover:dark:bg-darkSecondary group flex origin-center transform items-center justify-center gap-4 rounded-sm border border-gray-300 p-4 hover:border-gray-400 dark:border-neutral-700 sm:justify-start md:origin-top"
@@ -57,7 +73,7 @@ const Skills = () => {
                 <skill.logo className="h-8 w-8" />
               </div>
               <p className="pointer-events-none hidden select-none text-sm font-semibold sm:inline-flex md:text-base">
-                {skill.name}
+                {name}
               </p>
             </motion.div>
           )

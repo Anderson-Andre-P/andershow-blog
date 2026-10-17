@@ -3,18 +3,17 @@ import Image from '@/components/Image'
 import { PageSEO } from '@/components/SEO'
 import PrevNextNav from '@/components/PrevNextNav'
 import siteMetadata from '@/data/siteMetadata'
+import { localize, useLocale, useT } from '@/lib/i18n'
 
-const LINK_LABELS = {
-  github: 'View on GitHub',
-  playStore: 'Get it on Google Play',
-  appStore: 'Download on the App Store',
-  demo: 'Open live demo',
-}
+const LINK_KEYS = ['github', 'playStore', 'appStore', 'demo']
 
 export default function ProjectLayout({ project, frontMatter = {}, prev, next, children }) {
-  const { title, description, imgSrc, links = {} } = project
+  const t = useT()
+  const locale = useLocale()
+  const { title, imgSrc, links = {} } = project
+  const description = localize(project.description, locale)
   const { year, type, stack = [] } = frontMatter
-  const availableLinks = Object.keys(LINK_LABELS).filter((key) => links[key])
+  const availableLinks = LINK_KEYS.filter((key) => links[key])
 
   return (
     <>
@@ -24,7 +23,7 @@ export default function ProjectLayout({ project, frontMatter = {}, prev, next, c
           href="/projects"
           className="text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
         >
-          &larr; All projects
+          &larr; {t.projects.allProjects}
         </Link>
 
         <header className="mt-6 max-w-3xl">
@@ -46,7 +45,7 @@ export default function ProjectLayout({ project, frontMatter = {}, prev, next, c
                       : 'border border-zinc-300 text-zinc-700 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-zinc-500'
                   }`}
                 >
-                  {LINK_LABELS[key]}
+                  {t.projects.links[key]}
                 </Link>
               ))}
             </div>
@@ -63,19 +62,25 @@ export default function ProjectLayout({ project, frontMatter = {}, prev, next, c
           <dl className="grid grid-cols-2 gap-6 border-b border-zinc-200 pb-8 text-sm dark:border-zinc-800 md:col-span-1 md:block md:space-y-6 md:self-start md:border-0 md:pb-0">
             {type && (
               <div>
-                <dt className="font-semibold text-zinc-800 dark:text-zinc-100">Type</dt>
+                <dt className="font-semibold text-zinc-800 dark:text-zinc-100">
+                  {t.projects.type}
+                </dt>
                 <dd className="mt-1 text-zinc-600 dark:text-zinc-400">{type}</dd>
               </div>
             )}
             {year && (
               <div>
-                <dt className="font-semibold text-zinc-800 dark:text-zinc-100">Year</dt>
+                <dt className="font-semibold text-zinc-800 dark:text-zinc-100">
+                  {t.projects.year}
+                </dt>
                 <dd className="mt-1 text-zinc-600 dark:text-zinc-400">{year}</dd>
               </div>
             )}
             {stack.length > 0 && (
               <div className="col-span-2">
-                <dt className="font-semibold text-zinc-800 dark:text-zinc-100">Stack</dt>
+                <dt className="font-semibold text-zinc-800 dark:text-zinc-100">
+                  {t.projects.stack}
+                </dt>
                 <dd className="mt-2 flex flex-wrap gap-2">
                   {stack.map((item) => (
                     <span
@@ -99,9 +104,9 @@ export default function ProjectLayout({ project, frontMatter = {}, prev, next, c
           <PrevNextNav
             prev={prev}
             next={next}
-            prevLabel="Previous project"
-            nextLabel="Next project"
-            ariaLabel="More projects"
+            prevLabel={t.projects.previous}
+            nextLabel={t.projects.next}
+            ariaLabel={t.projects.more}
           />
         </div>
       </article>

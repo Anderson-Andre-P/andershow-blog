@@ -12,6 +12,7 @@ import siteMetadata from '@/data/siteMetadata'
 import Analytics from '@/components/analytics'
 import LayoutWrapper from '@/components/LayoutWrapper'
 import { ClientReload } from '@/components/ClientReload'
+import LocaleRedirect from '@/components/LocaleRedirect'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 const isSocket = process.env.SOCKET
@@ -24,6 +25,7 @@ export default function App({ Component, pageProps }) {
       </Head>
       {isDevelopment && isSocket && <ClientReload />}
       <Analytics />
+      <LocaleRedirect />
       {/* Skip entrance animations for people who ask their OS to reduce motion */}
       <MotionConfig reducedMotion="user">
         <LayoutWrapper>

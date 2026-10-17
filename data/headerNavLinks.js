@@ -1,9 +1,9 @@
+// `key` is the label in data/i18n.js (nav.*)
 const headerNavLinks = [
-  { href: '/', title: 'Home' },
-  { href: '/blog', title: 'Blog' },
-  { href: '/projects', title: 'Projects' },
-  { href: '/about', title: 'About' },
-  // { href: 'https://anderson-andre-p.github.io/portfolio-front-end/', title: 'Portfolio' },
+  { href: '/', key: 'home' },
+  { href: '/blog', key: 'blog' },
+  { href: '/projects', key: 'projects' },
+  { href: '/about', key: 'about' },
 ]
 
 export default headerNavLinks

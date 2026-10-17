@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import siteMetadata from '@/data/siteMetadata'
+import { useT } from '@/lib/i18n'
 
 // mailto: does nothing when the visitor has no mail app set up (common with webmail users),
 // so the click also copies the address and says so.
-const EmailButton = ({ className, icon, label = 'Email' }) => {
+const EmailButton = ({ className, icon, label }) => {
+  const t = useT()
   const [copied, setCopied] = useState(false)
 
   const copyEmail = () => {
@@ -19,7 +21,7 @@ const EmailButton = ({ className, icon, label = 'Email' }) => {
   return (
     <a href={`mailto:${siteMetadata.email}`} onClick={copyEmail} className={className}>
       {icon}
-      <span aria-live="polite">{copied ? 'Email copied' : label}</span>
+      <span aria-live="polite">{copied ? t.common.emailCopied : label || t.common.email}</span>
     </a>
   )
 }

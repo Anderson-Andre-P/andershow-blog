@@ -13,23 +13,28 @@ import ResumeButton from '@/components/ResumeButton'
 import EmailButton from '@/components/EmailButton'
 import { secondaryButton } from '@/components/buttonStyles'
 import { hasPublicFile } from '@/lib/utils/files'
+import { localeDir } from '@/lib/mdx'
+import { localize, useLocale, useT } from '@/lib/i18n'
 
 const MAX_DISPLAY = 3
 
-export async function getStaticProps() {
-  const posts = await getAllFilesFrontMatter('blog')
+export async function getStaticProps({ locale }) {
+  const posts = await getAllFilesFrontMatter(localeDir('blog', locale))
 
-  const hasResume = hasPublicFile(siteMetadata.resume)
+  const hasResume = hasPublicFile(localize(siteMetadata.resume, locale))
 
   return { props: { posts, hasResume } }
 }
 
 export default function Home({ posts, hasResume }) {
+  const t = useT()
+  const locale = useLocale()
+
   return (
     <>
       <PageSEO
-        title={`${siteMetadata.title} - ${siteMetadata.tagline}`}
-        description={siteMetadata.description}
+        title={`${siteMetadata.title} - ${localize(siteMetadata.tagline, locale)}`}
+        description={localize(siteMetadata.description, locale)}
       />
       <div className="space-y-2 pb-4 pt-6 md:space-y-5">
         <div className="flex flex-col-reverse items-start sm:flex-row">
@@ -38,27 +43,14 @@ export default function Home({ posts, hasResume }) {
               Anderson Eleutério
             </h1>
             <h2 className="mb-1 text-xl font-bold tracking-tight text-zinc-600 dark:text-white md:text-2xl">
-              Mobile &amp; Forward Deployed Engineer
+              {localize(siteMetadata.tagline, locale)}
             </h2>
           </div>
-          {/* <div className="relative mb-8 mr-auto w-[100px] sm:mb-0 sm:w-[200px]">
-            <Image
-              src="/static/images/profile-photo.jpg"
-              alt="avatar"
-              width="200px"
-              height="200px"
-              className="rounded-full"
-            />
-          </div> */}
         </div>
         <p className="my-4 max-w-2xl leading-loose text-zinc-600 dark:text-slate-300">
-          I build Flutter apps for logistics and industrial IoT, and I care about what happens after
-          they ship: how they're used in the field, where they break, and how they can make an
-          operation run better.
+          {t.home.intro}
         </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Open to remote international roles.
-        </p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.home.openToRemote}</p>
 
         <div className="mt-8 flex flex-wrap gap-3">
           {hasResume && <ResumeButton />}
@@ -108,6 +100,7 @@ export default function Home({ posts, hasResume }) {
           </a>
           <EmailButton
             className={secondaryButton}
+            label={t.common.email}
             icon={
               <svg
                 height="20"
@@ -130,27 +123,28 @@ export default function Home({ posts, hasResume }) {
 
       <div className="content mb-8 mt-12 sm:mt-16">
         <div className="flex items-baseline justify-between gap-4">
-          <h2 className="font-poppins title-font text-3xl font-bold">Projects</h2>
+          <h2 className="font-poppins title-font text-3xl font-bold">{t.home.projects}</h2>
           <Link
             href="/projects"
             className="text-base font-medium text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
           >
-            All projects &rarr;
+            {t.home.allProjects} &rarr;
           </Link>
         </div>
         <p className="my-4 max-w-2xl leading-loose text-zinc-600 dark:text-slate-300">
-          My day-to-day work is on seven B2B apps at DDMX. These are projects I built on my own and
-          as technical challenges, from asset management for maintenance teams to real estate
-          search, each one end to end with Flutter. Open one to read how it was built.
+          {t.home.projectsIntro}
         </p>
       </div>
 
       <ProjectGrid projects={projectsData.filter((project) => project.featured)} />
       <div className="content mt-12 sm:mt-24">
-        <h2 className="font-poppins title-font text-3xl font-bold">Experience</h2>
+        <h2 className="font-poppins title-font text-3xl font-bold">{t.home.experience}</h2>
         <ul className="mt-8">
           {experienceData.map((experience) => (
-            <ExperienceCard key={`${experience.company}-${experience.period}`} {...experience} />
+            <ExperienceCard
+              key={`${experience.company}-${experience.startYear}-${experience.level['en-US']}`}
+              {...experience}
+            />
           ))}
         </ul>
       </div>
@@ -161,13 +155,13 @@ export default function Home({ posts, hasResume }) {
 
       <div className="content mt-12 sm:mt-24">
         <div className="flex items-baseline justify-between gap-4">
-          <h2 className="font-poppins title-font text-3xl font-bold">Latest Posts</h2>
+          <h2 className="font-poppins title-font text-3xl font-bold">{t.home.latestPosts}</h2>
           {posts.length > MAX_DISPLAY && (
             <Link
               href="/blog"
               className="text-base font-medium text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
             >
-              All posts &rarr;
+              {t.home.allPosts} &rarr;
             </Link>
           )}
         </div>
@@ -176,9 +170,9 @@ export default function Home({ posts, hasResume }) {
             <li key={slug} className="py-8">
               <article className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
                 <dl>
-                  <dt className="sr-only">Published on</dt>
+                  <dt className="sr-only">{t.common.publishedOn}</dt>
                   <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                    <time dateTime={date}>{formatDate(date)}</time>
+                    <time dateTime={date}>{formatDate(date, locale)}</time>
                   </dd>
                 </dl>
                 <div className="space-y-3 xl:col-span-3">

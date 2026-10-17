@@ -54,6 +54,14 @@ const securityHeaders = [
 
 module.exports = withBundleAnalyzer({
   reactStrictMode: true,
+  // English is the default (no URL prefix); Portuguese lives under /pt-BR.
+  // The browser language is detected on the client (components/LocaleRedirect.js),
+  // so only pt-BR browsers get Portuguese, as Next's own detection also matches pt-PT.
+  i18n: {
+    locales: ['en-US', 'pt-BR'],
+    defaultLocale: 'en-US',
+    localeDetection: false,
+  },
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
   eslint: {
     dirs: ['pages', 'components', 'lib', 'layouts', 'scripts'],
@@ -72,6 +80,16 @@ module.exports = withBundleAnalyzer({
         permanent: true,
       },
       { source: '/blog/ison-27000', destination: '/blog/iso-27000', permanent: true },
+      {
+        source: '/blog/dio-http-flutter',
+        destination: '/blog/consuming-apis-in-flutter-with-dio-and-http',
+        permanent: true,
+      },
+      {
+        source: '/blog/difference-between-stl-and-stf',
+        destination: '/blog/stateful-vs-stateless-widgets-in-flutter',
+        permanent: true,
+      },
     ]
   },
   async headers() {

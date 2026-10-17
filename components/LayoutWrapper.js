@@ -6,8 +6,11 @@ import SectionContainer from './SectionContainer'
 import Footer from './Footer'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
+import LanguageSwitch from './LanguageSwitch'
+import { useT } from '@/lib/i18n'
 
 const LayoutWrapper = ({ children }) => {
+  const t = useT()
   return (
     <SectionContainer>
       <div className="flex h-screen flex-col justify-between">
@@ -32,14 +35,15 @@ const LayoutWrapper = ({ children }) => {
             <div className="hidden sm:block">
               {headerNavLinks.map((link) => (
                 <Link
-                  key={link.title}
+                  key={link.key}
                   href={link.href}
                   className="p-1 font-medium text-gray-900 dark:text-gray-100 sm:p-4"
                 >
-                  {link.title}
+                  {t.nav[link.key]}
                 </Link>
               ))}
             </div>
+            <LanguageSwitch className="ml-1 mr-3 sm:ml-2" />
             <ThemeSwitch />
             <MobileNav />
           </div>

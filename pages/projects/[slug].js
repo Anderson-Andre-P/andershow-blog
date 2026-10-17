@@ -2,28 +2,35 @@ import fs from 'fs'
 import path from 'path'
 import { MDXLayoutRenderer } from '@/components/MDXComponents'
 import ProjectLayout from '@/layouts/ProjectLayout'
-import { getFileBySlug } from '@/lib/mdx'
+import { getFileBySlug, localeDir } from '@/lib/mdx'
+import { DEFAULT_LOCALE } from '@/lib/locales'
 import { sortProjects } from '@/lib/projects'
 import projectsData from '@/data/projectsData'
 
-const hasCaseStudy = (slug) =>
-  fs.existsSync(path.join(process.cwd(), 'data', 'projects', `${slug}.mdx`))
+const hasCaseStudy = (slug, locale) =>
+  fs.existsSync(path.join(process.cwd(), 'data', localeDir('projects', locale), `${slug}.mdx`))
 
-export async function getStaticPaths() {
+export async function getStaticPaths({ locales }) {
   return {
-    paths: projectsData.map(({ slug }) => ({ params: { slug } })),
+    paths: locales.flatMap((locale) =>
+      projectsData.map(({ slug }) => ({ params: { slug }, locale }))
+    ),
     fallback: false,
   }
 }
 
-export async function getStaticProps({ params }) {
+export async function getStaticProps({ params, locale }) {
   const projects = sortProjects(projectsData)
   const index = projects.findIndex((p) => p.slug === params.slug)
   const project = projects[index]
   const toLink = (p) => ({ href: `/projects/${p.slug}`, title: p.title })
   const prev = index > 0 ? toLink(projects[index - 1]) : null
   const next = index < projects.length - 1 ? toLink(projects[index + 1]) : null
-  const caseStudy = hasCaseStudy(params.slug) ? await getFileBySlug('projects', params.slug) : null
+  // Falls back to the English case study while a translation doesn't exist
+  const caseStudyLocale = hasCaseStudy(params.slug, locale) ? locale : DEFAULT_LOCALE
+  const caseStudy = hasCaseStudy(params.slug, caseStudyLocale)
+    ? await getFileBySlug(localeDir('projects', caseStudyLocale), params.slug)
+    : null
 
   return {
     props: {

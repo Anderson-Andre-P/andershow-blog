@@ -2,11 +2,14 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTheme } from 'next-themes'
 import siteMetadata from '@/data/siteMetadata'
+import { useLocale, useT } from '@/lib/i18n'
 
-// Giscus uses 'pt' for Portuguese instead of the BCP 47 'pt-BR' used in post frontmatter
-const toGiscusLang = (postLang) => (postLang?.startsWith('pt') ? 'pt' : postLang)
+// Giscus uses 'pt' and 'en' instead of the site's 'pt-BR' and 'en-US'
+const toGiscusLang = (locale) => locale.split('-')[0]
 
-const Giscus = ({ postLang }) => {
+const Giscus = () => {
+  const t = useT()
+  const locale = useLocale()
   const [enableLoadComments, setEnabledLoadComments] = useState(true)
   const { theme, resolvedTheme } = useTheme()
   const commentsTheme =
@@ -43,7 +46,7 @@ const Giscus = ({ postLang }) => {
     script.setAttribute('data-reactions-enabled', reactions)
     script.setAttribute('data-emit-metadata', metadata)
     script.setAttribute('data-input-position', inputPosition)
-    script.setAttribute('data-lang', toGiscusLang(postLang) || lang)
+    script.setAttribute('data-lang', toGiscusLang(locale) || lang)
     script.setAttribute('data-theme', commentsTheme)
     script.setAttribute('crossorigin', 'anonymous')
     script.async = true
@@ -55,7 +58,7 @@ const Giscus = ({ postLang }) => {
       const comments = document.getElementById(COMMENTS_ID)
       if (comments) comments.innerHTML = ''
     }
-  }, [commentsTheme, postLang])
+  }, [commentsTheme, locale])
 
   // Reload on theme change
   useEffect(() => {
@@ -66,7 +69,7 @@ const Giscus = ({ postLang }) => {
 
   return (
     <div className="pb-6 pt-6 text-center text-gray-700 dark:text-gray-300">
-      {enableLoadComments && <button onClick={LoadComments}>Load Comments</button>}
+      {enableLoadComments && <button onClick={LoadComments}>{t.blog.loadComments}</button>}
       <div className="giscus" id={COMMENTS_ID} />
     </div>
   )

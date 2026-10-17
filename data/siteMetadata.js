@@ -1,24 +1,34 @@
 const siteMetadata = {
   title: 'Anderson Eleutério',
-  // Shown in the browser tab and search results for the homepage
-  tagline: 'Mobile & Forward Deployed Engineer',
+  // Shown in the browser tab and search results for the homepage.
+  // Text that changes per language uses { 'en-US': ..., 'pt-BR': ... } (see lib/locales.js)
+  tagline: {
+    'en-US': 'Mobile & Forward Deployed Engineer',
+    'pt-BR': 'Engenheiro Mobile e Forward Deployed Engineer',
+  },
   author: 'Anderson Eleutério',
   headerTitle: 'Andershow',
-  description:
-    'Anderson Eleutério is a mobile and forward deployed engineer building Flutter, Kotlin and Swift apps for logistics and industrial IoT. Projects, case studies and articles on mobile development and software architecture.',
-  language: 'en',
+  description: {
+    'en-US':
+      'Anderson Eleutério is a mobile and forward deployed engineer building Flutter, Kotlin and Swift apps for logistics and industrial IoT. Projects, case studies and articles on mobile development and software architecture.',
+    'pt-BR':
+      'Anderson Eleutério é engenheiro mobile e forward deployed engineer, e desenvolve apps em Flutter, Kotlin e Swift para logística e IoT industrial. Projetos, estudos de caso e artigos sobre desenvolvimento mobile e arquitetura de software.',
+  },
   theme: 'system', // system, dark or light
   siteUrl: 'https://anderson-andre.netlify.app',
   siteRepo: 'https://github.com/Anderson-Andre-P',
   siteLogo: '/static/images/logo.png',
   image: '/static/images/profile-photo.jpg',
-  // Put the PDF at public/static/files/ — the "Download resume" button only shows up when the file exists
-  resume: '/static/files/andershow_master_resume.pdf',
+  // PDFs in public/static/files/. The download button only shows up when the file exists;
+  // a locale without its own resume (null) uses the English one.
+  resume: {
+    'en-US': '/static/files/andershow_master_resume.pdf',
+    'pt-BR': null,
+  },
   socialBanner: '/static/images/banner-card.png',
   email: 'eleu.ander@gmail.com',
   github: 'https://github.com/Anderson-Andre-P',
   linkedin: 'https://www.linkedin.com/in/anderson-andre-pereira/',
-  locale: 'en-US',
   analytics: {
     // If you want to use an analytics provider you have to add it to the
     // content security policy in the `next.config.js` file.

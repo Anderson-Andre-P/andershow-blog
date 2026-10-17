@@ -2,15 +2,19 @@ import Link from '@/components/Link'
 import Tag from '@/components/Tag'
 import { useState } from 'react'
 import Pagination from '@/components/Pagination'
+import { useLocale, useT } from '@/lib/i18n'
 
-// Posts with any of these tags show up under the "Mobile" filter
-const MOBILE_TAGS = ['Flutter', 'Mobile Development', 'Dio', 'BLoC', 'Stateful', 'Stateless']
-const isMobilePost = (post) => post.tags.some((tag) => MOBILE_TAGS.includes(tag))
-
-const TOPICS = [
-  { id: 'all', label: 'All posts' },
-  { id: 'mobile', label: 'Mobile' },
+// Posts with any of these tags (in either language) show up under the "Mobile" filter
+const MOBILE_TAGS = [
+  'Flutter',
+  'Mobile Development',
+  'Desenvolvimento Mobile',
+  'Dio',
+  'BLoC',
+  'Stateful',
+  'Stateless',
 ]
+const isMobilePost = (post) => post.tags.some((tag) => MOBILE_TAGS.includes(tag))
 
 export default function ListLayout({
   posts,
@@ -19,6 +23,12 @@ export default function ListLayout({
   pagination,
   showTopicFilter = false,
 }) {
+  const t = useT()
+  const locale = useLocale()
+  const topics = [
+    { id: 'all', label: t.blog.filterAll },
+    { id: 'mobile', label: t.blog.filterMobile },
+  ]
   const [searchValue, setSearchValue] = useState('')
   const [topic, setTopic] = useState('all')
   const filteredBlogPosts = posts.filter((frontMatter) => {
@@ -40,8 +50,8 @@ export default function ListLayout({
             {title}
           </h1>
           {showTopicFilter && (
-            <div className="flex gap-2" role="group" aria-label="Filter posts by topic">
-              {TOPICS.map(({ id, label }) => (
+            <div className="flex gap-2" role="group" aria-label={t.blog.filterLabel}>
+              {topics.map(({ id, label }) => (
                 <button
                   key={id}
                   type="button"
@@ -60,10 +70,10 @@ export default function ListLayout({
           )}
           <div className="relative max-w-lg">
             <input
-              aria-label="Search articles"
+              aria-label={t.blog.search}
               type="text"
               onChange={(e) => setSearchValue(e.target.value)}
-              placeholder="Search articles"
+              placeholder={t.blog.search}
               className="block w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-900 dark:bg-gray-800 dark:text-gray-100"
             />
             <svg
@@ -83,21 +93,17 @@ export default function ListLayout({
           </div>
         </div>
         <ul>
-          {!filteredBlogPosts.length && 'No posts found.'}
+          {!filteredBlogPosts.length && t.blog.noPosts}
           {displayPosts.map((frontMatter) => {
-            const { slug, date, title, summary, tags, lang, readingMinutes } = frontMatter
-            const isPortuguese = lang?.startsWith('pt')
+            const { slug, date, title, summary, tags, readingMinutes } = frontMatter
             return (
               <li key={slug} className="py-6">
-                <article
-                  lang={lang}
-                  className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0"
-                >
+                <article className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
                   <dl className="text-sm text-gray-500 dark:text-gray-400">
-                    <dt className="sr-only">Published on</dt>
+                    <dt className="sr-only">{t.common.publishedOn}</dt>
                     <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
                       <time dateTime={date}>
-                        {new Date(date).toLocaleDateString('en-US', {
+                        {new Date(date).toLocaleDateString(locale, {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',
@@ -107,14 +113,8 @@ export default function ListLayout({
                     </dd>
                     {readingMinutes && (
                       <>
-                        <dt className="sr-only">Reading time</dt>
-                        <dd lang="en">{readingMinutes} min read</dd>
-                      </>
-                    )}
-                    {isPortuguese && (
-                      <>
-                        <dt className="sr-only">Language</dt>
-                        <dd lang="en">In Portuguese</dd>
+                        <dt className="sr-only">{t.common.readingTime}</dt>
+                        <dd>{t.common.minRead(readingMinutes)}</dd>
                       </>
                     )}
                   </dl>

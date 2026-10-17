@@ -1,7 +1,9 @@
 import siteMetadata from '@/data/siteMetadata'
+import { useT } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 
 const ScrollTopAndComment = () => {
+  const t = useT()
   const [show, setShow] = useState(false)
 
   useEffect(() => {
@@ -26,7 +28,7 @@ const ScrollTopAndComment = () => {
     >
       {siteMetadata.comment.provider && (
         <button
-          aria-label="Scroll To Comment"
+          aria-label={t.common.scrollToComments}
           type="button"
           onClick={handleScrollToComment}
           className="rounded-full bg-gray-200 p-2 text-gray-500 transition-all hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
@@ -41,7 +43,7 @@ const ScrollTopAndComment = () => {
         </button>
       )}
       <button
-        aria-label="Scroll To Top"
+        aria-label={t.common.scrollToTop}
         type="button"
         onClick={handleScrollTop}
         className="rounded-full bg-gray-200 p-2 text-gray-500 transition-all hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"

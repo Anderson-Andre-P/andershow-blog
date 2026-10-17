@@ -4,60 +4,49 @@ const matter = require('gray-matter')
 const prettier = require('prettier')
 const siteMetadata = require('../data/siteMetadata')
 
+// Keep in sync with lib/locales.js. English has no URL prefix.
+const LOCALES = ['en-US', 'pt-BR']
+const DEFAULT_LOCALE = 'en-US'
+const prefix = (locale) => (locale === DEFAULT_LOCALE ? '' : `/${locale}`)
+
+const isPublished = (file) => {
+  const { data } = matter(fs.readFileSync(file, 'utf8'))
+  return !data.draft && !data.canonicalUrl
+}
+
+const slugOf = (file) => file.split('/').pop().replace(/\.mdx?$/, '')
+
 ;(async () => {
   const prettierConfig = await prettier.resolveConfig('./.prettierrc.js')
-  const pages = await globby([
-    'pages/*.js',
-    'pages/*.tsx',
-    'data/blog/**/*.mdx',
-    'data/blog/**/*.md',
-    'data/projects/*.mdx',
-    'public/tags/**/*.xml',
-    '!pages/_*.js',
-    '!pages/_*.tsx',
-    '!pages/api',
-  ])
+
+  // Pages and case studies exist in every locale
+  const pages = (await globby(['pages/*.js', '!pages/_*.js', '!pages/404.js']))
+    .map((page) => page.replace('pages/', '/').replace('.js', ''))
+    .map((route) => (route === '/index' ? '' : route))
+  const projects = (await globby(['data/projects/en-US/*.mdx'])).map(
+    (file) => `/projects/${slugOf(file)}`
+  )
+
+  const routes = []
+  for (const locale of LOCALES) {
+    for (const route of [...pages, ...projects]) routes.push(`${prefix(locale)}${route}`)
+
+    // Posts and tag feeds only where they exist for that locale
+    const posts = await globby([`data/blog/${locale}/**/*.mdx`, `data/blog/${locale}/**/*.md`])
+    posts
+      .filter(isPublished)
+      .forEach((file) => routes.push(`${prefix(locale)}/blog/${slugOf(file)}`))
+
+    const tagFeeds = await globby([`public${prefix(locale)}/tags/**/feed.xml`])
+    tagFeeds.forEach((feed) => routes.push(feed.replace('public', '').replace('/feed.xml', '')))
+  }
 
   const sitemap = `
-        <?xml version="1.0" encoding="UTF-8"?>
-        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-            ${pages
-              .map((page) => {
-                // Exclude drafts from the sitemap
-                if (page.search('.md') >= 1 && fs.existsSync(page)) {
-                  const source = fs.readFileSync(page, 'utf8')
-                  const fm = matter(source)
-                  if (fm.data.draft) {
-                    return
-                  }
-                  if (fm.data.canonicalUrl) {
-                    return
-                  }
-                }
-                const path = page
-                  .replace('pages/', '/')
-                  .replace('data/blog', '/blog')
-                  .replace('data/projects', '/projects')
-                  .replace('public/', '/')
-                  .replace('.js', '')
-                  .replace('.tsx', '')
-                  .replace('.mdx', '')
-                  .replace('.md', '')
-                  .replace('/feed.xml', '')
-                const route = path === '/index' ? '' : path
-
-                if (page.search('pages/404.') > -1 || page.search(`pages/blog/[...slug].`) > -1) {
-                  return
-                }
-                return `
-                        <url>
-                            <loc>${siteMetadata.siteUrl}${route}</loc>
-                        </url>
-                    `
-              })
-              .join('')}
-        </urlset>
-    `
+    <?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      ${routes.map((route) => `<url><loc>${siteMetadata.siteUrl}${route}</loc></url>`).join('')}
+    </urlset>
+  `
 
   const formatted = prettier.format(sitemap, {
     ...prettierConfig,
