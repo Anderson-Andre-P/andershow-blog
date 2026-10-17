@@ -14,7 +14,7 @@ const ProjectCard = ({ title, slug, description, imgSrc, links = {}, highlighted
 
   return (
     <article
-      className={`group relative flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors focus-within:ring-2 focus-within:ring-indigo-500 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600 ${
+      className={`group relative flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors focus-within:ring-2 focus-within:ring-primary-500 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600 ${
         highlighted ? 'md:flex-row' : ''
       }`}
     >
@@ -36,7 +36,7 @@ const ProjectCard = ({ title, slug, description, imgSrc, links = {}, highlighted
         >
           <Link
             href={`/projects/${slug}`}
-            className="after:absolute after:inset-0 focus:outline-none group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+            className="after:absolute after:inset-0 focus:outline-none group-hover:text-primary-600 dark:group-hover:text-primary-400"
           >
             {title}
           </Link>
@@ -55,7 +55,7 @@ const ProjectCard = ({ title, slug, description, imgSrc, links = {}, highlighted
               <Link
                 key={key}
                 href={links[key]}
-                className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                 aria-label={`${title} on ${LINK_LABELS[key]}`}
               >
                 {LINK_LABELS[key]}

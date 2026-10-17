@@ -129,7 +129,7 @@ export default function Home({ posts, hasResume }) {
       <div className="flex justify-end text-base font-medium leading-6">
         <Link
           href="/projects"
-          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+          className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
         >
           All projects &rarr;
         </Link>
@@ -180,7 +180,7 @@ export default function Home({ posts, hasResume }) {
           <div className="flex justify-end text-base font-medium leading-6">
             <Link
               href="/blog"
-              className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+              className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
               aria-label="All posts"
             >
               All posts &rarr;

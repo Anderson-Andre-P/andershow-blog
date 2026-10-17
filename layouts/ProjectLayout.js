@@ -39,9 +39,9 @@ export default function ProjectLayout({ project, frontMatter = {}, next, childre
                 <Link
                   key={key}
                   href={links[key]}
-                  className={`rounded-md px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
                     index === 0
-                      ? 'bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
+                      ? 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-700'
                       : 'border border-zinc-300 text-zinc-700 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-zinc-500'
                   }`}
                 >
@@ -99,7 +99,7 @@ export default function ProjectLayout({ project, frontMatter = {}, next, childre
             <p className="text-sm text-zinc-500 dark:text-zinc-400">Next project</p>
             <Link
               href={`/projects/${next.slug}`}
-              className="mt-1 inline-block text-2xl font-bold tracking-tight text-zinc-800 hover:text-indigo-600 dark:text-zinc-100 dark:hover:text-indigo-400"
+              className="mt-1 inline-block text-2xl font-bold tracking-tight text-zinc-800 hover:text-primary-600 dark:text-zinc-100 dark:hover:text-primary-400"
             >
               {next.title}
             </Link>

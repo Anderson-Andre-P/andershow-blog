@@ -59,7 +59,7 @@ export default function AuthorLayout({ children, frontMatter, hasResume }) {
               {experienceData.map(({ company, role, level, period }) => (
                 <li key={`${company}-${period}`} className="relative pb-8 pl-6 last:pb-0">
                   <span
-                    className="absolute -left-[5px] top-2 h-2.5 w-2.5 rounded-full bg-indigo-500 dark:bg-indigo-400"
+                    className="absolute -left-[5px] top-2 h-2.5 w-2.5 rounded-full bg-primary-500 dark:bg-primary-400"
                     aria-hidden="true"
                   />
                   <p

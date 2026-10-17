@@ -17,7 +17,7 @@ const ExperienceCard = ({ company, href, logo, role, level, period, highlights, 
 
       <div className="mt-0.5 flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{role}</span>
-        <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">
+        <span className="inline-block rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-600 dark:bg-primary-900/50 dark:text-primary-300">
           {level}
         </span>
       </div>
