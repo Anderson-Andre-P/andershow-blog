@@ -21,7 +21,6 @@ const experienceData = [
       'DAO (Data Access Object) integration for efficient data management and persistence.',
       'Use of WebSockets for real-time communication and dynamic map updates.',
       'Application of usability heuristics to improve user experience and streamline interaction flows.',
-      'Additional experience with Angular and TypeScript, applied to web projects integrated with mobile solutions.',
     ],
   },
   {
