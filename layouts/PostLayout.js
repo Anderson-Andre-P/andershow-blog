@@ -8,16 +8,19 @@ import siteMetadata from '@/data/siteMetadata'
 import Comments from '@/components/comments'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 
-const editUrl = (fileName) => `${siteMetadata.siteRepo}/blob/master/data/blog/${fileName}`
-const discussUrl = (slug) =>
-  `https://mobile.twitter.com/search?q=${encodeURIComponent(
-    `${siteMetadata.siteUrl}/blog/${slug}`
-  )}`
-
+const editUrl = (fileName) => `${siteMetadata.siteRepo}/blob/main/data/blog/${fileName}`
 const postDateTemplate = { year: 'numeric', month: 'long', day: 'numeric' }
 
 export default function PostLayout({ frontMatter, authorDetails, next, prev, children }) {
-  const { slug, fileName, date, title, images, tags, lang = siteMetadata.language } = frontMatter
+  const {
+    slug,
+    fileName,
+    date,
+    title,
+    tags,
+    readingMinutes,
+    lang = siteMetadata.language,
+  } = frontMatter
 
   return (
     <SectionContainer>
@@ -31,9 +34,9 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
         <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
           <header className="pt-6 xl:pb-6">
             <div className="space-y-1 text-center">
-              <dl>
-                <dt className="sr-only">Published in</dt>
-                <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
+              <dl className="flex justify-center gap-4 text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
+                <dt className="sr-only">Published on</dt>
+                <dd>
                   <time dateTime={date}>
                     {new Date(date).toLocaleDateString(lang, {
                       month: 'long',
@@ -43,6 +46,12 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                     })}
                   </time>
                 </dd>
+                {readingMinutes && (
+                  <>
+                    <dt className="sr-only">Reading time</dt>
+                    <dd lang="en">{readingMinutes} min read</dd>
+                  </>
+                )}
               </dl>
 
               <div>
@@ -100,10 +109,13 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
               <div className="divide-gray-200 text-sm font-medium leading-5 dark:divide-gray-700 xl:col-start-1 xl:row-start-2 xl:divide-y">
                 {tags && (
                   <div className="py-4 xl:py-8">
-                    <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    <h2
+                      lang="en"
+                      className="text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+                    >
                       Tags
                     </h2>
-                    <div className="flex flex-wrap">
+                    <div className="mt-2 flex flex-wrap">
                       {tags.map((tag) => (
                         <Tag key={tag} text={tag} />
                       ))}
@@ -114,8 +126,11 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                   <div className="flex justify-between py-4 xl:block xl:space-y-8 xl:py-8">
                     {prev && (
                       <div>
-                        <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Last articles
+                        <h2
+                          lang="en"
+                          className="text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+                        >
+                          Previous article
                         </h2>
                         <div className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400">
                           <Link href={`/blog/${prev.slug}`}>{prev.title}</Link>
@@ -124,7 +139,10 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                     )}
                     {next && (
                       <div>
-                        <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <h2
+                          lang="en"
+                          className="text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+                        >
                           Next article
                         </h2>
                         <div className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400">
@@ -138,9 +156,10 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
               <div className="pt-4 xl:pt-8">
                 <Link
                   href="/blog"
+                  lang="en"
                   className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
                 >
-                  &larr; Return
+                  &larr; Back to blog
                 </Link>
               </div>
             </footer>
