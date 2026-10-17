@@ -1,6 +1,7 @@
 import SocialIcon from '@/components/social-icons'
 import Image from '@/components/Image'
 import ResumeButton from '@/components/ResumeButton'
+import { primaryButton, secondaryButton } from '@/components/buttonStyles'
 import { PageSEO } from '@/components/SEO'
 import experienceData from '@/data/experienceData'
 
@@ -36,13 +37,10 @@ export default function AuthorLayout({ children, frontMatter, hasResume }) {
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <a
-              href={`mailto:${email}`}
-              className="flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 font-medium text-white transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:focus-visible:ring-offset-zinc-900"
-            >
+            {hasResume && <ResumeButton />}
+            <a href={`mailto:${email}`} className={hasResume ? secondaryButton : primaryButton}>
               Email me
             </a>
-            {hasResume && <ResumeButton />}
           </div>
           <div className="mt-5 flex gap-4">
             <SocialIcon kind="github" href={github} size={6} />
