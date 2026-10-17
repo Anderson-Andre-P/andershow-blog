@@ -1,17 +1,16 @@
-import Link from '@/components/Link'
 import { PageSEO } from '@/components/SEO'
 import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
-import { getAllTags } from '@/lib/tags'
-import kebabCase from '@/lib/utils/kebabCase'
+import { getAllTags, getTagNames } from '@/lib/tags'
 
 export async function getStaticProps() {
   const tags = await getAllTags('blog')
+  const tagNames = await getTagNames('blog')
 
-  return { props: { tags } }
+  return { props: { tags, tagNames } }
 }
 
-export default function Tags({ tags }) {
+export default function Tags({ tags, tagNames }) {
   const sortedTags = Object.keys(tags).sort((a, b) => tags[b] - tags[a])
   return (
     <>
@@ -26,14 +25,11 @@ export default function Tags({ tags }) {
           {Object.keys(tags).length === 0 && 'No tags found.'}
           {sortedTags.map((t) => {
             return (
-              <div key={t} className="mb-2 mr-5 mt-2">
-                <Tag text={t} />
-                <Link
-                  href={`/tags/${kebabCase(t)}`}
-                  className="-ml-2 text-sm font-semibold uppercase text-gray-600 dark:text-gray-300"
-                >
-                  {` (${tags[t]})`}
-                </Link>
+              <div key={t} className="flex items-baseline">
+                <Tag text={tagNames[t] || t} />
+                <span className="mb-2 mr-4 text-xs text-zinc-500 dark:text-zinc-400">
+                  {tags[t]}
+                </span>
               </div>
             )
           })}
