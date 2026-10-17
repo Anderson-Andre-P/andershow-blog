@@ -21,8 +21,9 @@ export async function getStaticPaths() {
 export async function getStaticProps({ params }) {
   const allPosts = await getAllFilesFrontMatter('blog')
   const postIndex = allPosts.findIndex((post) => formatSlug(post.slug) === params.slug.join('/'))
-  const prev = allPosts[postIndex + 1] || null
-  const next = allPosts[postIndex - 1] || null
+  // Posts hidden from the list (e.g. translated originals) have no previous/next links
+  const prev = postIndex === -1 ? null : allPosts[postIndex + 1] || null
+  const next = postIndex === -1 ? null : allPosts[postIndex - 1] || null
   const post = await getFileBySlug('blog', params.slug.join('/'))
   const authorList = post.frontMatter.authors || ['default']
   const authorPromise = authorList.map(async (author) => {

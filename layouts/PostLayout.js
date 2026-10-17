@@ -19,8 +19,10 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
     title,
     tags,
     readingMinutes,
+    translation,
     lang = siteMetadata.language,
   } = frontMatter
+  const isPortuguese = lang.startsWith('pt')
 
   return (
     <SectionContainer>
@@ -57,6 +59,27 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
               <div>
                 <PageTitle>{title}</PageTitle>
               </div>
+              {translation && (
+                <p className="pt-2 text-sm text-gray-500 dark:text-gray-400">
+                  {isPortuguese ? (
+                    <Link
+                      href={`/blog/${translation}`}
+                      lang="en"
+                      className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
+                    >
+                      Read this post in English
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/blog/${translation}`}
+                      lang="pt-BR"
+                      className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
+                    >
+                      Leia este post em português
+                    </Link>
+                  )}
+                </p>
+              )}
             </div>
           </header>
           <div
