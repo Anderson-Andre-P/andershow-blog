@@ -132,8 +132,10 @@ export default function Home({ posts, hasResume }) {
             All projects &rarr;
           </Link>
         </div>
-        <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          Personal projects and technical challenges built with Flutter.
+        <p className="my-4 max-w-2xl leading-loose text-zinc-600 dark:text-slate-300">
+          My day-to-day work is on seven B2B apps at DDMX. These are projects I built on my own and
+          as technical challenges, from asset management for maintenance teams to real estate
+          search, each one end to end with Flutter. Open one to read how it was built.
         </p>
       </div>
 
