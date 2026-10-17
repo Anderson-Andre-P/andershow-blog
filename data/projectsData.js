@@ -66,7 +66,7 @@ const projectsData = [
       'en-US': `A real estate app to search properties with filters, publish listings, save favorites and receive push notifications.`,
       'pt-BR': `Um app imobiliário para buscar imóveis com filtros, publicar anúncios, salvar favoritos e receber notificações push.`,
     },
-    imgSrc: '/static/images/projects/zaffre/Zaffre-banner.png',
+    imgSrc: '/static/images/projects/zaffre/Zaffre-banner.jpg',
     links: { github: 'https://github.com/Anderson-Andre-P/Imobis-Flutter' },
   },
 ]

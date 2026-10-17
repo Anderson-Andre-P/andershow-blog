@@ -13,7 +13,9 @@ const Image = ({ themeAware, src, alt, ...rest }) => {
   const finalSrc =
     themeAware && theme === 'dark' ? src.replace(/(\.png|\.jpg|\.jpeg)$/, '-dark$1') : src
 
-  return <NextImage src={finalSrc} alt={alt} {...rest} />
+  // `unoptimized` serves the file as is. Netlify's image optimizer (IPX) can't load sharp's native
+  // library on this setup, so /_next/image requests fail; images in public/ are already optimized.
+  return <NextImage src={finalSrc} alt={alt} unoptimized {...rest} />
 }
 
 export default Image

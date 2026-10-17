@@ -61,6 +61,14 @@ Arquivos: `components/SEO.js`, script novo em `scripts/`.
 O Chrome em modo headless não simula telas menores que cerca de 500px, então o layout em largura de
 celular nunca foi conferido. Abrir o site num celular e anotar o que estiver estranho.
 
+### 7.1. Otimização automática de imagens
+
+As imagens usam `unoptimized` (`components/Image.js`, `components/Screenshots.js`) porque o
+otimizador da Netlify (IPX) não consegue carregar a biblioteca nativa do `sharp` 0.28 neste projeto
+(`libvips-cpp.so.42: cannot open shared object file`). Por isso, imagens novas em `public/` devem
+entrar já otimizadas (WebP ou JPG, até cerca de 1280px de largura). Para voltar a usar a otimização
+automática, atualizar o Next.js e o `sharp` e testar num deploy preview.
+
 ## Conteúdo (precisam de informação)
 
 ### 8. Trabalho profissional
