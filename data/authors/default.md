@@ -1,49 +1,27 @@
 ---
 name: Anderson Eleutério
 avatar: /static/images/profile_pic.png
-occupation: Software Engineer
-company: CLOSE TO WORK
+occupation: Mobile Developer
+company: DDMX
 email: eleu.ander@gmail.com
 linkedin: https://www.linkedin.com/in/anderson-andre-pereira/
 github: https://github.com/Anderson-Andre-P
 ---
 
-## 👋 About Me
+I'm a mobile developer at DDMX, where I build and maintain Flutter apps for iOS and Android, alongside native Android code in Java and integrations in Kotlin and Swift. I graduated in Information Systems from [FEPI](https://fepi.br/) in November 2023.
 
-Hello! I'm **Anderson Eleutério**, a passionate **Software Engineer** with a degree in **Information Systems** (graduated in Nov/2023 at [FEPI](https://fepi.br/)).
+## What I work on
 
-I specialize in building **scalable applications** for both web and mobile platforms, mainly using `Flutter` and `React`. My focus is always on creating solutions that combine **performance**, **usability**, and **real-world impact**.
+Most of my day-to-day is product work:
 
-Beyond my technical background, I see myself as a **creative, proactive, and flexible professional**, always eager to learn and explore new technologies. I enjoy transforming complex problems into elegant and efficient software solutions.
+- **Real-time features:** live video monitoring with external SDKs, maps and geolocation tracking, and WebSocket updates.
+- **Keeping existing apps healthy:** null safety migrations, performance work, and observability for apps that need to work offline.
+- **Shipping:** publishing and maintaining apps on Google Play and the App Store.
 
----
+## What I'm learning
 
-## 🚀 What I Do
+I'm going deeper into app architecture (BLoC and Clean Architecture), mobile performance, and cloud and DevOps practices. I write about what I learn on the [blog](/blog).
 
-- **Cross-platform mobile apps** with Flutter (iOS & Android).
-- **Web applications** with React and modern JavaScript frameworks.
-- **API integration & backend collaboration** to deliver complete solutions.
-- **UI/UX implementation**, turning design into smooth user experiences.
+## Outside of work
 
----
-
-## 🌱 Current Focus
-
-Right now, I'm deepening my expertise in:
-
-- **Scalable architectures** (MVC, MVVM, Clean Architecture).
-- **Performance optimization** for mobile and web apps.
-- **Cloud integration** and modern DevOps practices.
-
----
-
-## 🎯 Beyond Code
-
-When I’m not coding, you’ll probably find me:
-
-- 🚴 Riding my bike
-- 📷 Exploring photography
-- 🎶 Listening to music
-- ✈️ Planning my next trip
-
----
+I ride my bike, take photos, listen to a lot of music, and plan the next trip.
