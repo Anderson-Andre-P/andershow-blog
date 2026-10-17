@@ -1,4 +1,4 @@
-// Each project can link to GitHub, the stores and/or a live demo:
+// Each project can link to GitHub, the stores and/or a live demo (shown on its case study page):
 // links: { github, playStore, appStore, demo }
 // `slug` must match the case study file in data/projects/<slug>.mdx
 // `featured: true` projects show up on the homepage (an even number fills the 2-column grid);
