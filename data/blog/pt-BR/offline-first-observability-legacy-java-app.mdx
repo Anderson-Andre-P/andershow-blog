@@ -1,0 +1,99 @@
+---
+title: 'Observabilidade offline-first em um app mobile legado em Java'
+date: '2026-01-19'
+lastmod: '2026-01-19'
+tags:
+  [
+    'Desenvolvimento Mobile',
+    'Observabilidade',
+    'Java',
+    'Sistemas Legados',
+    'Engenharia de Confiabilidade',
+  ]
+draft: false
+summary: 'Em um app mobile legado em Java, implementei um pipeline de observabilidade offline-first que guarda localmente os logs das ações do usuário em uma fila com DAO e só os envia para uma API quando o aparelho está online. Os logs sobrevivem a reinicializações, são enviados em lotes de 50 a cada 3 minutos para reduzir o impacto na rede e na bateria, e funcionam como uma "stacktrace de ações do usuário" para reconstruir os fluxos que levam aos bugs. Junto com o Sentry, isso cria um sistema de duas camadas: as exceções e o histórico passo a passo do que o usuário fez logo antes do problema.'
+authors: ['default']
+---
+
+# Introdução
+
+Apps mobile legados costumam carregar restrições do mundo real: arquitetura antiga, pouco espaço para grandes refatorações e problemas em produção difíceis de reproduzir localmente. Nesse tipo de ambiente, adicionar observabilidade não é um "seria bom ter": é um requisito de estabilidade.
+
+Neste post, descrevo uma funcionalidade de **observabilidade offline-first** que implementei em um projeto mobile **legado em Java** e que se tornou importante para a empresa: um rastreamento confiável das ações do usuário que resiste a conexão ruim, reinicializações do app e longos períodos offline.
+
+## O problema: crashes não contam a história toda
+
+O app tinha bugs e comportamentos inesperados que nem sempre geravam um crash. Mesmo quando uma exceção acontecia, só a stacktrace muitas vezes não explicava o _porquê_, porque não tínhamos o caminho que o usuário fez até chegar àquele estado.
+
+O que precisávamos:
+
+- Um registro durável das **ações do usuário** e dos principais eventos do app
+- **Persistência offline** e **entrega garantida** quando o aparelho volta a ter conexão
+- Impacto mínimo em **desempenho**, **bateria** e **uso de rede**
+- Uma solução que coubesse em uma **base de código legada em Java**
+
+## A solução: logs offline-first com uma fila local (DAO)
+
+A ideia central é simples: tratar os logs como dados de primeira classe e gerenciá-los como uma fila confiável.
+
+### Como funciona
+
+- O app grava um log estruturado para os eventos relevantes (telas abertas, toques, ações, mudanças de estado).
+- Cada log é salvo em um banco de dados local, por meio de uma camada **DAO**.
+- Os logs formam uma fila de itens "pendentes" esperando para ser entregues.
+- O envio acontece **só quando o aparelho está conectado à internet**.
+- Se o aparelho estiver offline, os logs continuam guardados localmente.
+- Se o usuário reiniciar o celular, os logs continuam lá, e a fila volta a enviar automaticamente na próxima conexão.
+
+## Estratégia de envio: eficiente, previsível e de baixo impacto
+
+Para não sobrecarregar a rede nem gastar bateria, a sincronização é controlada:
+
+- Os logs são enviados em **lotes de 50**
+- A sincronização roda **a cada 3 minutos**
+- Sem internet, o envio é pulado e tentado de novo depois
+
+Esse desenho mantém o pipeline previsível e evita uma "tempestade de envios" depois que a conexão volta, garantindo ainda assim que os logs cheguem ao backend com regularidade.
+
+## Logs como uma "stacktrace de ações do usuário"
+
+Uma decisão importante foi tratar esses logs como uma **stacktrace das ações do usuário**.
+
+Em vez de eventos isolados, os logs formam uma cadeia cronológica que responde perguntas como:
+
+- O que o usuário fez logo antes do problema?
+- Quais telas e ações levaram a esse estado?
+- Em que ponto o fluxo do usuário começou a fugir do comportamento esperado?
+
+Essa "stacktrace de ações" muitas vezes é a peça que faltava para transformar um relato vago de bug em produção em algo que dá para resolver.
+
+## Sentry + stacktrace de ações: observabilidade em duas camadas
+
+Depois de construir o pipeline offline-first, combinamos ele com o **Sentry**:
+
+- O **Sentry** captura as exceções e as stacktraces dos crashes
+- A **stacktrace de ações** mostra o caminho passo a passo do usuário até o problema
+
+Agora, quando algo quebra em produção, conseguimos analisar:
+
+- A falha técnica (exceção + stacktrace)
+- O contexto de comportamento (o que o usuário fez logo antes)
+
+Isso reduz bastante o tempo de investigação e aumenta a precisão das correções, principalmente quando o crash é sintoma de um problema de estado que aconteceu antes.
+
+## Por que isso importa em um projeto legado
+
+Mesmo sem reescrever o app, essa funcionalidade trouxe melhorias reais:
+
+- Análise de causa raiz mais rápida em produção
+- Menos dependência de reproduzir bugs manualmente
+- Mais visibilidade do comportamento real dos usuários
+- Mais confiança ao mexer em partes legadas
+
+Acima de tudo, ela trouxe confiabilidade para uma base de código que precisava mais de estabilidade do que de novidade.
+
+## Conclusão
+
+Observabilidade não é exclusividade de stacks modernas. Com um desenho cuidadoso (**persistência local**, **comportamento offline-first**, **envio em lotes controlados** e **sincronização que respeita a conectividade**), é possível ter uma visibilidade de nível de produção mesmo em aplicações legadas em Java.
+
+E, combinando isso com o Sentry, você não fica só com "o que quebrou": você entende _por que aconteceu_, com uma sequência clara das ações do usuário até a falha.

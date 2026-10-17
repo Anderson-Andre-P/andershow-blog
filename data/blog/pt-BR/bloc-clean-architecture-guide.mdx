@@ -1,0 +1,430 @@
+---
+title: 'Guia de estudo de BLoC e Clean Architecture'
+date: '2026-02-26'
+lastmod: '2026-02-26'
+tags: ['Flutter', 'BLoC', 'Gerenciamento de Estado']
+draft: false
+summary: 'Este guia explica o padrão BLoC e os conceitos de Clean Architecture, e como aplicá-los em projetos Flutter.'
+authors: ['default']
+---
+
+## O que você vai aprender
+
+### 0. Introdução
+
+Este artigo é baseado neste repositório: https://github.com/Anderson-Andre-P/dev_study
+
+### 1. Camadas da Clean Architecture
+
+A Clean Architecture separa o app em **4 camadas distintas**, cada uma com uma responsabilidade específica:
+
+```
+┌─────────────────────────────────────────────────┐
+│ PRESENTATION LAYER (UI)                         │
+│ - StudyHomePage (the screen users see)          │
+│ - StudyBloc (state management)                  │
+│ - StudyItemView (UI model)                      │
+└─────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────┐
+│ DOMAIN LAYER (Business Logic)                   │
+│ - Study (entity/model)                          │
+│ - StudyRepository (interface)                   │
+│ - GetStudies (usecase/business logic)           │
+└─────────────────────────────────────────────────┘
+                        ↓
+┌──────────────────────────────────────────────────┐
+│ DATA LAYER (Data Sources)                        │
+│ - StudyLocalDataSource (where data comes from)   │
+│ - StudyRepositoryImpl (repository implementation)│
+└──────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────┐
+│ EXTERNAL (Databases, APIs, Files)               │
+│ - Local database, REST API, JSON files, etc.    │
+└─────────────────────────────────────────────────┘
+```
+
+### 2. Fluxo de dados entre as camadas
+
+Quando você abre o app e a página carrega os estudos:
+
+```
+1. StudyHomePage.initState()
+   └─→ Sends StudyLoadRequested event to StudyBloc
+
+2. StudyBloc receives the event
+   └─→ Emits StudyLoading state (UI shows spinner)
+   └─→ Calls GetStudies.call() from DOMAIN layer
+
+3. GetStudies.call() (Domain Logic)
+   └─→ Calls StudyRepository.getStudies() from DATA layer
+
+4. StudyRepositoryImpl (Data Layer)
+   └─→ Calls StudyLocalDataSource.fetch()
+   └─→ Converts raw Map data → Study entities
+   └─→ Returns List<Study>
+
+5. GetStudies receives List<Study>
+   └─→ Returns it to BLoC
+
+6. StudyBloc transforms Study → StudyItemView
+   └─→ Emits StudyLoaded state with transformed data
+
+7. BlocBuilder in StudyHomePage
+   └─→ Detects state change
+   └─→ Rebuilds UI with the new data
+   └─→ Displays GridView of study cards
+```
+
+### 3. Por que separar em camadas?
+
+| Benefício | Explicação |
+|---------|-------------|
+| **Testabilidade** | Cada camada pode ser testada isoladamente, sem a interface |
+| **Reutilização** | A lógica de domínio pode ser usada na web, no mobile e no desktop |
+| **Manutenibilidade** | Mudanças em uma camada não quebram as outras |
+| **Flexibilidade** | Troque a fonte de dados (API → banco de dados) sem mudar a interface |
+| **Escalabilidade** | Fica fácil adicionar funcionalidades sem quebrar tudo |
+
+---
+
+## O padrão BLoC explicado
+
+BLoC = **Business Logic Component** (componente de lógica de negócio)
+
+### As 3 partes do BLoC
+
+#### 1. **Eventos** (entrada)
+- Representam ações do usuário: "carregar estudos", "favoritar este item" etc.
+- São enviados PARA o BLoC
+- Ficam em `study_event.dart`
+
+```dart
+class StudyLoadRequested extends StudyEvent {
+  const StudyLoadRequested();
+}
+```
+
+#### 2. **Estados** (saída)
+- Representam o estado da interface: carregando, carregado, erro etc.
+- São emitidos PELO BLoC
+- Ficam em `study_state.dart`
+
+```dart
+class StudyLoaded extends StudyState {
+  final List<StudyItemView> items;
+  const StudyLoaded(this.items);
+}
+```
+
+#### 3. **BLoC** (lógica)
+- Escuta os eventos
+- Usa a lógica de negócio (camada de domínio)
+- Emite estados
+- Fica em `study_bloc.dart`
+
+```dart
+class StudyBloc extends Bloc<StudyEvent, StudyState> {
+  Future<void> _onStudyLoadRequested(...) async {
+    emit(const StudyLoading()); // Show spinner
+    final studies = await _getStudies(); // Get data
+    emit(StudyLoaded(items)); // Show data
+  }
+}
+```
+
+### Ciclo de vida do BLoC
+
+```
+Create BLoC instance (in main.dart via BlocProvider)
+         ↓
+User interacts with UI
+         ↓
+Event is added to BLoC (context.read<StudyBloc>().add(...))
+         ↓
+BLoC listens for that event type
+         ↓
+BLoC's handler is called (e.g., _onStudyLoadRequested)
+         ↓
+BLoC emits states as it processes
+         ↓
+BlocBuilder listens to states
+         ↓
+UI rebuilds when state changes
+```
+
+---
+
+## Estrutura de arquivos e responsabilidades
+
+### `/presentation/bloc/`
+**Objetivo**: gerenciamento de estado com o padrão BLoC
+- `study_event.dart` - Eventos (ações do usuário)
+- `study_state.dart` - Estados (estados da interface)
+- `study_bloc.dart` - BLoC (orquestração da lógica de negócio)
+
+**Conceito-chave**: o BLoC é o intermediário entre a interface e a camada de domínio
+
+### `/presentation/pages/`
+**Objetivo**: telas com as quais o usuário interage
+- `study_home_page.dart` - Tela principal, usa BlocBuilder
+- `layout_study_page.dart` - Tela de detalhe
+
+**Conceito-chave**: as páginas escutam os estados do BLoC e reconstroem a interface de acordo
+
+### `/domain/`
+**Objetivo**: lógica de negócio (independente de framework)
+- `entities/study.dart` - Modelo de dados
+- `usecases/get_studies.dart` - Lógica de negócio ("buscar todos os estudos")
+- `repositories/study_repository.dart` - Interface
+
+**Conceito-chave**: o domínio não sabe nada de Flutter, banco de dados ou APIs
+
+### `/data/`
+**Objetivo**: buscar e transformar dados
+- `datasources/study_local_datasource.dart` - Fonte de dados (fixa no código, API, banco de dados etc.)
+- `repositories/study_repository_impl.dart` - Implementa a interface do domínio
+
+**Conceito-chave**: converte dados brutos em entidades de domínio
+
+### `/app/`
+**Objetivo**: configuração da injeção de dependência
+- `study_hub_injection.dart` - Cria e conecta todas as dependências
+
+**Conceito-chave**: o lugar central onde todas as camadas se conectam
+
+---
+
+## Injeção de dependência a fundo
+
+### O que é DI?
+
+Em vez de as classes criarem as próprias dependências:
+
+```dart
+// ❌ Bad (no DI)
+class StudyBloc extends Bloc<StudyEvent, StudyState> {
+  final GetStudies getStudies = GetStudies(...); // Creates its own
+}
+```
+
+Nós as fornecemos de fora:
+
+```dart
+// ✅ Good (with DI)
+class StudyBloc extends Bloc<StudyEvent, StudyState> {
+  final GetStudies getStudies;
+  StudyBloc(this.getStudies); // Receives it
+}
+```
+
+### A cadeia em `study_hub_injection.dart`
+
+```dart
+StudyBloc createStudyBloc() {
+  // Layer 1: DATA - Raw data source
+  final dataSource = StudyLocalDataSource();
+
+  // Layer 2: DATA - Repository implementation
+  final repository = StudyRepositoryImpl(dataSource);
+
+  // Layer 3: DOMAIN - Business logic
+  final getStudies = GetStudies(repository);
+
+  // Layer 4: PRESENTATION - State management
+  final bloc = StudyBloc(getStudies);
+
+  return bloc;
+}
+```
+
+### Por que isso importa para os testes
+
+```dart
+// In your test file
+class FakeDataSource extends StudyLocalDataSource {
+  @override
+  Future<List<Map>> fetch() async {
+    return [/* test data */]; // No real database!
+  }
+}
+
+// Test the BLoC with fake data
+final testBloc = StudyBloc(
+  GetStudies(StudyRepositoryImpl(FakeDataSource()))
+);
+```
+
+---
+
+## Conceitos-chave para lembrar
+
+### 1. **Fluxo de dados unidirecional**
+- Os dados descem pelas camadas (Apresentação → Domínio → Dados)
+- Os eventos sobem da interface para o BLoC
+- Os estados descem do BLoC para a interface
+
+### 2. **Separação de responsabilidades**
+- Camada de domínio: lógica pura, sem código de Flutter ou de banco de dados
+- Camada de dados: busca e armazenamento, sem lógica de negócio
+- Camada de apresentação: só interface, delega a lógica ao BLoC
+
+### 3. **Entidade vs modelo vs view**
+- **Entidade** (domínio): `Study` - modelo de negócio
+- **Modelo** (dados): o `Map` bruto vindo da fonte de dados
+- **View** (apresentação): `StudyItemView` - o que a interface precisa
+
+### 4. **Interface reativa**
+- Não chame setState() manualmente
+- Não atualize widgets manualmente
+- Só emita mudanças de estado, e a interface reage automaticamente pelo BlocBuilder
+
+### 5. **Independência de framework**
+- A camada de domínio tem ZERO imports de `package:flutter`
+- A lógica de domínio poderia rodar no backend, numa CLI, na web, em qualquer lugar
+- Só a camada de apresentação importa o Flutter
+
+---
+
+## Casos de uso comuns
+
+### Adicionando uma nova funcionalidade
+
+1. **Adicione a entidade de domínio** (se for um novo tipo de dado)
+   - Crie `Feature.dart` em domain/entities
+
+2. **Adicione o caso de uso de domínio**
+   - Crie `GetFeatures.dart` em domain/usecases
+   - Defina a lógica de negócio
+
+3. **Adicione a camada de dados**
+   - Crie a fonte de dados em data/datasources
+   - Crie a implementação do repositório em data/repositories
+
+4. **Adicione o BLoC**
+   - Crie feature_event.dart
+   - Crie feature_state.dart
+   - Crie feature_bloc.dart
+
+5. **Adicione a apresentação**
+   - Crie páginas e widgets usando BlocBuilder
+   - Conecte no main.dart com BlocProvider
+
+6. **Atualize a injeção**
+   - Adicione a função createFeatureBloc()
+
+---
+
+## Lendo o código
+
+Quando abrir um arquivo, procure estes padrões:
+
+### No BLoC
+```dart
+// Event handler - listens for events and processes them
+Future<void> _onStudyLoadRequested(...) async {
+  emit(const StudyLoading()); // Emit state
+  try {
+    final data = await _usecase(); // Call domain
+    emit(StudyLoaded(data)); // Emit success
+  } catch (e) {
+    emit(StudyError(e.toString())); // Emit error
+  }
+}
+```
+
+### Nas páginas
+```dart
+// Trigger events in initState or callbacks
+@override
+void initState() {
+  super.initState();
+  context.read<StudyBloc>().add(const StudyLoadRequested());
+}
+
+// Listen to states and rebuild UI
+BlocBuilder<StudyBloc, StudyState>(
+  builder: (context, state) {
+    if (state is StudyLoading) return Spinner();
+    if (state is StudyLoaded) return GridView(...);
+    if (state is StudyError) return ErrorWidget();
+  }
+)
+```
+
+---
+
+## Trilha de aprendizado
+
+1. **Entenda as camadas** - Leia os comentários de cada arquivo explicando a camada dele
+2. **Siga o fluxo de dados** - Acompanhe um estudo da fonte de dados até a interface
+3. **Estude o padrão BLoC** - Entenda Eventos → BLoC → Estados
+4. **Aprenda injeção de dependência** - Por que injetamos em vez de criar
+5. **Pratique** - Adicione uma nova funcionalidade seguindo o mesmo padrão
+
+---
+
+## Arquivos com comentários
+
+Todos os arquivos principais têm comentários detalhados explicando:
+- O que cada classe ou método faz
+- Por que está estruturado desse jeito
+- Como se encaixa na arquitetura
+- Exemplos de código e explicações
+
+**Comece a leitura por aqui:**
+1. `lib/src/app/study_hub_injection.dart` - Veja todas as camadas conectadas
+2. `lib/src/features/study_hub/presentation/bloc/study_bloc.dart` - Lógica central
+3. `lib/src/features/study_hub/presentation/pages/study_home_page.dart` - Integração com a interface
+4. `lib/src/app/main.dart` - Configuração do app
+
+---
+
+## Diagrama da arquitetura
+
+```
+┌─────────────────────────────────────┐
+│   StudyHomePage (StatefulWidget)    │
+│   - Uses BlocBuilder                │
+│   - Listens to StudyBloc states     │
+│   - Sends StudyLoadRequested event  │
+└──────────────┬──────────────────────┘
+               │ event
+               ▼
+┌──────────────────────────────┐
+│   StudyBloc (Business Logic) │
+│   - _onStudyLoadRequested()  │
+│   - _toViewModel().          │
+│   - Emits states             │
+└──────────────┬───────────────┘
+               │ calls
+               ▼
+┌──────────────────────────────┐
+│   GetStudies (Domain Usecase)│
+│   - call() method            │
+│   - Pure business logic.     │
+└──────────────┬───────────────┘
+               │ calls
+               ▼
+┌──────────────────────────────┐
+│   StudyRepository (Interface)│
+│   - getStudies()             │
+└──────────────┬───────────────┘
+               │ implemented by
+               ▼
+┌──────────────────────────────┐
+│   StudyRepositoryImpl (Data) │
+│   - Transforms Map → Study.  │
+└──────────────┬───────────────┘
+               │ uses
+               ▼
+┌──────────────────────────────┐
+│   StudyLocalDataSource (Data)│
+│   - fetch() returns raw data │
+└──────────────┬───────────────┘
+               │ represents
+               ▼
+        [Hardcoded Data]
+      (Database/API in real app)
+```
