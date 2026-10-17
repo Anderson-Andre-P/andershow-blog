@@ -312,9 +312,9 @@ export default function ListLayout({ posts, title, description, showFilters = fa
           ))}
         </ul>
       ) : (
-        <ul className="mt-6 space-y-1">
+        <ul className="mt-6 divide-y divide-zinc-200 dark:divide-zinc-800">
           {visiblePosts.map((post) => (
-            <li key={post.slug}>
+            <li key={post.slug} className="py-1">
               <PostRow {...post} />
             </li>
           ))}
