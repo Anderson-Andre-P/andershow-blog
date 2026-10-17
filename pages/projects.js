@@ -3,13 +3,9 @@ import projectsData from '@/data/projectsData'
 import ProjectCard from '@/components/ProjectCard'
 import ProjectGrid from '@/components/ProjectGrid'
 import { PageSEO } from '@/components/SEO'
+import { sortProjects } from '@/lib/projects'
 
-// Featured projects first, keeping the order from projectsData
-const projects = [
-  ...projectsData.filter((p) => p.featured),
-  ...projectsData.filter((p) => !p.featured),
-]
-const [highlighted, ...rest] = projects
+const [highlighted, ...rest] = sortProjects(projectsData)
 
 export default function Projects() {
   return (
@@ -20,8 +16,8 @@ export default function Projects() {
           Projects
         </h1>
         <p className="max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-          Mobile apps I've built with Flutter, from technical challenges to personal projects. Each
-          one links to its source code.
+          Mobile apps I've built with Flutter, from technical challenges to personal projects. Open
+          a project to see how it was built.
         </p>
       </div>
       {highlighted && <ProjectCard {...highlighted} highlighted />}

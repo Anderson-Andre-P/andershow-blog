@@ -8,13 +8,13 @@ const LINK_LABELS = {
   demo: 'Live demo',
 }
 
-const ProjectCard = ({ title, description, imgSrc, links = {}, highlighted = false }) => {
+// The whole card opens the case study (stretched title link); store/GitHub links sit above it.
+const ProjectCard = ({ title, slug, description, imgSrc, links = {}, highlighted = false }) => {
   const availableLinks = Object.keys(LINK_LABELS).filter((key) => links[key])
-  const mainLink = availableLinks.length > 0 ? links[availableLinks[0]] : null
 
   return (
     <article
-      className={`flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 ${
+      className={`group relative flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors focus-within:ring-2 focus-within:ring-indigo-500 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600 ${
         highlighted ? 'md:flex-row' : ''
       }`}
     >
@@ -34,13 +34,12 @@ const ProjectCard = ({ title, description, imgSrc, links = {}, highlighted = fal
             highlighted ? 'text-2xl' : 'text-xl'
           }`}
         >
-          {mainLink ? (
-            <Link href={mainLink} className="hover:text-indigo-600 dark:hover:text-indigo-400">
-              {title}
-            </Link>
-          ) : (
-            title
-          )}
+          <Link
+            href={`/projects/${slug}`}
+            className="after:absolute after:inset-0 focus:outline-none group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+          >
+            {title}
+          </Link>
         </h3>
         <p
           className={`mt-2 leading-relaxed text-zinc-600 dark:text-zinc-400 ${
@@ -51,7 +50,7 @@ const ProjectCard = ({ title, description, imgSrc, links = {}, highlighted = fal
         </p>
 
         {availableLinks.length > 0 && (
-          <div className="mt-auto flex flex-wrap gap-x-5 gap-y-2 pt-5 text-sm font-medium">
+          <div className="relative z-10 mt-auto flex flex-wrap gap-x-5 gap-y-2 pt-5 text-sm font-medium">
             {availableLinks.map((key) => (
               <Link
                 key={key}

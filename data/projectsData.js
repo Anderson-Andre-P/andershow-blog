@@ -1,9 +1,11 @@
 // Each project can link to GitHub, the stores and/or a live demo:
 // links: { github, playStore, appStore, demo }
+// `slug` must match the case study file in data/projects/<slug>.mdx
 // `featured: true` projects show up on the homepage; the first one is highlighted on /projects.
 const projectsData = [
   {
     title: 'Vibraguard',
+    slug: 'vibraguard',
     featured: true,
     description: `VibraGuard is an advanced mobile platform designed to simplify asset and service management. With a user-friendly interface and powerful features, the application is the definitive tool for maintenance teams, engineers and asset managers.`,
     imgSrc: '/static/images/projects/vibraguard-banner.png',
@@ -11,6 +13,7 @@ const projectsData = [
   },
   {
     title: 'Onboarding and Sign In',
+    slug: 'onboarding-and-sign-in',
     featured: true,
     description: `This Flutter app combines informative Onboarding with secure login, providing a smooth introduction and reliable authentication for users.`,
     imgSrc: '/static/images/projects/onboarding-and-sign-in-banner.png',
@@ -18,24 +21,28 @@ const projectsData = [
   },
   {
     title: 'IMC Flutter',
+    slug: 'imc-flutter',
     description: `"IMC_Flutter" is your definitive app to track and improve your health in a simple and effective way. With a modern and user-friendly interface, "IMC_Flutter" allows you to calculate your Body Mass Index (BMI) in a matter of seconds, providing valuable insights into your physical condition.`,
     imgSrc: '/static/images/projects/imc-banner.png',
     links: { github: 'https://github.com/Anderson-Andre-P/imc_flutter' },
   },
   {
     title: 'QR Code Scanner',
+    slug: 'qr-code-scanner',
     description: `QR Code App is a powerful QR code reading and generating tool, developed with Flutter technology to provide an efficient and versatile experience to its users. This app allows you to easily read QR Codes on labels, flyers, websites and more, providing relevant information instantly.`,
     imgSrc: '/static/images/projects/qrcode-banner.png',
     links: { github: 'https://github.com/Anderson-Andre-P/qr_code_scanner' },
   },
   {
     title: 'Strong Password',
+    slug: 'strong-password',
     description: `This app is a personal project I created to show a user in a friendly way whether their password is strong or weak.`,
     imgSrc: '/static/images/projects/strong-password-banner.png',
     links: { github: 'https://github.com/Anderson-Andre-P/strong_password' },
   },
   {
     title: 'Zaffre Imóveis',
+    slug: 'zaffre-imoveis',
     featured: true,
     description: `A virtual real estate agency app being built with Flutter, aimed at solving a real-world problem.`,
     imgSrc: '/static/images/projects/zaffre/Zaffre-banner.png',

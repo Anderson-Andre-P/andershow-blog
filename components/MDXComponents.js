@@ -5,12 +5,14 @@ import Image from './Image'
 import CustomLink from './Link'
 import TOCInline from './TOCInline'
 import Pre from './Pre'
+import Screenshots from './Screenshots'
 
 export const MDXComponents = {
   Image,
   TOCInline,
   a: CustomLink,
   pre: Pre,
+  Screenshots,
   wrapper: ({ components, layout, ...rest }) => {
     const Layout = require(`../layouts/${layout}`).default
     return <Layout {...rest} />
