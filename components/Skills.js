@@ -1,11 +1,9 @@
 import React from 'react'
 import {
-  SiJavascript,
   SiFirebase,
   SiGit,
   SiFlutter,
   SiDart,
-  SiAngular,
   SiGooglemaps,
   SiKotlin,
   SiSwift,
@@ -35,14 +33,6 @@ const skills = [
     logo: SiKotlin,
   },
   {
-    name: 'Angular',
-    logo: SiAngular,
-  },
-  {
-    name: 'JavaScript & TypeScript',
-    logo: SiJavascript,
-  },
-  {
     name: 'Firebase / WebSockets',
     logo: SiFirebase,
   },
@@ -51,7 +41,7 @@ const skills = [
     logo: SiGooglemaps,
   },
   {
-    name: 'Performance & Otimization',
+    name: 'Performance & Optimization',
     logo: AiOutlineAreaChart,
   },
   {
@@ -76,9 +66,7 @@ const Skills = () => {
         I specialize in cross-platform mobile app development with Flutter, delivering fast,
         scalable, and intuitive experiences for both iOS and Android. I also work on native app
         maintenance, integrating features like maps, geolocation, and WebSockets, optimizing
-        performance, and managing app releases on the App Stores. Additionally, I complement my
-        mobile work with web development in TypeScript and Angular, providing integrated,
-        high-quality solutions for users.
+        performance, and managing app releases on the App Stores.
       </p>
 
       {/* Grid de ícones */}
@@ -87,7 +75,7 @@ const Skills = () => {
         whileInView="visible"
         variants={FadeContainer}
         viewport={{ once: true }}
-        className="my-10 grid grid-cols-3 gap-4"
+        className="my-10 grid grid-cols-3 gap-4 sm:grid-cols-2"
       >
         {skills.map((skill, index) => {
           return (
