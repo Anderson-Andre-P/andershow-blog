@@ -17,8 +17,6 @@ import { motion } from 'framer-motion'
 import { showHoverAnimation, removeHoverAnimation } from '../lib/windowAnimation'
 import { FadeContainer, popUp } from '../lib/framerMotionVariants'
 
-import HexSkillRadar from './HexSkillRadar'
-
 const skills = [
   {
     name: 'Flutter (Cross-Platform)',
@@ -70,21 +68,6 @@ const skills = [
   },
 ]
 
-const radarSkills = [
-  { label: 'Flutter', value: 90 },
-  { label: 'Swift', value: 35 },
-  { label: 'Dart', value: 75 },
-  { label: 'Kotlin', value: 45 },
-  { label: 'React', value: 40 },
-  { label: 'Js/Ts', value: 50 },
-  { label: 'Firebase/wsk', value: 55 },
-  { label: 'Maps', value: 35 },
-  { label: 'Performance', value: 25 },
-  { label: 'Deploy', value: 70 },
-  { label: 'Git', value: 65 },
-  { label: 'Archtecture', value: 20 },
-]
-
 const Skills = () => {
   return (
     <>
@@ -126,12 +109,6 @@ const Skills = () => {
           )
         })}
       </motion.div>
-
-      <h2 className="font-poppins title-font text-3xl font-bold">Skills Radar</h2>
-
-      <div className="my-10 flex justify-center">
-        <HexSkillRadar skills={radarSkills} size={440} />
-      </div>
     </>
   )
 }
