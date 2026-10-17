@@ -34,7 +34,7 @@ export default function Home({ posts, hasResume }) {
               Anderson Eleutério
             </h1>
             <h2 className="mb-1 text-xl font-bold tracking-tight text-zinc-600 dark:text-white md:text-2xl">
-              Specialist in building scalable software for the real world.
+              Mobile &amp; Forward Deployed Engineer
             </h2>
           </div>
           {/* <div className="relative mb-8 mr-auto w-[100px] sm:mb-0 sm:w-[200px]">
@@ -47,9 +47,13 @@ export default function Home({ posts, hasResume }) {
             />
           </div> */}
         </div>
-        <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          Mobile developer focused on Flutter, with native Kotlin and Swift experience, building
-          fast and reliable apps for iOS and Android.
+        <p className="my-4 max-w-2xl leading-loose text-zinc-600 dark:text-slate-300">
+          I build Flutter apps for logistics and industrial IoT, and I care about what happens after
+          they ship: how they're used in the field, where they break, and how they can make an
+          operation run better.
+        </p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Open to remote international roles.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
@@ -119,21 +123,21 @@ export default function Home({ posts, hasResume }) {
       </div>
 
       <div className="content mb-8 mt-12 sm:mt-16">
-        <h2 className="font-poppins title-font text-3xl font-bold">Projects</h2>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="font-poppins title-font text-3xl font-bold">Projects</h2>
+          <Link
+            href="/projects"
+            className="text-base font-medium text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
+          >
+            All projects &rarr;
+          </Link>
+        </div>
         <p className="my-4 space-y-4 leading-loose text-zinc-500 dark:text-slate-300">
-          A selection of mobile apps, from real-world professional work to personal projects.
+          Personal projects and technical challenges built with Flutter.
         </p>
       </div>
 
       <ProjectGrid projects={projectsData.filter((project) => project.featured)} />
-      <div className="flex justify-end text-base font-medium leading-6">
-        <Link
-          href="/projects"
-          className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
-        >
-          All projects &rarr;
-        </Link>
-      </div>
       <div className="content mt-12 sm:mt-24">
         <h2 className="font-poppins title-font text-3xl font-bold">Experience</h2>
         <ul className="mt-8">
@@ -148,7 +152,17 @@ export default function Home({ posts, hasResume }) {
       </div>
 
       <div className="content mt-12 sm:mt-24">
-        <h2 className="font-poppins title-font text-3xl font-bold">Latest Posts</h2>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="font-poppins title-font text-3xl font-bold">Latest Posts</h2>
+          {posts.length > MAX_DISPLAY && (
+            <Link
+              href="/blog"
+              className="text-base font-medium text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
+            >
+              All posts &rarr;
+            </Link>
+          )}
+        </div>
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {posts.slice(0, MAX_DISPLAY).map(({ slug, date, title, summary, tags }) => (
             <li key={slug} className="py-8">
@@ -176,17 +190,6 @@ export default function Home({ posts, hasResume }) {
             </li>
           ))}
         </ul>
-        {posts.length > MAX_DISPLAY && (
-          <div className="flex justify-end text-base font-medium leading-6">
-            <Link
-              href="/blog"
-              className="text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
-              aria-label="All posts"
-            >
-              All posts &rarr;
-            </Link>
-          </div>
-        )}
       </div>
     </>
   )
