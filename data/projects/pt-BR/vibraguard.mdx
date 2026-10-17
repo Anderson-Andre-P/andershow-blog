@@ -1,0 +1,79 @@
+---
+year: 2023
+type: Desafio técnico
+stack:
+  ['Flutter', 'MVVM', 'MobX', 'Provider', 'GetIt', 'Dio', 'mobile_scanner', 'Syncfusion Charts']
+---
+
+## Visão geral
+
+O VibraGuard é um app de gestão de ativos e serviços para equipes de manutenção, engenheiros e gestores de ativos. Ele reúne dispositivos monitorados e ordens de serviço em um só lugar, para que um técnico possa ver o estado de um ativo e agir pelo celular.
+
+## O problema
+
+Equipes de manutenção perdem tempo quando os dados dos ativos e as ordens de serviço ficam em lugares diferentes, e o cadastro manual de dispositivos gera erros de digitação. O app foca em três coisas: ver o estado de cada ativo monitorado, acompanhar o trabalho de manutenção e vincular dispositivos de forma rápida e sem erros.
+
+## O que o app faz
+
+- **Vínculo por QR code:** escaneie o QR code de um dispositivo para vinculá-lo à plataforma, sem digitação manual.
+- **Monitoramento de dispositivos:** uma lista de todos os ativos monitorados com status, histórico e localização.
+- **Detalhes do dispositivo:** métricas em tempo real, histórico de manutenção e documentação de cada ativo.
+- **Ordens de serviço:** acompanhe ordens abertas e concluídas e priorize as tarefas de manutenção.
+- **Detalhes da ordem de serviço:** descrição, status, responsáveis e histórico de ações.
+- **Onboarding, login e cadastro**, com validação dos formulários.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/vibraguard/screens/onboarding.webp',
+      alt: 'Onboarding',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/sign-in.webp',
+      alt: 'Login',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/assets.webp',
+      alt: 'Ativos monitorados',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/asset-details.webp',
+      alt: 'Detalhes do ativo',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/qr-scanner.webp',
+      alt: 'Leitor de QR code',
+      width: 540,
+      height: 1170,
+    },
+    {
+      src: '/static/images/projects/vibraguard/screens/work-order-details.webp',
+      alt: 'Detalhes da ordem de serviço',
+      width: 540,
+      height: 1170,
+    },
+  ]}
+/>
+
+## Decisões técnicas
+
+- **Arquitetura MVVM:** regras de negócio, interface e representação dos dados ficam em camadas separadas. Cada camada pode mudar sozinha, o que reduz o risco de efeitos colaterais ao atualizar uma tela.
+- **MobX para estado reativo**, com **GetIt** para injeção de dependência, mantendo os view models independentes dos widgets que os usam.
+- **Dio** para requisições HTTP, com **logger** para facilitar a investigação de problemas de rede.
+- **mobile_scanner** e **qr_flutter** para ler e gerar QR codes.
+- **Syncfusion Flutter Charts** para mostrar as métricas dos dispositivos.
+- Git hooks com **Husky** e **flutter_lints** para manter o código consistente.
+
+O [design foi feito no Figma](https://www.figma.com/file/ASMDdAUXSnRKAo3ch6vPAQ/VibraGuard?type=design&node-id=1%3A2&mode=design&t=18IICEUM5IEuoqDM-1) antes da implementação.
+
+## Resultado
+
+O resultado é um código modular que segue os princípios de Clean Code, em que novas telas e funcionalidades podem ser adicionadas sem mexer em camadas não relacionadas.
