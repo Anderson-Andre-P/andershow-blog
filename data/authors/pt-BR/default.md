@@ -1,7 +1,7 @@
 ---
 name: Anderson Eleutério
 avatar: /static/images/profile-photo.jpg
-occupation: Engenheiro Mobile e Forward Deployed Engineer
+occupation: Engenheiro Mobile
 company: DDMX
 email: eleu.ander@gmail.com
 linkedin: https://www.linkedin.com/in/anderson-andre-pereira/
@@ -23,7 +23,7 @@ A maior parte do meu trabalho é em logística e IoT industrial:
 
 ## Como eu trabalho
 
-Gosto de trabalhar perto do problema: entender o contexto operacional por trás de um requisito, trabalhar junto com produto, design e clientes, e adaptar a solução às restrições reais. Por isso me interesso por Forward Deployed Engineering, além de vagas mobile.
+Gosto de trabalhar perto do problema: entender o contexto operacional por trás de um requisito, trabalhar junto com produto, design e clientes, e adaptar a solução às restrições reais.
 
 ## Stack
 
@@ -35,4 +35,4 @@ Ando de bicicleta, fotografo, escuto muita música e planejo a próxima viagem.
 
 ## Contato
 
-Estou disponível para vagas remotas internacionais. Fale comigo em [eleu.ander@gmail.com](mailto:eleu.ander@gmail.com).
+Estou disponível para vagas remotas internacionais de Senior Mobile Engineer (Flutter). Fale comigo em [eleu.ander@gmail.com](mailto:eleu.ander@gmail.com).

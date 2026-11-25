@@ -3,16 +3,16 @@ const siteMetadata = {
   // Shown in the browser tab and search results for the homepage.
   // Text that changes per language uses { 'en-US': ..., 'pt-BR': ... } (see lib/locales.js)
   tagline: {
-    'en-US': 'Mobile & Forward Deployed Engineer',
-    'pt-BR': 'Engenheiro Mobile e Forward Deployed Engineer',
+    'en-US': 'Mobile Engineer — Flutter',
+    'pt-BR': 'Engenheiro Mobile — Flutter',
   },
   author: 'Anderson Eleutério',
   headerTitle: 'Andershow',
   description: {
     'en-US':
-      'Anderson Eleutério is a mobile and forward deployed engineer building Flutter, Kotlin and Swift apps for logistics and industrial IoT. Projects, case studies and articles on mobile development and software architecture.',
+      'Anderson Eleutério is a mobile engineer building Flutter apps, with native Kotlin and Swift integrations, for logistics and industrial IoT. Projects, case studies and articles on mobile development and software architecture.',
     'pt-BR':
-      'Anderson Eleutério é engenheiro mobile e forward deployed engineer, e desenvolve apps em Flutter, Kotlin e Swift para logística e IoT industrial. Projetos, estudos de caso e artigos sobre desenvolvimento mobile e arquitetura de software.',
+      'Anderson Eleutério é engenheiro mobile e desenvolve apps em Flutter, com integrações nativas em Kotlin e Swift, para logística e IoT industrial. Projetos, estudos de caso e artigos sobre desenvolvimento mobile e arquitetura de software.',
   },
   theme: 'system', // system, dark or light
   siteUrl: 'https://anderson-andre.netlify.app',
