@@ -1,6 +1,10 @@
 import { BriefcaseIcon } from '@heroicons/react/outline'
 import Image from './Image'
-import { localize, useLocale } from '@/lib/i18n'
+import { useState } from 'react'
+import { localize, useLocale, useT } from '@/lib/i18n'
+
+// Long highlight lists start collapsed to this many items.
+const VISIBLE_HIGHLIGHTS = 4
 
 const CompanyLogo = ({ logo, company }) =>
   logo ? (
@@ -24,6 +28,8 @@ const CompanyLogo = ({ logo, company }) =>
 
 const ExperienceCard = ({ company, href, logo, ...localized }) => {
   const locale = useLocale()
+  const t = useT()
+  const [expanded, setExpanded] = useState(false)
   const { role, level, period, highlights, description } = Object.fromEntries(
     Object.entries(localized).map(([key, value]) => [key, localize(value, locale)])
   )
@@ -59,11 +65,25 @@ const ExperienceCard = ({ company, href, logo, ...localized }) => {
         <span className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">{period}</span>
 
         {highlights && (
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            {highlights.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+          <>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              {(expanded ? highlights : highlights.slice(0, VISIBLE_HIGHLIGHTS)).map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            {highlights.length > VISIBLE_HIGHLIGHTS && (
+              <button
+                type="button"
+                onClick={() => setExpanded((value) => !value)}
+                aria-expanded={expanded}
+                className="mt-2 self-start text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
+              >
+                {expanded
+                  ? t.common.showLess
+                  : t.common.showMore(highlights.length - VISIBLE_HIGHLIGHTS)}
+              </button>
+            )}
+          </>
         )}
 
         {description?.map((paragraph) => (
