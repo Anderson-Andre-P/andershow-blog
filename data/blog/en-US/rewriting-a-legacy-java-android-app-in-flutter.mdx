@@ -1,0 +1,98 @@
+---
+title: 'Rebuilding a Nearly 10-Year-Old Java Android App in Flutter Without Changing the UI'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Java', 'Android', 'Legacy Code', 'Mobile Development']
+draft: false
+summary: "How I'm rewriting in Flutter a native Android app written in Java, used in the field for nearly 10 years, with a UI identical to the original. Starting from the same architecture as the team's other apps, I used the Java code as the specification and, along the way, found more than 20 bugs hidden in the legacy code."
+authors: ['default']
+---
+
+## The context
+
+This post follows the previous one, about [migrating two Flutter apps to Clean Architecture and BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc). After reorganizing those two, one app still didn't fit the standard: a **native Android app written in Java**, with its first commit in 2016 and used in the field every day.
+
+It's an operations app: sign in, checklist, a list of service orders, a map with route and GPS tracking, photos, signatures, sync with the server and real-time messages over MQTT. For confidentiality reasons, I won't name the app or describe business rules.
+
+The migration is about **80%** done. The app already runs on devices with a UI identical to the original, and what's left is tests and final adjustments.
+
+## Why rewrite it
+
+The project passed through many hands and grew far beyond what the company expected. In its first releases, it didn't even have real version control: the code was kept in Dropbox. Over time, it piled up features without a defined structure or shared rules, and it never had documentation.
+
+The result was code that was hard to understand and hard to change, showing its age: sync built on `AsyncTask`, deprecated since Android 11, global state in static classes, business logic inside `Activity` classes and no automated tests. Because the app had grown beyond plan and had no documentation, **tracking down the source of a bug was hard**: every investigation started by reading old code without knowing what was intentional and what was a mistake.
+
+That's why the app was refactored. And since the mobile team is small and the other apps were already in Flutter with the same architecture, the refactor became a rewrite in Flutter rather than a reorganization of the Java code.
+
+## The main rule: users must not notice the switch
+
+People using the app in the field shouldn't have to relearn anything. So the rule was to reproduce the Java app's layouts, texts, colors and behavior **exactly**. Visual improvements can come later, in a planned redesign. A rewrite is not the moment for them.
+
+I also decided the new app would be **installed from scratch, without migrating local data**. That simplified the work a lot, with one caveat: each device has to sync everything pending before switching versions.
+
+## Starting from a template, not from scratch
+
+Before starting, I turned the architecture of the two previous apps into a **template**: the same folder structure (`core` and `features`, with `presentation`, `application`, `domain` and `data` layers), the same packages and the same solutions for networking, errors, logging, dependency injection, navigation and storage.
+
+That way, the rewrite started with the whole foundation in place, and the work could focus on what is specific to this app. It's also how I made sure the team's three apps follow the same standard. Anyone who has worked on one can find their way around the others.
+
+## The Java code as the specification
+
+There was no requirements document, so the Java code itself became the specification. The process was:
+
+1. **Map every Java screen and service** to its Flutter equivalent: `Activity` classes became screens inside features, the sync `AsyncTask`s became a feature of their own, and the alarm and boot services became a foreground service.
+2. **Port only what is reachable.** Some Java classes and events had no callers at all. Instead of porting everything just in case, I left them out and recorded why.
+3. **Record every known difference**, such as telemetry data the Flutter packages don't expose, so nobody gets caught off guard later.
+
+## Reproducing the Android UI in Flutter
+
+Making Flutter look exactly like an Android app from 2016 took more work than it seems. Flutter draws its own UI, so nothing comes "for free" from the system. I took the values from the project's XML layouts and from the resources of the AppCompat and Material Components versions used in the build: font sizes, field heights, corner radii, pressed button colors and spacing.
+
+A few details that made a difference:
+
+- **System font.** The Java app didn't bundle any font, so it used each device's default. Instead of pinning a font family, I let Flutter follow the system font.
+- **Native toast.** The `Toast` looks different depending on the Android version and manufacturer. The only way to match it was to call the native toast through a `MethodChannel`.
+- **"Wrong" behavior that had to stay the same.** For example, Android ignores a `layout_margin` defined in a default button style. So in the Java app, buttons didn't have the margin the code seemed to set. For the screens to match, Flutter had to reproduce that behavior, not what the code said.
+
+I documented each of these rules, with its source value in the Java project, so visual fidelity doesn't depend on anyone's memory.
+
+## Technical decisions
+
+Beyond the template's architecture, some decisions came from problems the Java app already had:
+
+- **Photos as files, not in the database.** The Java app stored photos as base64 inside the event tables, so every read of pending items loaded the images into memory. In Flutter, the database stores only the file path, and the base64 conversion happens only on upload. Once the server confirms, the file is deleted.
+- **A single sync engine.** In Java, several independent `AsyncTask`s, triggered from many places, could run at the same time and send the same events twice. In Flutter, a single `SyncEngine` allows one run at a time and folds requests made during a run into one extra pass.
+- **Large responses off the main thread.** Server responses are decoded in a separate isolate so they don't freeze the UI.
+- **`sqflite` instead of a database that loads everything into memory.** I evaluated an alternative and dropped it because its own documentation says the whole database is loaded into memory when opened.
+- **Session saved at intervals.** Session state is saved every 15 seconds and when the app goes to the background, instead of on every GPS reading. Operation events are still written immediately.
+- **Flutter version pinned in the project**, so the build is reproducible with the required Gradle, AGP and Kotlin versions.
+
+## The bugs the legacy code was hiding
+
+Reading the Java code line by line to port it had a side effect: I found **more than 20 bugs** that had been in production for years. Each one is recorded with its source, its effect and the fix in Flutter. A few examples:
+
+- **A calculation missing a factor.** A schedule filter was supposed to show the next 7 days and used `1000 * 60 * 24 * 7` for the interval. It's missing a `* 60`, so the actual window was about 2.8 hours, and it looked at the past instead of the future.
+- **A condition that is always true.** A check used `list.size() >= 0`, which can never be false.
+- **Comparing dates by weekday.** A "same day" filter compared `Date.getDay()`, which returns the day of the week. Two Mondays in different weeks counted as the same day.
+- **Removing the wrong item.** When finishing an order, the code removed the first item in the list instead of the order that was finished.
+- **Data repeated in every event.** Base64 photos from an order were copied into every following event, increasing data usage for no reason.
+- **Security.** I found issues to fix in network traffic and in how credentials were stored and logged. I won't go into detail here, but all of them are fixed in the Flutter version.
+
+The most important decision was **not to port the bugs**. In a rewrite whose goal is "identical behavior", it's tempting to copy everything, mistakes included. The rule I followed: the UI and the flows stay the same, the defects don't.
+
+## Where it stands
+
+The migration is about 80% done:
+
+- Every screen and flow used by the Java app has been ported, and the app runs on devices with an identical UI.
+- The code passes static analysis, the automated tests already in place and the project's architecture rule checks.
+- **Still to do:** expand the tests and make the final adjustments. Then comes side-by-side validation against the production version on two devices, as I did with the other apps, before the switch in the field.
+
+Once the new version is in production, I'll come back with the results.
+
+## What I'm learning
+
+- **A template turns a rewrite into a screens project.** With the foundation ready and proven in the other apps, the energy goes into what is specific to the product.
+- **In an app without documentation, the code is the specification, bugs included.** That's why careful reading matters as much as writing.
+- **"Identical" means what users see, not the defects.** Separating the two from the start keeps old problems out of new code.
+- **Document decisions while they're still fresh.** Every difference, bug and layout value recorded today is one less question tomorrow.
