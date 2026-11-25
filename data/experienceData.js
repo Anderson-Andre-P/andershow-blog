@@ -41,6 +41,23 @@ const experienceData = [
     },
   },
   {
+    company: 'Freelance',
+    role: { 'en-US': 'Freelance Developer', 'pt-BR': 'Desenvolvedor Freelancer' },
+    level: { 'en-US': 'Freelance', 'pt-BR': 'Freelance' },
+    period: { 'en-US': 'Feb 2024 — Apr 2024', 'pt-BR': 'fev. 2024 — abr. 2024' },
+    startYear: 2024,
+    highlights: {
+      'en-US': [
+        'Built a Flutter conversational AI app where users chat with AI personas, integrated with a Dockerized proprietary LLM API.',
+        'Delivered a conversion-focused WordPress site (landing, upsell, and quiz flows) with Cloudflare for performance and security.',
+      ],
+      'pt-BR': [
+        'Desenvolvi um app de IA conversacional em Flutter no qual os usuários conversam com personas de IA, integrado a uma API proprietária de LLM em Docker.',
+        'Entreguei um site WordPress focado em conversão (fluxos de landing page, upsell e quiz), com Cloudflare para desempenho e segurança.',
+      ],
+    },
+  },
+  {
     company: 'IE Tecnologia',
     href: 'https://www.ietecnologia.com/',
     logo: '/static/images/logos/ie_tecnologia_logo.png',

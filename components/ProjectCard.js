@@ -4,7 +4,8 @@ import { localize, useLocale, useT } from '@/lib/i18n'
 
 // The whole card opens the case study (stretched title link). External links (GitHub, stores)
 // only appear on the case study page.
-const ProjectCard = ({ title, slug, description, imgSrc, highlighted = false }) => {
+// Without a banner (imgSrc), `previewScreens` shows a few app screens side by side instead.
+const ProjectCard = ({ title, slug, description, imgSrc, previewScreens, highlighted = false }) => {
   const t = useT()
   const locale = useLocale()
 
@@ -21,6 +22,25 @@ const ProjectCard = ({ title, slug, description, imgSrc, highlighted = false }) 
           }`}
         >
           <Image src={imgSrc} alt="" layout="fill" objectFit="cover" />
+        </div>
+      )}
+
+      {!imgSrc && previewScreens?.length > 0 && (
+        <div
+          className={`flex items-center justify-center gap-3 bg-zinc-100 px-6 pt-6 dark:bg-zinc-800 sm:gap-4 ${
+            highlighted ? 'md:w-3/5 md:pb-6' : ''
+          }`}
+        >
+          {previewScreens.map((src, index) => (
+            <div
+              key={src}
+              className={`w-1/4 overflow-hidden rounded-t-xl border border-b-0 border-zinc-300 dark:border-zinc-700 ${
+                highlighted ? 'md:rounded-xl md:border-b' : ''
+              } ${index === 1 ? '' : 'mt-6'}`}
+            >
+              <Image src={src} alt="" width={540} height={1200} layout="responsive" />
+            </div>
+          ))}
         </div>
       )}
 

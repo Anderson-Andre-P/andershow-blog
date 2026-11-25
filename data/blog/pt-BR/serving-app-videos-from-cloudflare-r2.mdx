@@ -1,0 +1,115 @@
+---
+title: 'Tirando centenas de vídeos de dentro de um app Flutter com Cloudflare R2 e cache no aparelho'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Cloudflare R2', 'Cache', 'Desempenho', 'Desenvolvimento Mobile']
+draft: false
+summary: 'Um app B2C em Flutter mostrava centenas de vídeos curtos, e a mídia somava cerca de 430 MB. Em vez de colocar tudo no pacote do app, deixei só as imagens de capa e passei os vídeos para um bucket no Cloudflare R2. O app baixa cada vídeo na primeira vez que ele toca e guarda no aparelho, e sem internet mostra a capa no lugar.'
+authors: ['default']
+---
+
+## O problema
+
+Estou desenvolvendo um app B2C em Flutter que mostra **centenas de vídeos curtos** de demonstração: clipes sem som, em loop, que aparecem em listas, em telas de detalhe e durante o uso principal do app. Por ser um projeto ainda sigiloso, não vou citar o nome nem o ramo.
+
+A primeira versão era a mais simples possível: todos os vídeos e as imagens de capa dentro dos assets do app. Funcionava, mas a mídia somava **cerca de 430 MB**. Um app desse tamanho:
+
+- demora para baixar e espanta quem está instalando pelo 4G;
+- obriga o usuário a guardar centenas de vídeos que talvez nunca assista;
+- exige publicar uma versão nova na loja para trocar ou corrigir um único vídeo.
+
+## A decisão: capas no app, vídeos fora
+
+Separei a mídia em duas partes, com papéis diferentes:
+
+- **As capas (JPG) continuam dentro do app.** São pequenas e garantem que toda tela tenha uma imagem, mesmo no primeiro uso e sem internet.
+- **Os vídeos (MP4) saíram do app** e foram para um bucket no **Cloudflare R2**. O app baixa cada vídeo na primeira vez que ele precisa tocar e guarda uma cópia no aparelho. Da segunda vez em diante, inclusive offline, toca a cópia local.
+
+O comportamento para o usuário ficou assim: com internet, o vídeo aparece depois de um breve carregamento sobre a capa. Sem internet, os vídeos já vistos tocam normalmente, e os outros mostram a capa. Nenhuma tela fica vazia.
+
+## Por que o Cloudflare R2
+
+O R2 é um armazenamento de objetos compatível com a API do S3, e a principal diferença para este caso é que **ele não cobra pela saída de dados** (egress). Num app que entrega vídeo, o tráfego de download é justamente o que cresce com o número de usuários, então essa é a linha de custo que mais importa.
+
+Para começar, usei a URL pública de desenvolvimento do bucket (`r2.dev`). A própria Cloudflare recomenda essa URL só para desenvolvimento, porque ela tem limite de requisições e não passa pelo cache da CDN. Por isso, deixei o endereço **configurável no build**, em vez de fixo no código:
+
+```dart
+abstract final class MediaUrls {
+  /// Trocar para um domínio próprio é só mudar o --dart-define,
+  /// sem alterar código.
+  static const baseUrl = String.fromEnvironment(
+    'MEDIA_BASE_URL',
+    defaultValue: 'https://<bucket>.r2.dev/media',
+  );
+
+  static String video(String id) => '$baseUrl/videos/$id.mp4';
+}
+```
+
+Com isso, apontar o app para um domínio próprio com CDN, ou para um bucket de homologação, é só passar `--dart-define=MEDIA_BASE_URL=...` no build.
+
+## O cache no aparelho
+
+A peça central é uma classe pequena que devolve o arquivo local de um vídeo, baixando-o antes se ainda não estiver no aparelho. Uma versão simplificada:
+
+```dart
+class VideoCache {
+  VideoCache({required this.client, required this.directory});
+
+  final http.Client client;
+  final Future<Directory> Function() directory;
+  final Map<String, Future<File?>> _downloads = {};
+
+  /// O arquivo local do vídeo, baixando antes se preciso.
+  /// `null` quando não dá para obter (offline, erro do servidor):
+  /// quem chamou continua mostrando a capa.
+  Future<File?> fileFor(String url) {
+    // Um segundo pedido do mesmo vídeo espera o primeiro download.
+    return _downloads[url] ??= _fetch(Uri.parse(url)).whenComplete(() {
+      _downloads.remove(url);
+    });
+  }
+
+  Future<File?> _fetch(Uri uri) async {
+    try {
+      final dir = await directory();
+      final target = File('${dir.path}/${uri.pathSegments.last}');
+      if (await target.exists() && await target.length() > 0) return target;
+
+      final response = await client.get(uri);
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) return null;
+
+      // Grava num arquivo à parte e renomeia no fim,
+      // para um download interrompido nunca ser lido como vídeo.
+      final partial = File('${target.path}.part');
+      await partial.writeAsBytes(response.bodyBytes, flush: true);
+      return await partial.rename(target.path);
+    } on Object {
+      return null;
+    }
+  }
+}
+```
+
+Três detalhes fazem diferença:
+
+1. **Um download por vídeo, mesmo com vários pedidos.** O mesmo vídeo pode aparecer em mais de um lugar da tela ao mesmo tempo. O mapa de `Future`s garante que o segundo pedido espere o primeiro download, em vez de baixar o arquivo duas vezes.
+2. **Arquivo temporário e renomeação.** O vídeo é gravado em um arquivo `.part` e só é renomeado para o nome final quando termina. Se o app fechar ou a conexão cair no meio, sobra um `.part`, nunca um MP4 corrompido que o player tentaria abrir.
+3. **Falha vira `null`, não exceção.** Sem rede ou com erro no servidor, a classe devolve `null`, e o widget de vídeo simplesmente mantém a capa. A interface não precisa tratar erro de rede em cada tela.
+
+O cache é registrado na injeção de dependências e chega aos widgets por um `InheritedWidget`. Nos testes, o cliente HTTP é substituído por um falso, o que permite cobrir os casos de download bem-sucedido, arquivo já em cache, erro do servidor e pedidos simultâneos sem acessar a rede.
+
+## O que ainda pode melhorar
+
+Essa primeira versão resolve o problema principal, mas tem limites que eu já conheço:
+
+- **O download passa inteiro pela memória** (`bodyBytes`) antes de ir para o disco. Para clipes curtos isso funciona, mas o caminho natural é gravar em streaming direto no arquivo.
+- **O cache não tem limite de tamanho.** Hoje ele só cresce. Uma política de remoção dos vídeos menos usados evitaria ocupar espaço demais em aparelhos com pouco armazenamento.
+- **A URL `r2.dev` precisa dar lugar a um domínio próprio** antes do lançamento, para ganhar o cache da CDN e sair do limite de requisições. Como a base já é configurável, essa troca não exige mudar código.
+
+## O que eu levaria para o próximo app
+
+- **Nem toda mídia precisa estar no pacote.** Separe o que o app precisa ter sempre, como as capas, do que pode chegar sob demanda, como os vídeos.
+- **Projete o estado offline antes do online.** Decidir que "sem vídeo, mostra a capa" deixou o app útil em qualquer situação de rede.
+- **Downloads precisam ser atômicos.** Gravar num arquivo temporário e renomear no fim é barato e evita uma classe inteira de arquivos corrompidos.
+- **Deixe a origem da mídia configurável desde o primeiro dia.** Bucket de desenvolvimento, de homologação e domínio de produção viram só um parâmetro de build.

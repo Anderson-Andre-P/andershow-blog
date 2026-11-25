@@ -12,12 +12,15 @@ const dictionary = {
       email: 'Email',
       emailMe: 'Email me',
       emailCopied: 'Email copied',
+      showMore: (count) => `Show ${count} more`,
+      showLess: 'Show less',
       minRead: (minutes) => `${minutes} min read`,
       publishedOn: 'Published on',
       readingTime: 'Reading time',
     },
     home: {
-      openToRemote: 'Open to remote international roles.',
+      openToWork: 'Open to work',
+      openToRemote: 'Looking for remote Senior Mobile Engineer (Flutter) roles.',
       intro:
         "I build Flutter apps for logistics and industrial IoT, and I care about what happens after they ship: how they're used in the field, where they break, and how they can make an operation run better.",
       projects: 'Projects',
@@ -25,6 +28,9 @@ const dictionary = {
         'My day-to-day work is on seven B2B apps at DDMX. These are projects I built on my own and as technical challenges, from asset management for maintenance teams to real estate search, each one end to end with Flutter. Open one to read how it was built.',
       allProjects: 'All projects',
       experience: 'Experience',
+      recommendations: 'Recommendations',
+      recommendationsLink: 'See on LinkedIn',
+      recommendationsNote: 'Translated from Portuguese.',
       latestPosts: 'Latest Posts',
       allPosts: 'All posts',
     },
@@ -95,6 +101,7 @@ const dictionary = {
     about: {
       title: 'About',
       career: 'Career',
+      education: 'Education',
       roleAt: (occupation, company) => `${occupation} at ${company}`,
       photoAlt: (name) => `${name} profile picture`,
       description: (name, occupation, company) =>
@@ -119,12 +126,15 @@ const dictionary = {
       email: 'E-mail',
       emailMe: 'Enviar e-mail',
       emailCopied: 'E-mail copiado',
+      showMore: (count) => `Mostrar mais ${count}`,
+      showLess: 'Mostrar menos',
       minRead: (minutes) => `${minutes} min de leitura`,
       publishedOn: 'Publicado em',
       readingTime: 'Tempo de leitura',
     },
     home: {
-      openToRemote: 'Disponível para vagas remotas internacionais.',
+      openToWork: 'Em busca de oportunidades',
+      openToRemote: 'Procurando vagas remotas de Senior Mobile Engineer (Flutter).',
       intro:
         'Desenvolvo apps em Flutter para logística e IoT industrial, e me importo com o que acontece depois que eles são publicados: como são usados em campo, onde quebram e como podem fazer uma operação funcionar melhor.',
       projects: 'Projetos',
@@ -132,6 +142,9 @@ const dictionary = {
         'No dia a dia, trabalho em sete apps B2B na DDMX. Estes são projetos que construí por conta própria e em desafios técnicos, de gestão de ativos para equipes de manutenção a busca de imóveis, cada um de ponta a ponta com Flutter. Abra um para ver como foi construído.',
       allProjects: 'Todos os projetos',
       experience: 'Experiência',
+      recommendations: 'Recomendações',
+      recommendationsLink: 'Ver no LinkedIn',
+      recommendationsNote: '',
       latestPosts: 'Posts recentes',
       allPosts: 'Todos os posts',
     },
@@ -202,6 +215,7 @@ const dictionary = {
     about: {
       title: 'Sobre',
       career: 'Carreira',
+      education: 'Formação',
       roleAt: (occupation, company) => `${occupation} na ${company}`,
       photoAlt: (name) => `Foto de perfil de ${name}`,
       description: (name, occupation, company) =>

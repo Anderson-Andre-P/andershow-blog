@@ -1,0 +1,127 @@
+---
+title: 'Why I Threw Away My First Test Suite, and What I Put in Its Place'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Testing', 'BLoC', 'Software Quality', 'Mobile Development']
+draft: false
+summary: 'While rebuilding two production Flutter apps, one started with no tests and the other with 321 inherited tests nobody reviewed. Today they have more than 500 test files between them. Along the way, I deleted an entire suite I had written myself, audited tests one by one and created tests that watch the tests.'
+authors: ['default']
+---
+
+## The starting point
+
+This post is part of the series about [migrating two Flutter apps to Clean Architecture and BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc). There, I mentioned that one of the results was bringing in automated tests. Here I explain how that happened, including the part that didn't work the first time.
+
+The two apps started from different places:
+
+- **A real-time monitoring app** had **no** automated tests at all.
+- **An app used in the field** had **321 inherited tests** that had never been reviewed as a whole. Nobody knew which ones still tested anything useful.
+
+Today, the two apps have **more than 500 test files** between them, covering unit, BLoC, widget and integration tests. The number, though, is the least interesting part. What matters is why these tests deserve trust.
+
+## Why I threw away the first suite
+
+In the app with no tests, I started with the infrastructure: a harness that **blocks network access in every test**, fakes for WebSocket and secure storage, injection points to swap the HTTP client and connectivity detection, and a CI workflow with static analysis, tests and a coverage report.
+
+On top of that, I wrote a first suite. It passed, produced coverage and looked great in the report. But when the time came to use it to **validate the code after the refactor**, I realized I didn't trust it. It had been written alongside code that was still changing, and it wasn't clear whether the tests checked behavior or just repeated the implementation.
+
+So I made a decision that looks like waste: **I deleted the whole suite and rebuilt it from scratch**, feature by feature, on top of the stabilized code. The infrastructure stayed, the tests didn't.
+
+It was the right call. A suite you don't trust is worse than no suite: it gives you a sense of safety that isn't there.
+
+## Auditing tests, not just writing them
+
+Writing new tests isn't enough. In the field app, the 321 inherited tests went through a **test-by-test audit**, and each one got one of four decisions: keep, fix, rewrite or delete. None was deleted without an explicit decision.
+
+In the monitoring app, after rebuilding the suite, I ran a quality audit with one simple question: **does this coverage cover real behavior?** It found three problems that coverage reports don't show:
+
+### Tautological tests
+
+These are tests that can't fail. For example:
+
+```dart
+test('returns the formatted total', () {
+  final formatter = MockFormatter();
+  when(() => formatter.total(10)).thenReturn('\$10.00');
+
+  expect(formatter.total(10), '\$10.00');
+});
+```
+
+The test sets up the mock to return a value and then checks that the mock returned that value. It always passes, covers lines and tests nothing in the real code.
+
+### Over-mocking
+
+When almost everything around the code is a mock, the test ends up checking the order of calls instead of the result. Any refactor breaks the test even when behavior doesn't change, and a real bug can slip through.
+
+### Uncovered branches
+
+Error paths, empty lists and malformed server responses, exactly the cases that cause the most trouble in production, were left out.
+
+I fixed these issues and closed the gaps the audit found.
+
+## The rules that hold the suite together
+
+To keep the suite from degrading again, a few rules were written down in both projects:
+
+- **Tests are not disposable.** Never weaken, remove, skip or mock away the behavior under test just to make a test pass. If a test conflicts with the intended behavior, the conflict is discussed before the test changes.
+- **Every fixed bug gets a failing test first.** A regression is a real bug, and the test makes sure it doesn't come back.
+- **Each layer has its own kind of test.** Use cases with success and error paths; data conversion with the happy path **and** a malformed payload; BLoCs with `bloc_test`, checking the sequence of states; screens with their loading, error, empty and filled states, in light and dark themes.
+- **A feature only counts as tested after the end-to-end test on a device.** Passing unit tests aren't enough.
+
+One important decision was what **not** to do: the migration itself didn't follow TDD. The reference behavior already existed, in the old app, and that part was validated by comparing on a device. Tests came as a milestone of their own in the rebuild, organized by specs and plans per area.
+
+## Tests that watch the tests
+
+Some rules are easy to forget. Instead of relying on code review, I turned the most important ones into tests:
+
+- **Every interaction needs a key.** Tests find widgets by constant keys, not by text or icons, which change with translations and redesigns. A test walks through the screen code and **fails if an interactive widget has no key**, or if two keys share a value.
+- **Every tap in an integration test uses the right helper**, which makes sure the widget is visible before tapping.
+- **No integration test file is left out** of the entry point that runs the combined suite.
+
+A simplified example of the idea:
+
+```dart
+test('every button on the screens has a key', () {
+  final screens = Directory('lib/features')
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((f) => f.path.contains('/presentation/'));
+
+  final missing = [
+    for (final file in screens)
+      if (hasButtonWithoutKey(file.readAsStringSync())) file.path,
+  ];
+
+  expect(missing, isEmpty, reason: 'Buttons without a key: $missing');
+});
+```
+
+## Trustworthy test data
+
+Integration tests depend on data that looks like the server's. Two precautions made a difference:
+
+- **Shared JSON fixtures** with complete scenarios, such as a whole fleet instead of a single vehicle. A test with only one item doesn't reveal list problems.
+- **Fixtures validated against the API contract.** A script checks every fixture against the OpenAPI spec of the staging server. If the contract changes, a test with stale data doesn't pass silently.
+
+Integration tests were rewritten as **user journeys**, such as signing in, switching accounts, linking a vehicle, a checklist and a service order, against a simulated backend. There's also an optional test against the real server, read-only and blocked for production.
+
+## Small details that save hours
+
+- **A readable report at the end of the suite**, with a table per feature group, failures with file and line, and the 10 slowest tests. Nobody has to scroll through the whole log.
+- **Reading the real exit code** of the test command, instead of trusting the output text alone.
+- **Flakiness has a cause.** In one of the apps, the first widget test in about 36 files failed with "an animation is still running". The cause: fonts were loaded inside the first test, which scheduled an extra frame. Loading the fonts once, before each file's tests, fixed it.
+
+## The result
+
+- From **zero** and from **321 never-reviewed tests** to **more than 500 test files** across both apps.
+- A suite you can trust when refactoring, because each test checks behavior, not implementation.
+- Written rules, and tests that watch the rules, so quality doesn't depend on anyone's memory.
+
+## What I'd take to the next project
+
+- **High coverage doesn't mean a good suite.** A tautological test raises coverage and protects nothing.
+- **Have the courage to delete.** A suite you don't trust costs maintenance and gives false confidence.
+- **Test observable behavior.** Emitted states, what shows on screen, the returned result. Not the order of internal calls.
+- **Turn rules into tests.** A convention that depends on human review will be forgotten someday.
+- **On-device testing is still necessary.** Automated tests reduce risk a lot, but a feature is only done when it works on the phone.

@@ -1,0 +1,143 @@
+---
+title: 'Offline-First Without Losing Data: Closing the Doors Through Which a Flutter App Lost Information'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Offline First', 'Sync', 'Architecture', 'Mobile Development']
+draft: false
+summary: 'A service order that had been completed and confirmed by the server showed up the next day with all its data wiped. The root cause analysis showed there was no single bug, but several doors through which the app silently lost data. First I made the loss detectable and recoverable. Then, while rebuilding the app, I turned the cause into an architecture rule with a transactional outbox.'
+authors: ['default']
+---
+
+## The bug that shouldn't exist
+
+QA reported a strange case in a Flutter app used in the field: a service order had been completed, synced and **confirmed on the server**. The next day, it showed up in the app's history with **all its data wiped**, as if it had never been done.
+
+In an offline-first app, this is the worst kind of bug. The user did the work, the app said everything was fine, and the information disappeared. Worse, it disappeared **silently**: no error, no crash, no alert in monitoring.
+
+This post covers how I investigated the problem and how the solution evolved in two stages: first, fixes in the production app. Then, while [rebuilding the app with Clean Architecture and BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc), an architecture rule that prevents the loss at the source. For confidentiality reasons, I won't name the app or describe business rules.
+
+## Root cause analysis: not one bug, but several doors
+
+I started by writing a root cause analysis: the full lifecycle of an order in the app, a list of hypotheses ranked by likelihood and, for each one, the evidence in the code that confirmed or ruled it out.
+
+The result wasn't a single cause. It was **several doors through which the app could lose data**, each one enough to produce the symptom:
+
+### 1. A network failure read as "order cancelled"
+
+The app compared the list of orders from the API with the local orders. If a pending or active order wasn't in the response, the app concluded it had been cancelled on the server and cancelled it locally.
+
+The problem: on a 401, a 500 or a timeout, the list came back **empty**. To the app, every order had "disappeared from the server", so it cancelled all of them.
+
+**Fix:** the check only runs when **every** response arrived successfully, and an order is only considered cancelled after being missing from **two consecutive successful fetches**. A network failure is never read as a response again.
+
+### 2. Sending before saving
+
+The order was queued for upload **before** being written to the local database. If the write failed afterwards, the server knew about something the app itself no longer did.
+
+**Fix:** reverse the order. Save on the device first, then queue the upload.
+
+### 3. A "swapped" database with no warning
+
+The database path came from a native call. When that call failed, the app created a **new, empty** database somewhere else. To the user, it looked like everything had been erased. To monitoring, nothing had happened.
+
+**Fix:** a chain of fallbacks to find the right path (native channel, then the saved path, then the platform default), and **any deviation raises an alert** in Sentry.
+
+### 4. An old dialog that logged out the new session
+
+When the session expired, up to 7 parallel requests, every 10 seconds, each opened its own "session expired" dialog. The user signed in again, but an old dialog was still on the stack. When they tapped "OK", it **logged out the new session**.
+
+**Fix:** _single-flight_ handling, where one request handles the expiry and the others wait for the result, plus a comparison with the session captured at the time of the error. A dialog from an old session can no longer affect the current one.
+
+## Step one: make the loss detectable and recoverable
+
+Closing the known doors didn't guarantee there were no others. So, before any big refactor, I built a safety net: an **execution ledger**.
+
+It's a simple record, one marker per completed order, valid for 30 days. The key detail is **where** it lives: outside the main database, in separate storage. If the main database is lost, the ledger survives.
+
+With it, when an order the ledger says was completed comes back from the API as if it were new, the app:
+
+1. **Restores the data automatically**, without the user noticing.
+2. **Sends an event to Sentry** with its own fingerprint, so this case doesn't get mixed up with other errors and can be tracked.
+
+I also started recovering timers and images after a loss and logging an event whenever an order regresses in status. Silent data loss became **detectable** and **recoverable**.
+
+## Step two: prevent the loss at the source
+
+The ledger is a safety net, not a solution. While rebuilding the app, the question changed from "how do we recover lost data?" to "how do we make the app **unable** to lose data?". The answer became an architecture rule: **every write is atomic and durable**, and every upload goes through an **outbox**.
+
+### The outbox
+
+The outbox is a durable queue, stored in the local database, holding everything that needs to reach the server. The rules:
+
+- **Nothing reaches the server without going through the queue.** Uploads only come from an entry stored on the device, and queuing is a transactional write: if the app closes a second later, the upload is still pending, not lost. The "server knows, app doesn't" path no longer exists.
+- **Each entry carries its own context.** Session, vehicle and anything else needed are captured when the entry is created. If the user switches accounts before the upload, the entry is still correct.
+- **Each entry has a stable, client-generated id**, designed so the server can discard duplicates.
+- **Each feature registers its own handler.** The refueling feature knows how to send refuelings, the messages feature knows how to send messages. The queue mechanism knows nothing about business rules.
+
+### Only remove what the server confirmed
+
+The syncer drains the queue when there is a connection, by entry type and in batches. The most important point: **it removes from the queue only the ids the server confirmed**, inside a transaction. If a new entry is queued while a batch is in flight, it isn't in the confirmed list, so it can never be deleted by mistake.
+
+Each send ends in one of four outcomes, and the `sealed` type forces the code to handle all of them:
+
+```dart
+sealed class SendOutcome {
+  const SendOutcome();
+}
+
+/// The whole batch was accepted: everything can leave the queue.
+final class Accepted extends SendOutcome {
+  const Accepted();
+}
+
+/// Part was accepted: only these ids leave, the rest retries.
+final class AcceptedPartial extends SendOutcome {
+  const AcceptedPartial(this.confirmedIds);
+  final List<String> confirmedIds;
+}
+
+/// Failed, but may succeed later (network, 5xx): retry with backoff.
+final class RetryLater extends SendOutcome {
+  const RetryLater();
+}
+
+/// Will never succeed (a 4xx that isn't auth): drop it and alert.
+final class Rejected extends SendOutcome {
+  const Rejected(this.reason);
+  final String reason;
+}
+```
+
+Retries use **exponential backoff with jitter**, starting at 5 seconds and capped at 5 minutes. That way, when connectivity returns, devices don't all hit the server at the same moment. And `Rejected` is the only case where something leaves the queue without confirmation, always with an alert in monitoring, never silently.
+
+### Photos outside the database
+
+Photos taken in the field, often in areas without signal, are the evidence of the work done. In the outbox, the entry stores only the **file path**, and the base64 conversion happens only on upload. A cleanup routine deletes old photos, but **never one still referenced by a queued entry**. In the old app, a rollback could even delete the user's photos.
+
+## Testing what can't fail
+
+An architecture rule is only worth something if it's tested. The outbox and the syncer got tests for the cases that used to cause data loss:
+
+- A partially accepted batch, confirming only the right ids.
+- An entry queued in the middle of a send, which has to survive.
+- The offline and online cycle: queue with no network, network returns, queue drains.
+- Enqueue failures, pending limits and rescheduling.
+- Backoff and the syncer's guards.
+
+## The result
+
+Silent data loss went through three stages:
+
+1. **Detectable:** any regression of an order raises an event in monitoring.
+2. **Recoverable:** the ledger automatically restores the data of a completed order.
+3. **Prevented at the source:** with atomic writes and the outbox, the app no longer has a path to send something it didn't save, or to delete something the server didn't confirm.
+
+The difference between the second and third stages is the one that matters most. The ledger fixes the symptom after it shows up. The outbox removes the whole class of bugs.
+
+## What I'd take to the next offline-first app
+
+- **"Error" and "empty response" are different things.** Never make a destructive decision, such as cancelling, deleting or overwriting, based on a response that may have failed.
+- **Save before sending.** The order of operations is part of correctness, and whatever goes to the server should come from something already stored on the device.
+- **Only remove what was confirmed.** "I sent the batch, so I'll clear the queue" loses anything that arrived in between.
+- **Silent loss is worse than a crash.** A crash shows up in monitoring. Data that disappears without an error only shows up when the client complains.
+- **A safety net buys time for the right solution.** The ledger protected users while the new architecture was being built.

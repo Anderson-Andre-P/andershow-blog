@@ -1,0 +1,112 @@
+---
+title: 'I Built a GPS Simulator to Test Location Apps, with Altitude and Tunnels from the Real Map'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Android', 'Kotlin', 'Geolocation', 'Mobile Development']
+draft: false
+summary: 'Testing a location app means walking down the street or relying on fake positions that look nothing like a real GPS. I built an Android app in Flutter that publishes simulated positions through the system’s test providers, follows real routes, keeps running with the screen off and uses map data for altitude and tunnels, without inventing a single number.'
+authors: ['default']
+---
+
+## Why I built it
+
+A good part of my work is on apps that depend on location: background tracking, arriving at a stop, entering and leaving a geofence, calculating speed. Testing that is tedious. Either you go out walking or driving with the phone, or you use a fake location app that teleports the device from one point to another, with nothing like the behavior of a real GPS.
+
+I wanted a tool that would make the phone **believe** it was traveling a real route, at the right speed, with the imperfections of a real GPS, and keep working with the screen off, which is exactly when background location bugs show up. Since I couldn't find one that did all of that, I built the **GPS Simulator**.
+
+## What it does
+
+It's an Android app, for Android 12 or newer, built with Flutter. You mark points on the map, build the route and start the simulation. From then on, any other app on the device that asks for the location gets the simulated positions.
+
+- **Real routes:** the route can come from OSRM, GraphHopper, your own server or be a straight line. You can also import routes in GPX, KML or GeoJSON and export or share them in GPX and KML.
+- **Round trips**, with the return leg routed following the direction of the streets.
+- **GPS imperfections:** ready-made profiles (City, Highway and Covered area) or noise, speed variation and turns tuned by hand. A stationary point drifts like a real parked phone instead of sitting on a single coordinate.
+- **Geofence scenario**, to simulate entering and leaving an area.
+- **Background:** the simulation keeps running with the screen off, with a notification showing the elapsed time.
+- **Home screen widget**, which follows the simulation and starts the last route with one tap.
+- **Address search** and favorite places to teleport the device.
+
+## Publishing positions through Android itself
+
+Android has an official mechanism for this: **test providers**. With Developer options enabled and the app selected as the "mock location app", it can register fake location providers and publish positions to them.
+
+Flutter doesn't expose that API, so I wrote a small Kotlin plugin. It registers one test provider for GPS and another for the network, with the same properties as a real provider:
+
+```kotlin
+val properties = ProviderProperties.Builder()
+    .setHasNetworkRequirement(network)
+    .setHasSatelliteRequirement(!network)
+    .setHasAltitudeSupport(true)
+    .setHasSpeedSupport(true)
+    .setHasBearingSupport(true)
+    .setPowerUsage(ProviderProperties.POWER_USAGE_LOW)
+    .setAccuracy(ProviderProperties.ACCURACY_FINE)
+    .build()
+locationManager.addTestProvider(name, properties)
+locationManager.setTestProviderEnabled(name, true)
+```
+
+At each step of the simulation, the app builds a `Location` with latitude, longitude, speed, bearing, accuracy and time, and publishes it with `setTestProviderLocation`. The plugin also detects whether Developer options are enabled, and the app shows the steps to set it up as the mock location app.
+
+## The rule: no invented data
+
+The first version published a fixed altitude and lost the signal at regular intervals, anywhere on the route. They looked realistic, but they were made-up numbers. An app under test could pass because of data no real phone would ever see.
+
+So I set a rule for the realism features: **anything that looks real must come from real map data. When there's no data, the app publishes nothing instead of inventing it.**
+
+### Altitude and tunnels from the map
+
+When a route is created, wherever it came from, the app sends its geometry to a **Valhalla** server:
+
+- The `/height` endpoint returns the **terrain height** along the route, sampled every 30 meters.
+- The `/trace_attributes` endpoint map-matches the route and says which stretches are **tunnels, bridges or covered areas**, based on OpenStreetMap.
+
+With that:
+
+- **Inside a tunnel, the GPS loses its signal**, like a real phone, and gets it back at the exit.
+- **On bridges, the altitude follows the deck**, not the valley floor the terrain model has underneath it. The same goes for tunnels, relative to the hilltop above. On those stretches, the height is interpolated between the two ends.
+- If the imported file already has an altitude for every point, the app uses the file's.
+- **Without data**, for example offline or with the server down, the position is published **without altitude**, and the app says so on screen.
+
+```kotlin
+// No altitude is better than an invented one: without it the
+// Location simply reports hasAltitude() == false.
+val msl = (fix["altitude"] as Number?)?.toDouble()
+if (msl != null) applyAltitude(location, msl, vertical)
+```
+
+The terrain profile is saved with the route, so the server is queried once per route, not once per simulation.
+
+### The geoid detail
+
+This is where a subtle problem showed up. The terrain model gives the height **above mean sea level**. A real GPS chip reports the height **above the WGS84 ellipsoid**, a mathematical surface that doesn't match sea level. In Brazil, the difference is in the tens of meters. Publishing the terrain height directly would be a plausible number, but a wrong one.
+
+On Android 14 or newer, the system has `AltitudeConverter`, which knows that difference. The plugin runs a "probe": it creates a position at zero height on the ellipsoid and asks the converter for the matching height above sea level. The value that comes back, with its sign flipped, is the difference at that point. It's computed off the main thread and cached per area, and the published altitude matches what a real GPS would report. On older versions, which don't have the converter, the app publishes the height above sea level and says so on screen.
+
+### Respecting public servers
+
+By default, terrain comes from the public Valhalla server run by the FOSSGIS community, which asks for at most one request per second and for apps not to hard-code its address. The client respects that limit, the address can be changed in the settings, with a button to test the server, and the required attribution is shown on screen.
+
+The same goes for the map. The default is Google Maps, but you can switch to OpenStreetMap, which needs no key and whose usage policy is also respected.
+
+For Google Maps to work, I had to set up the key in the [Google Cloud Console](https://console.cloud.google.com/): create a project, enable the **Maps SDK for Android** and generate an API key for the app. Without it, the SDK draws only an empty background and logs an authorization error (`Authorization failure`). It's a simple setup, but easy to forget when running the app on a new machine, which is exactly why the key-free OpenStreetMap option is useful.
+
+## How it's built
+
+The app was created from the same template I use for Flutter apps at work: **feature-based Clean Architecture**, **BLoC** for all state, `get_it` for dependency injection, `go_router` for navigation and a `Result` in use cases instead of exceptions. The simulation logic, the engine that computes each position, lives entirely in the domain layer, with no dependency on Flutter or Android, which makes it easy to test.
+
+Some packages that do the heavy lifting:
+
+- `flutter_foreground_task` to keep the simulation alive with the screen off.
+- `google_maps_flutter` and `flutter_map` for the two map types.
+- `home_widget` for the home screen widget.
+- `sembast` to store routes, favorites and settings.
+
+The project has tests for the use cases, the BLoCs and the background simulation service. The app's summary is on its [project page](/projects/gps-simulator).
+
+## What I learned
+
+- **Internal tools are worth the investment.** A good simulator turns a half-hour field test into a few taps, and makes cases testable that would be hard to reproduce on the street, like entering a tunnel in the middle of a route.
+- **Fake realism is worse than no realism.** An invented altitude can make a test pass by mistake. Publishing "no altitude" is more honest and more useful.
+- **Geographic data hides details.** Sea level and the ellipsoid look like the same thing until you compare against a real GPS.
+- **Public servers have rules.** Throttling requests, letting users change the server and showing attribution are part of using a free service well.

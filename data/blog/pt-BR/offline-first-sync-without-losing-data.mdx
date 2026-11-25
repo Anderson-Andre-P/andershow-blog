@@ -1,0 +1,143 @@
+---
+title: 'Offline-first sem perder dados: como fechei as portas por onde um app Flutter perdia informações'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Offline First', 'Sincronização', 'Arquitetura', 'Desenvolvimento Mobile']
+draft: false
+summary: 'Uma ordem de serviço executada e já confirmada pelo servidor apareceu no dia seguinte com todos os dados zerados. A análise de causa raiz mostrou que não havia um bug, e sim várias portas por onde o app perdia dados em silêncio. Primeiro tornei a perda detectável e recuperável. Depois, na reconstrução do app, transformei a causa em regra de arquitetura com um outbox transacional.'
+authors: ['default']
+---
+
+## O bug que não deveria existir
+
+O QA reportou um caso estranho num app Flutter usado em campo: uma ordem de serviço tinha sido executada, sincronizada e **confirmada no servidor**. No dia seguinte, ela apareceu no histórico do app com **todos os dados zerados**, como se nunca tivesse sido feita.
+
+Num app offline-first, esse é o pior tipo de bug. O usuário fez o trabalho, o app disse que estava tudo certo, e a informação sumiu. Pior: sumiu **em silêncio**, sem erro, sem crash e sem nenhum alerta no monitoramento.
+
+Este post conta como investiguei o problema e como a solução evoluiu em duas etapas: primeiro, correções no app em produção. Depois, na [reconstrução do app com Clean Architecture e BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc), uma regra de arquitetura que impede a perda na origem. Por confidencialidade, não cito o app nem regras de negócio.
+
+## Análise de causa raiz: não era um bug, eram várias portas
+
+Comecei escrevendo uma análise de causa raiz: o ciclo de vida completo de uma ordem no app, uma lista de hipóteses ordenadas pela probabilidade e, para cada uma, a evidência no código que a confirmava ou descartava.
+
+O resultado não foi uma causa única. Foram **várias portas por onde o app podia perder dados**, cada uma suficiente para produzir o sintoma:
+
+### 1. Uma falha de rede lida como "ordem cancelada"
+
+O app comparava a lista de ordens que vinha da API com as ordens locais. Se uma ordem pendente ou ativa não estava na resposta, o app concluía que ela tinha sido cancelada no servidor e a cancelava localmente.
+
+O problema: com um erro 401, um 500 ou um timeout, a lista vinha **vazia**. Para o app, todas as ordens tinham "sumido do servidor", então ele cancelava todas.
+
+**Correção:** a verificação só roda quando **todas** as respostas chegaram com sucesso, e uma ordem só é considerada cancelada depois de estar ausente em **duas buscas bem-sucedidas seguidas**. Uma falha de rede nunca mais é interpretada como resposta.
+
+### 2. Enviar antes de gravar
+
+A ordem entrava na fila de envio **antes** de ser gravada no banco local. Se a gravação falhasse depois, o servidor ficava sabendo de algo que o próprio app não sabia mais.
+
+**Correção:** inverter a ordem. Primeiro grava no aparelho, depois enfileira o envio.
+
+### 3. Um banco "trocado" sem nenhum aviso
+
+O caminho do banco de dados vinha de uma chamada nativa. Quando essa chamada falhava, o app criava um banco **novo e vazio** em outro lugar. Para o usuário, parecia que tudo tinha sido apagado. Para o monitoramento, nada tinha acontecido.
+
+**Correção:** uma cadeia de alternativas para encontrar o caminho certo (canal nativo, depois o caminho salvo, depois o padrão da plataforma), e **qualquer desvio gera um alerta** no Sentry.
+
+### 4. Um diálogo antigo que deslogava a sessão nova
+
+Quando a sessão expirava, até 7 requisições em paralelo, a cada 10 segundos, abriam cada uma o seu diálogo de "sessão expirada". O usuário fazia login de novo, mas um diálogo antigo continuava na pilha. Quando ele tocava em "Ok", **deslogava a sessão nova**.
+
+**Correção:** tratamento _single-flight_, em que só uma requisição trata a expiração e as outras esperam o resultado, e uma comparação com a sessão capturada no momento do erro. Um diálogo de uma sessão antiga não pode mais afetar a atual.
+
+## Primeiro passo: tornar a perda detectável e recuperável
+
+Fechar as portas conhecidas não garantia que não houvesse outras. Então, antes de qualquer refatoração grande, criei uma rede de segurança: um **ledger de execução**.
+
+É um registro simples, um marcador por ordem executada, com validade de 30 dias. O detalhe importante é **onde** ele fica: fora do banco principal, em outro armazenamento. Se o banco principal se perder, o ledger sobrevive.
+
+Com ele, quando uma ordem que o ledger diz ter sido executada volta da API como se fosse nova, o app:
+
+1. **Restaura os dados automaticamente**, sem o usuário perceber.
+2. **Envia um evento ao Sentry** com uma fingerprint própria, para esse caso não se misturar com outros erros e poder ser acompanhado.
+
+Também passei a recuperar cronômetros e imagens depois de uma perda e a registrar um evento sempre que uma ordem regride de status. A perda silenciosa passou a ser **detectável** e **recuperável**.
+
+## Segundo passo: impedir a perda na origem
+
+O ledger é uma rede de segurança, não uma solução. Na reconstrução do app, a pergunta mudou de "como recuperar dados perdidos?" para "como fazer o app ser **incapaz** de perder dados?". A resposta virou uma regra de arquitetura: **toda escrita é atômica e durável**, e todo envio ao servidor passa por um **outbox**.
+
+### O outbox
+
+O outbox é uma fila durável, guardada no banco local, com tudo o que precisa ir para o servidor. As regras:
+
+- **Nada vai para o servidor sem passar pela fila.** O envio só sai de uma entrada gravada no aparelho, e enfileirar é uma gravação transacional: se o app fechar um segundo depois, o envio continua pendente, não perdido. Não existe mais o caminho "o servidor sabe, o app não".
+- **Cada entrada carrega o próprio contexto.** Sessão, veículo e o que mais for necessário são capturados no momento em que a entrada é criada. Se o usuário trocar de conta antes do envio, a entrada continua correta.
+- **Cada entrada tem um id gerado no aparelho e estável**, pensado para o servidor poder descartar duplicatas.
+- **Cada feature registra o próprio handler.** A feature de abastecimento sabe enviar abastecimentos, a de mensagens sabe enviar mensagens. O mecanismo de fila não conhece regras de negócio.
+
+### Só remove o que o servidor confirmou
+
+O sincronizador processa a fila quando há conexão, por tipo de entrada e em lotes. O ponto mais importante: **ele remove da fila apenas os ids que o servidor confirmou**, dentro de uma transação. Se uma entrada nova for enfileirada enquanto um lote está sendo enviado, ela não está na lista de confirmados, então nunca é apagada por engano.
+
+Cada envio termina em um de quatro resultados, e o tipo `sealed` obriga o código a tratar todos:
+
+```dart
+sealed class SendOutcome {
+  const SendOutcome();
+}
+
+/// O lote inteiro foi aceito: tudo pode sair da fila.
+final class Accepted extends SendOutcome {
+  const Accepted();
+}
+
+/// Parte foi aceita: só esses ids saem, o resto tenta de novo.
+final class AcceptedPartial extends SendOutcome {
+  const AcceptedPartial(this.confirmedIds);
+  final List<String> confirmedIds;
+}
+
+/// Falhou, mas pode dar certo depois (rede, 5xx): tenta de novo com backoff.
+final class RetryLater extends SendOutcome {
+  const RetryLater();
+}
+
+/// Nunca vai dar certo (um 4xx que não é de autenticação): descarta e alerta.
+final class Rejected extends SendOutcome {
+  const Rejected(this.reason);
+  final String reason;
+}
+```
+
+As novas tentativas usam **backoff exponencial com jitter**, começando em 5 segundos e chegando a no máximo 5 minutos. Assim, quando a conexão volta, os aparelhos não disparam todos ao mesmo tempo contra o servidor. E o caso `Rejected` é o único em que algo sai da fila sem confirmação, sempre com um alerta no monitoramento, nunca em silêncio.
+
+### Fotos fora do banco
+
+Fotos tiradas em campo, muitas vezes em áreas sem sinal, são a evidência do trabalho feito. No outbox, a entrada guarda só o **caminho do arquivo**, e a conversão para base64 acontece apenas no envio. Uma rotina de limpeza apaga as fotos antigas, mas **nunca uma que ainda esteja referenciada por uma entrada na fila**. Antes, um rollback no app antigo chegava a apagar as fotos do usuário.
+
+## Testando o que não pode falhar
+
+Uma regra de arquitetura só vale se for testada. O outbox e o sincronizador ganharam testes para os casos que causavam perda de dados:
+
+- Envio parcialmente aceito e a confirmação apenas dos ids certos.
+- Uma entrada enfileirada no meio de um envio, que precisa sobreviver.
+- O ciclo offline e online: enfileirar sem rede, a rede voltar e a fila esvaziar.
+- Falha ao enfileirar, limite de pendentes e reagendamento.
+- Backoff e as guardas do sincronizador.
+
+## O resultado
+
+A perda silenciosa de dados passou por três estágios:
+
+1. **Detectável:** qualquer regressão de uma ordem gera um evento no monitoramento.
+2. **Recuperável:** o ledger restaura automaticamente os dados de uma ordem executada.
+3. **Impedida na origem:** com escritas atômicas e o outbox, o app não tem mais um caminho para enviar algo que não gravou, nem para apagar algo que o servidor não confirmou.
+
+A diferença entre o segundo e o terceiro estágio é a que mais importa. O ledger corrige o sintoma depois que ele aparece. O outbox elimina a classe inteira de bugs.
+
+## O que eu levaria para o próximo app offline-first
+
+- **"Erro" e "resposta vazia" são coisas diferentes.** Nunca tome uma decisão destrutiva, como cancelar, apagar ou sobrescrever, com base em uma resposta que pode ter falhado.
+- **Grave antes de enviar.** A ordem das operações é parte da correção, e o que vai para o servidor deve sair de algo que já está gravado no aparelho.
+- **Só remova o que foi confirmado.** "Enviei o lote, então limpo a fila" perde qualquer coisa que entrou no meio do caminho.
+- **Perda silenciosa é pior que crash.** Um crash aparece no monitoramento. Dados que somem sem erro só aparecem quando o cliente reclama.
+- **Uma rede de segurança compra tempo para a solução certa.** O ledger protegeu os usuários enquanto a arquitetura nova era construída.

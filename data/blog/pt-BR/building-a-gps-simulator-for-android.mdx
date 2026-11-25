@@ -1,0 +1,112 @@
+---
+title: 'Construí um simulador de GPS para testar apps de localização, com altitude e túneis do mapa real'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Android', 'Kotlin', 'Geolocalização', 'Desenvolvimento Mobile']
+draft: false
+summary: 'Testar um app de localização exige andar pela rua ou confiar em posições falsas que não se parecem com um GPS de verdade. Construí um app Android em Flutter que publica posições simuladas pelos provedores de teste do sistema, segue rotas reais, roda com a tela desligada e usa dados do mapa para altitude e túneis, sem inventar nenhum número.'
+authors: ['default']
+---
+
+## Por que construí
+
+Boa parte do meu trabalho é em apps que dependem de localização: rastreamento em segundo plano, chegada a um ponto, entrada e saída de uma cerca virtual, cálculo de velocidade. Testar isso é chato. Ou você sai andando ou dirigindo com o celular, ou usa um app de localização falsa que teleporta o aparelho de um ponto a outro, sem nada parecido com o comportamento de um GPS real.
+
+Eu queria uma ferramenta que fizesse o celular **acreditar** que está percorrendo uma rota de verdade, na velocidade certa, com as imperfeições de um GPS real, e que continuasse funcionando com a tela desligada, que é justamente quando os bugs de localização em segundo plano aparecem. Como não encontrei uma que fizesse tudo isso, construí o **Simulador de GPS**.
+
+## O que ele faz
+
+É um app Android, para Android 12 ou mais novo, feito em Flutter. Você marca pontos no mapa, gera a rota e inicia a simulação. A partir daí, qualquer outro app do aparelho que pedir a localização recebe as posições simuladas.
+
+- **Rotas de verdade:** a rota pode vir do OSRM, do GraphHopper, de um servidor próprio ou ser uma linha reta. Também dá para importar rotas em GPX, KML ou GeoJSON e exportar ou compartilhar em GPX e KML.
+- **Ida e volta**, com a volta roteirizada pelo sentido das ruas.
+- **Imperfeições de GPS:** perfis prontos (Cidade, Rodovia e Área coberta) ou ruído, variação de velocidade e curvas ajustados à mão. Um ponto parado oscila como um celular parado de verdade, em vez de ficar cravado numa coordenada.
+- **Cenário de cerca virtual**, para simular a entrada e a saída de uma área.
+- **Segundo plano:** a simulação continua com a tela desligada, com uma notificação mostrando o tempo decorrido.
+- **Widget na tela inicial**, que acompanha a simulação e inicia a última rota com um toque.
+- **Busca de endereços** e lugares favoritos para teleportar o aparelho.
+
+## Publicando posições pelo próprio Android
+
+O Android tem um mecanismo oficial para isso: os **provedores de teste**. Com as Opções do desenvolvedor ativadas e o app escolhido como "app de local fictício", ele pode registrar provedores de localização falsos e publicar posições neles.
+
+O Flutter não expõe essa API, então escrevi um plugin pequeno em Kotlin. Ele registra um provedor de teste para o GPS e outro para a rede, com as mesmas propriedades de um provedor real:
+
+```kotlin
+val properties = ProviderProperties.Builder()
+    .setHasNetworkRequirement(network)
+    .setHasSatelliteRequirement(!network)
+    .setHasAltitudeSupport(true)
+    .setHasSpeedSupport(true)
+    .setHasBearingSupport(true)
+    .setPowerUsage(ProviderProperties.POWER_USAGE_LOW)
+    .setAccuracy(ProviderProperties.ACCURACY_FINE)
+    .build()
+locationManager.addTestProvider(name, properties)
+locationManager.setTestProviderEnabled(name, true)
+```
+
+A cada passo da simulação, o app monta um `Location` com latitude, longitude, velocidade, direção, precisão e horário, e o publica com `setTestProviderLocation`. O plugin também detecta se as Opções do desenvolvedor estão ativas, e o app mostra o passo a passo para configurá-lo como app de local fictício.
+
+## A regra: nada de dados inventados
+
+A primeira versão publicava uma altitude fixa e perdia o sinal em intervalos regulares, em qualquer ponto da rota. Pareciam realistas, mas eram números inventados. Um app sendo testado podia passar no teste por causa de um dado que nenhum celular de verdade veria.
+
+Então defini uma regra para a parte de realismo: **tudo o que parecer real precisa vir de dados reais do mapa. Quando não houver dado, o app não publica nada, em vez de inventar.**
+
+### Altitude e túneis do mapa
+
+Quando uma rota é criada, venha ela de onde vier, o app envia a geometria para um servidor **Valhalla**:
+
+- O endpoint `/height` devolve a **altura do terreno** ao longo da rota, amostrada a cada 30 metros.
+- O endpoint `/trace_attributes` faz o _map matching_ da rota e diz quais trechos são **túneis, pontes ou áreas cobertas**, a partir do OpenStreetMap.
+
+Com isso:
+
+- **Dentro de um túnel, o GPS fica sem sinal**, como num celular de verdade, e volta na saída.
+- **Em pontes, a altitude segue o tabuleiro**, e não o fundo do vale que o modelo de terreno tem embaixo dela. O mesmo vale para túneis, em relação ao topo do morro. Nesses trechos, a altura é interpolada entre as duas pontas.
+- Se o arquivo importado já traz a altitude de todos os pontos, o app usa a do arquivo.
+- **Sem dados**, por exemplo offline ou com o servidor fora do ar, a posição é publicada **sem altitude**, e o app avisa isso na tela.
+
+```kotlin
+// No altitude is better than an invented one: without it the
+// Location simply reports hasAltitude() == false.
+val msl = (fix["altitude"] as Number?)?.toDouble()
+if (msl != null) applyAltitude(location, msl, vertical)
+```
+
+O perfil de terreno é salvo junto com a rota, então o servidor é consultado uma vez por rota, e não a cada simulação.
+
+### O detalhe do geoide
+
+Aqui apareceu um problema sutil. O modelo de terreno dá a altura **acima do nível do mar**. Um chip de GPS de verdade informa a altura **acima do elipsoide WGS84**, uma superfície matemática que não coincide com o nível do mar. No Brasil, a diferença fica na casa de dezenas de metros. Publicar a altura do terreno direto seria um número plausível, mas errado.
+
+No Android 14 ou mais novo, o sistema tem o `AltitudeConverter`, que conhece essa diferença. O plugin faz uma "sonda": cria uma posição com altitude zero no elipsoide e pede ao conversor a altura correspondente acima do nível do mar. O valor que volta, com o sinal invertido, é a diferença naquele ponto. Ela é calculada fora da thread principal e guardada em cache por região, e a altitude publicada fica igual à de um GPS real. Em versões mais antigas, que não têm o conversor, o app publica a altura acima do nível do mar e avisa isso na tela.
+
+### Respeitando os servidores públicos
+
+O terreno usa por padrão o servidor público do Valhalla mantido pela comunidade FOSSGIS, que pede no máximo uma requisição por segundo e que os apps não deixem o endereço fixo no código. O cliente respeita esse limite, o endereço pode ser trocado nas configurações, com um botão para testar o servidor, e o crédito exigido aparece na tela.
+
+O mesmo vale para o mapa. O padrão é o Google Maps, mas dá para trocar pelo OpenStreetMap, que não usa chave e cuja política de uso também é respeitada.
+
+Para o Google Maps funcionar, precisei configurar a chave no [Google Cloud Console](https://console.cloud.google.com/): criar um projeto, ativar o **Maps SDK for Android** e gerar uma chave de API para o app. Sem isso, o SDK desenha só um fundo vazio e registra no log um erro de autorização (`Authorization failure`). É uma configuração simples, mas fácil de esquecer ao rodar o app numa máquina nova, e é justamente por isso que a opção do OpenStreetMap, sem chave, é útil.
+
+## Como ele é construído
+
+O app foi criado a partir do mesmo template que uso nos apps Flutter do trabalho: **Clean Architecture por feature**, **BLoC** em todo o estado, `get_it` para injeção de dependências, `go_router` para navegação e um `Result` nos casos de uso em vez de exceções. A lógica da simulação, o motor que calcula cada posição, fica toda na camada de domínio, sem depender do Flutter nem do Android, o que facilita testar.
+
+Alguns pacotes que fazem o trabalho pesado:
+
+- `flutter_foreground_task` para manter a simulação viva com a tela desligada.
+- `google_maps_flutter` e `flutter_map` para os dois tipos de mapa.
+- `home_widget` para o widget da tela inicial.
+- `sembast` para guardar rotas, favoritos e configurações.
+
+O projeto tem testes para os casos de uso, os BLoCs e o serviço de simulação em segundo plano. O resumo do app está na [página do projeto](/projects/gps-simulator).
+
+## O que eu aprendi
+
+- **Ferramentas internas valem o investimento.** Um bom simulador transforma um teste de campo de meia hora em alguns toques, e torna testáveis casos que seriam difíceis de reproduzir na rua, como entrar num túnel no meio de uma rota.
+- **Realismo falso é pior que nenhum realismo.** Uma altitude inventada pode fazer um teste passar por engano. Publicar "sem altitude" é mais honesto e mais útil.
+- **Dados geográficos escondem detalhes.** Nível do mar e elipsoide parecem a mesma coisa até você comparar com um GPS real.
+- **Servidores públicos têm regras.** Limitar as requisições, permitir trocar o servidor e mostrar os créditos faz parte de usar bem um serviço gratuito.

@@ -3,6 +3,9 @@ import { useRouter } from 'next/router'
 import siteMetadata from '@/data/siteMetadata'
 import { DEFAULT_LOCALE, LOCALES, localePath } from '@/lib/locales'
 
+// Link preview images generated at build time by scripts/generate-og-images.mjs
+export const ogImagePath = (locale, page = 'default') => `/static/images/og/${locale}/${page}.png`
+
 // Path of the current page without the locale prefix, query string or hash
 const usePagePath = () => useRouter().asPath.split(/[?#]/)[0]
 
@@ -27,6 +30,8 @@ const CommonSEO = ({ title, description, ogType, ogImage, twImage, canonicalUrl 
       ) : (
         <meta property="og:image" content={ogImage} key={ogImage} />
       )}
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content={siteMetadata.twitter} />
       <meta name="twitter:title" content={title} />
@@ -49,9 +54,10 @@ const CommonSEO = ({ title, description, ogType, ogImage, twImage, canonicalUrl 
   )
 }
 
-export const PageSEO = ({ title, description }) => {
-  const ogImageUrl = siteMetadata.siteUrl + siteMetadata.socialBanner
-  const twImageUrl = siteMetadata.siteUrl + siteMetadata.socialBanner
+export const PageSEO = ({ title, description, ogImage }) => {
+  const { locale } = useRouter()
+  const ogImageUrl = siteMetadata.siteUrl + (ogImage || ogImagePath(locale))
+  const twImageUrl = ogImageUrl
   return (
     <CommonSEO
       title={title}
@@ -64,9 +70,9 @@ export const PageSEO = ({ title, description }) => {
 }
 
 export const TagSEO = ({ title, description }) => {
-  const ogImageUrl = siteMetadata.siteUrl + siteMetadata.socialBanner
-  const twImageUrl = siteMetadata.siteUrl + siteMetadata.socialBanner
   const router = useRouter()
+  const ogImageUrl = siteMetadata.siteUrl + ogImagePath(router.locale)
+  const twImageUrl = ogImageUrl
   const pagePath = usePagePath()
   return (
     <>
@@ -96,25 +102,19 @@ export const BlogSEO = ({
   date,
   lastmod,
   url,
-  images = [],
+  slug,
   canonicalUrl,
 }) => {
   const router = useRouter()
   const publishedAt = new Date(date).toISOString()
   const modifiedAt = new Date(lastmod || date).toISOString()
-  let imagesArr =
-    images.length === 0
-      ? [siteMetadata.socialBanner]
-      : typeof images === 'string'
-      ? [images]
-      : images
-
-  const featuredImages = imagesArr.map((img) => {
-    return {
+  // The generated preview replaces the old `images` banners from the front matter
+  const featuredImages = [
+    {
       '@type': 'ImageObject',
-      url: img.includes('http') ? img : siteMetadata.siteUrl + img,
-    }
-  })
+      url: siteMetadata.siteUrl + ogImagePath(router.locale, `blog/${slug}`),
+    },
+  ]
 
   let authorList
   if (authorDetails) {

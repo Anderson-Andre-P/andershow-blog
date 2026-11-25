@@ -4,10 +4,12 @@ import PostRow from '@/components/blog/PostRow'
 import siteMetadata from '@/data/siteMetadata'
 import { getAllFilesFrontMatter } from '@/lib/mdx'
 import ProjectGrid from '@/components/ProjectGrid'
+import ProjectCard from '@/components/ProjectCard'
 import projectsData from '@/data/projectsData'
 import ExperienceCard from '@/components/ExperienceCard'
 import experienceData from '@/data/experienceData'
 import Skills from '@/components/Skills'
+import Recommendations from '@/components/Recommendations'
 import ResumeButton from '@/components/ResumeButton'
 import EmailButton from '@/components/EmailButton'
 import { secondaryButton } from '@/components/buttonStyles'
@@ -16,6 +18,9 @@ import { localeDir } from '@/lib/mdx'
 import { localize, useLocale, useT } from '@/lib/i18n'
 
 const MAX_DISPLAY = 3
+
+// The first featured project gets the large card, like on /projects
+const [topProject, ...featuredProjects] = projectsData.filter((project) => project.featured)
 
 export async function getStaticProps({ locale }) {
   const posts = await getAllFilesFrontMatter(localeDir('blog', locale))
@@ -49,7 +54,16 @@ export default function Home({ posts, hasResume }) {
         <p className="my-4 max-w-2xl leading-loose text-zinc-600 dark:text-slate-300">
           {t.home.intro}
         </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.home.openToRemote}</p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            {t.home.openToWork}
+          </span>
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">{t.home.openToRemote}</span>
+        </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
           {hasResume && <ResumeButton />}
@@ -135,7 +149,12 @@ export default function Home({ posts, hasResume }) {
         </p>
       </div>
 
-      <ProjectGrid projects={projectsData.filter((project) => project.featured)} />
+      {topProject && (
+        <div className="pt-8">
+          <ProjectCard {...topProject} highlighted />
+        </div>
+      )}
+      <ProjectGrid projects={featuredProjects} />
       <div className="content mt-12 sm:mt-24">
         <h2 className="font-poppins title-font text-3xl font-bold">{t.home.experience}</h2>
         <ul className="mt-8">
@@ -147,6 +166,8 @@ export default function Home({ posts, hasResume }) {
           ))}
         </ul>
       </div>
+
+      <Recommendations />
 
       <div className="mt-12 sm:mt-24">
         <Skills />
