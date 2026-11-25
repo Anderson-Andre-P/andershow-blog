@@ -17,7 +17,8 @@ const dictionary = {
       readingTime: 'Reading time',
     },
     home: {
-      openToRemote: 'Open to remote Senior Mobile Engineer (Flutter) roles.',
+      openToWork: 'Open to work',
+      openToRemote: 'Looking for remote Senior Mobile Engineer (Flutter) roles.',
       intro:
         "I build Flutter apps for logistics and industrial IoT, and I care about what happens after they ship: how they're used in the field, where they break, and how they can make an operation run better.",
       projects: 'Projects',
@@ -125,7 +126,8 @@ const dictionary = {
       readingTime: 'Tempo de leitura',
     },
     home: {
-      openToRemote: 'Disponível para vagas remotas de Senior Mobile Engineer (Flutter).',
+      openToWork: 'Em busca de oportunidades',
+      openToRemote: 'Procurando vagas remotas de Senior Mobile Engineer (Flutter).',
       intro:
         'Desenvolvo apps em Flutter para logística e IoT industrial, e me importo com o que acontece depois que eles são publicados: como são usados em campo, onde quebram e como podem fazer uma operação funcionar melhor.',
       projects: 'Projetos',

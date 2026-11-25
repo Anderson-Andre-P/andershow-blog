@@ -49,7 +49,16 @@ export default function Home({ posts, hasResume }) {
         <p className="my-4 max-w-2xl leading-loose text-zinc-600 dark:text-slate-300">
           {t.home.intro}
         </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.home.openToRemote}</p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            {t.home.openToWork}
+          </span>
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">{t.home.openToRemote}</span>
+        </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
           {hasResume && <ResumeButton />}
