@@ -4,6 +4,7 @@ import PostRow from '@/components/blog/PostRow'
 import siteMetadata from '@/data/siteMetadata'
 import { getAllFilesFrontMatter } from '@/lib/mdx'
 import ProjectGrid from '@/components/ProjectGrid'
+import ProjectCard from '@/components/ProjectCard'
 import projectsData from '@/data/projectsData'
 import ExperienceCard from '@/components/ExperienceCard'
 import experienceData from '@/data/experienceData'
@@ -17,6 +18,9 @@ import { localeDir } from '@/lib/mdx'
 import { localize, useLocale, useT } from '@/lib/i18n'
 
 const MAX_DISPLAY = 3
+
+// The first featured project gets the large card, like on /projects
+const [topProject, ...featuredProjects] = projectsData.filter((project) => project.featured)
 
 export async function getStaticProps({ locale }) {
   const posts = await getAllFilesFrontMatter(localeDir('blog', locale))
@@ -145,7 +149,12 @@ export default function Home({ posts, hasResume }) {
         </p>
       </div>
 
-      <ProjectGrid projects={projectsData.filter((project) => project.featured)} />
+      {topProject && (
+        <div className="pt-8">
+          <ProjectCard {...topProject} highlighted />
+        </div>
+      )}
+      <ProjectGrid projects={featuredProjects} />
       <div className="content mt-12 sm:mt-24">
         <h2 className="font-poppins title-font text-3xl font-bold">{t.home.experience}</h2>
         <ul className="mt-8">
