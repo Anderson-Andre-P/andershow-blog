@@ -1,0 +1,139 @@
+---
+title: 'Como encontrei um loop de sincronização escondido desde 2020 e reduzi o tráfego de um app em mais de 90%'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Android', 'Java', 'Código Legado', 'Desempenho', 'Desenvolvimento Mobile']
+draft: false
+summary: 'Um cliente reclamou que um único aparelho tinha gastado 195 GB de internet móvel em um mês. A suspeita caiu sobre a versão mais recente do app e sobre os logs. A investigação mostrou outra coisa: um loop de sincronização que existia desde 2020. A correção reduziu as requisições em cerca de 93% e os dados recebidos em cerca de 13,7 vezes, medidos em aparelho real.'
+authors: ['default']
+---
+
+## O problema
+
+O app em questão é o mesmo app Android em Java que contei estar [recriando em Flutter](/blog/rewriting-a-legacy-java-android-app-in-flutter). Antes da reescrita, ainda na versão em Java, chegou uma reclamação séria do cliente: **um único aparelho tinha consumido 195 GB de internet móvel em um mês**, cerca de 6 GB por dia. Pouco depois, outros três aparelhos chegaram a 42, 102 e 163 GB.
+
+Para um app de operação que basicamente envia eventos e recebe atualizações, isso é absurdo. E o custo não é só técnico: é a conta de dados do cliente.
+
+Havia duas suspeitas naturais:
+
+1. **A versão mais recente do app**, publicada pouco antes das reclamações.
+2. **O envio de logs**, que eu mesmo tinha implementado meses antes.
+
+A reação natural do cliente seria pedir para voltar à versão antiga. Antes de qualquer decisão, era preciso descobrir a causa de verdade.
+
+## Primeiro passo: descartar suspeitos com conta, não com opinião
+
+Comecei pelos logs, porque eram meu código e a suspeita mais óbvia. Em vez de testar no escuro, fiz a conta do **pior caso possível**: com o servidor de logs fora do ar para sempre, o app reenviaria no máximo 50 eventos a cada 3 minutos. Isso dá cerca de **12 MB por dia**, aproximadamente 500 vezes menos do que os 6 GB por dia observados.
+
+Os logs não explicavam nem de longe a ordem de grandeza do problema. Mesmo assim, aproveitei para melhorar o envio deles, com prazo de validade na fila e uma chave para desligar o envio pela rede. Mas a causa estava em outro lugar.
+
+## Montando uma investigação controlada
+
+Para não depender de impressões, montei um ambiente de medição:
+
+- **Builds de referência** da versão antiga e da versão atual, lado a lado, para comparar as duas nas mesmas condições.
+- **Instrumentação de rede própria**, contando os bytes enviados e recebidos em cada requisição.
+- **Medições no emulador** com o app em primeiro plano, em segundo plano e com a tela desligada, sempre com a mesma conta e o mesmo servidor de homologação.
+- **Um inventário de todos os pontos do código que acessam a rede**, nas duas versões.
+- **A composição das respostas do servidor, campo a campo**, para saber o que pesava em cada uma.
+
+Com isso, o padrão apareceu rápido. Com o app parado, sem ninguém tocando na tela, ele fazia **cerca de 40 requisições por minuto**, uma sincronização completa a cada 2 a 4 segundos. E o log repetia sem parar a mesma linha:
+
+```text
+D/SyncTask: Executando SYNC novamente pois ainda existem dados para serem enviados: 0 8 0
+```
+
+Os três números eram os itens pendentes em memória. No caso medido, `0 8 0` ficou fixo por 20 minutos: o app dizia que tinha 8 eventos para enviar, mas não havia nada de novo.
+
+## Provando a causa com um experimento
+
+Ter um suspeito não basta. Para provar que aquele era o problema, fiz um **experimento causal**: troquei **apenas** a condição que decide repetir a sincronização, sem mexer em mais nada, e medi de novo nas mesmas condições.
+
+Em 5 minutos, as requisições caíram de cerca de 203 para 22, e o JSON baixado de cerca de 118 MB para 12,7 MB, uma queda de **89%**. A causa estava confirmada.
+
+## A causa: uma condição que nunca ficava falsa
+
+O fluxo era assim: depois de enviar os eventos, a tarefa de sincronização verificava se "ainda havia dados para enviar". Se houvesse, ela se executava de novo **imediatamente**, sem intervalo. Simplificando:
+
+```java
+// Simplificado: decide repetir olhando uma lista em memória
+if (response.isOk() && !pendingEventsInMemory.isEmpty()) {
+    new SyncTask().execute();
+}
+```
+
+O problema é que os eventos enviados vinham do **banco local** (Room), e a confirmação do servidor marcava como enviados **no banco**. Ninguém removia os itens da **lista em memória**. Então a lista nunca esvaziava, o servidor respondia OK, e a condição ficava verdadeira para sempre.
+
+O resultado era uma cadeia sem fim: a sincronização principal disparava a de ordens, que disparava a de rotas, que disparava a principal de novo. Cada volta baixava cerca de **1,8 MB de JSON**, com o app aberto, em segundo plano ou com a tela desligada.
+
+### Por que cada volta custava tanto
+
+A análise campo a campo das respostas mostrou outro detalhe: a **lista completa de veículos e operadores da conta** vinha em toda resposta e representava a maior parte do tamanho (cerca de 91% em uma das chamadas). Ou seja, o custo de cada volta crescia com o tamanho da frota do cliente. Isso também ajudava a explicar por que aparelhos diferentes chegaram a consumos tão diferentes.
+
+## Arqueologia no git: não era uma regressão
+
+A suspeita inicial era a versão mais recente, então fui atrás da origem no histórico do git:
+
+- A regra "repetir a sincronização se ainda existir dado para enviar" foi criada em **2017**, e fazia sentido na época.
+- Em **2020**, o envio de eventos passou a ler do banco local, e a remoção dos itens da lista em memória saiu da tarefa de sincronização. **A condição de repetir não foi ajustada.** Daí em diante, o loop passou a existir.
+
+Medi também a versão antiga, que o cliente queria reinstalar: ela consumia praticamente o mesmo que a atual. **Não era uma regressão recente.** Voltar à versão antiga não resolveria nada e ainda faria o cliente perder cerca de 150 alterações feitas desde então.
+
+## A correção
+
+A correção ensina o app a **perceber quando terminou o trabalho**. Criei duas classes pequenas e sem dependências do Android, fáceis de testar:
+
+- **`SyncRepeatPolicy`** decide se a sincronização deve se repetir. Ela só repete se o servidor respondeu OK, **confirmou pelo menos um item**, ainda restam pendentes e o número de repetições seguidas está abaixo de 20.
+- **`SyncAck`** calcula quais eventos foram confirmados a partir do lote que foi **realmente enviado**, e não de uma lista em memória.
+
+```java
+final class SyncRepeatPolicy {
+    static final int MAX_CONSECUTIVE_REPEATS = 20;
+
+    static boolean shouldRepeat(boolean responseOk, int confirmed,
+                                int stillPending, int consecutiveRepeats) {
+        return responseOk
+                && confirmed > 0
+                && stillPending > 0
+                && consecutiveRepeats < MAX_CONSECUTIVE_REPEATS;
+    }
+}
+```
+
+A regra de "só repete se houve progresso" é o que fecha o loop: se o servidor não confirmou nada, o app espera o próximo alarme de sincronização, que já existia, em vez de tentar de novo na hora. O teto de 20 repetições permite esvaziar uma fila grande, com até cerca de 1.000 eventos acumulados em lotes de 50, e garante que o problema nunca mais vire um loop infinito.
+
+No mesmo trecho, corrigi dois defeitos vizinhos que a investigação revelou:
+
+- O tamanho do lote vinha da lista em memória. Com a lista vazia e eventos pendentes no banco, **nada era enviado**.
+- A confirmação dependia de uma configuração de tamanho máximo de lote. Se ela valesse 0, **o mesmo lote seria reenviado para sempre**.
+
+## Os resultados
+
+Validei a correção em emulador e em aparelhos reais, um celular Android e um tablet, contra o servidor de homologação, com o mesmo código antes e depois:
+
+| | Antes | Depois | Redução |
+| --- | --- | --- | --- |
+| Requisições de sincronização por minuto, app parado | ~43 | **3** | ~93% |
+| Dados recebidos em 10 min, celular, app na tela | 25,84 MB | **1,89 MB** | ~13,7 vezes |
+| Dados recebidos em 10 min, celular, segundo plano | 24,53 MB | **1,80 MB** | ~13,6 vezes |
+| Projeção para 24 h, celular, app na tela | ~3,7 GB | **~270 MB** | ~13,7 vezes |
+
+A projeção para 24 horas é o consumo por minuto multiplicado pelos minutos do dia, e não um dia inteiro medido. Também testei os casos de borda: sem rede por 5 minutos, o app não fez nenhuma requisição nem gerou erro. Quando a rede voltou, com 135 eventos acumulados, ele enviou 3 lotes (50, 50 e 35), esvaziou a fila e voltou ao ritmo de 3 requisições por minuto.
+
+Deixei registrado também o que a investigação **não** provou: o loop explica a ordem de grandeza (3,5 a 4,7 GB por dia projetados antes da correção, contra cerca de 6 GB por dia relatados), mas não o valor exato. A diferença pode vir de contas com mais ordens ou frotas maiores em produção, que não foram medidas.
+
+## Explicando para quem não é técnico
+
+O cliente não precisava entender `SyncTask` nem Room. Precisava entender por que voltar à versão antiga não resolveria e por que a correção era segura. Escrevi um comunicado em linguagem simples, com uma analogia:
+
+> Pense em um motorista que entrega uma carta e depois fica voltando ao correio, a cada poucos segundos, para perguntar se ainda tem alguma carta para entregar. A carta já foi entregue, mas ele não "anota" isso.
+
+O comunicado trazia as tabelas de antes e depois, a comparação entre a versão antiga e a atual, a lista do que o cliente perderia ao voltar e a proposta: uma nova versão igual à atual **mais a correção, e nada além disso**.
+
+## O que eu levaria para o próximo problema
+
+- **Descarte suspeitos com conta.** Uma estimativa de pior caso levou poucos minutos e tirou os logs da investigação sem nenhum teste.
+- **Meça antes de mudar.** Sem instrumentação, eu teria discutido opiniões sobre qual versão consumia mais.
+- **Prove a causa mudando uma coisa só.** O experimento causal transformou uma suspeita em certeza antes de qualquer correção definitiva.
+- **Desconfie das suas próprias conclusões.** No meio da investigação, cheguei a concluir que a versão antiga consumia menos. Depois percebi que as janelas de medição tinham pegado travamentos de rede e corrigi a conclusão. Teria sido fácil deixar passar.
+- **Um loop precisa de critério de progresso e de teto.** "Repetir enquanto houver dados" é uma regra frágil. "Repetir enquanto houver progresso, até um limite" não vira loop infinito.

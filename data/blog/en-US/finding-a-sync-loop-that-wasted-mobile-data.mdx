@@ -1,0 +1,139 @@
+---
+title: 'How I Found a Sync Loop Hidden Since 2020 and Cut an App’s Data Traffic by Over 90%'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Android', 'Java', 'Legacy Code', 'Performance', 'Mobile Development']
+draft: false
+summary: 'A client reported that a single device had used 195 GB of mobile data in one month. Suspicion fell on the latest app version and on the logs. The investigation showed something else: a sync loop that had existed since 2020. The fix cut requests by about 93% and received data by about 13.7x, measured on a real device.'
+authors: ['default']
+---
+
+## The problem
+
+This is the same Java Android app I wrote about [rebuilding in Flutter](/blog/rewriting-a-legacy-java-android-app-in-flutter). Before the rewrite, while it was still in Java, a serious complaint came in from the client: **a single device had used 195 GB of mobile data in one month**, about 6 GB per day. Soon after, three other devices reached 42, 102 and 163 GB.
+
+For an operations app that mostly sends events and receives updates, that's absurd. And the cost isn't only technical: it's the client's data bill.
+
+There were two natural suspects:
+
+1. **The latest version of the app**, released shortly before the complaints.
+2. **Log uploading**, which I had implemented myself a few months earlier.
+
+The client's natural reaction would be to ask for a rollback to the old version. Before any decision, we had to find the real cause.
+
+## Step one: rule out suspects with math, not opinions
+
+I started with the logs, since they were my code and the most obvious suspect. Instead of testing blindly, I worked out the **worst possible case**: with the log server down forever, the app would resend at most 50 events every 3 minutes. That's about **12 MB per day**, roughly 500 times less than the 6 GB per day observed.
+
+The logs didn't come close to explaining the scale of the problem. I still used the chance to improve log uploading, with an expiry for queued items and a switch to turn off network uploads. But the cause was somewhere else.
+
+## Setting up a controlled investigation
+
+To avoid relying on impressions, I set up a measurement environment:
+
+- **Reference builds** of the old and current versions, side by side, to compare both under the same conditions.
+- **My own network instrumentation**, counting the bytes sent and received on each request.
+- **Emulator measurements** with the app in the foreground, in the background and with the screen off, always with the same account and the same staging server.
+- **An inventory of every place in the code that hits the network**, in both versions.
+- **A field-by-field breakdown of the server responses**, to see what made each one heavy.
+
+With that, the pattern showed up quickly. With the app idle and nobody touching the screen, it made **about 40 requests per minute**, a full sync every 2 to 4 seconds. And the log kept repeating the same line:
+
+```text
+D/SyncTask: Running SYNC again because there is still data to send: 0 8 0
+```
+
+The three numbers were the pending items in memory. In the measured case, `0 8 0` stayed fixed for 20 minutes: the app claimed it had 8 events to send, but there was nothing new.
+
+## Proving the cause with an experiment
+
+Having a suspect isn't enough. To prove that was the problem, I ran a **causal experiment**: I changed **only** the condition that decides whether to repeat the sync, touched nothing else, and measured again under the same conditions.
+
+Over 5 minutes, requests dropped from about 203 to 22, and downloaded JSON from about 118 MB to 12.7 MB, an **89%** drop. The cause was confirmed.
+
+## The cause: a condition that never became false
+
+The flow worked like this: after sending events, the sync task checked whether "there was still data to send". If so, it ran again **immediately**, with no delay. Simplified:
+
+```java
+// Simplified: decides to repeat by looking at an in-memory list
+if (response.isOk() && !pendingEventsInMemory.isEmpty()) {
+    new SyncTask().execute();
+}
+```
+
+The problem is that sent events were read from the **local database** (Room), and the server's confirmation marked them as sent **in the database**. Nothing removed the items from the **in-memory list**. So the list never emptied, the server answered OK, and the condition stayed true forever.
+
+The result was an endless chain: the main sync triggered the orders sync, which triggered the routes sync, which triggered the main sync again. Each round downloaded about **1.8 MB of JSON**, with the app open, in the background or with the screen off.
+
+### Why each round cost so much
+
+The field-by-field analysis of the responses revealed another detail: the **full list of the account's vehicles and operators** came back in every response and made up most of its size (about 91% in one of the calls). In other words, the cost of each round grew with the size of the client's fleet. That also helped explain why different devices reached such different totals.
+
+## Git archaeology: it wasn't a regression
+
+The initial suspect was the latest version, so I traced the origin through git history:
+
+- The rule "repeat the sync if there is still data to send" was created in **2017**, and it made sense at the time.
+- In **2020**, event uploads started reading from the local database, and removing items from the in-memory list moved out of the sync task. **The repeat condition wasn't updated.** From then on, the loop existed.
+
+I also measured the old version the client wanted to reinstall: it used practically the same amount of data as the current one. **It wasn't a recent regression.** Rolling back wouldn't fix anything, and the client would lose about 150 changes made since then.
+
+## The fix
+
+The fix teaches the app to **notice when the work is done**. I created two small classes with no Android dependencies, easy to test:
+
+- **`SyncRepeatPolicy`** decides whether the sync should repeat. It only repeats if the server answered OK, **confirmed at least one item**, items are still pending and the number of consecutive repeats is below 20.
+- **`SyncAck`** works out which events were confirmed from the batch that was **actually sent**, not from an in-memory list.
+
+```java
+final class SyncRepeatPolicy {
+    static final int MAX_CONSECUTIVE_REPEATS = 20;
+
+    static boolean shouldRepeat(boolean responseOk, int confirmed,
+                                int stillPending, int consecutiveRepeats) {
+        return responseOk
+                && confirmed > 0
+                && stillPending > 0
+                && consecutiveRepeats < MAX_CONSECUTIVE_REPEATS;
+    }
+}
+```
+
+The "only repeat if there was progress" rule is what closes the loop: if the server confirmed nothing, the app waits for the next scheduled sync alarm, which already existed, instead of retrying right away. The cap of 20 repeats is enough to drain a large queue, up to about 1,000 accumulated events in batches of 50, and guarantees the problem can never turn into an infinite loop again.
+
+In the same code, I fixed two neighboring defects the investigation uncovered:
+
+- The batch size came from the in-memory list. With the list empty and events pending in the database, **nothing was sent**.
+- The confirmation depended on a maximum batch size setting. If it was 0, **the same batch would be resent forever**.
+
+## The results
+
+I validated the fix on an emulator and on real devices, an Android phone and a tablet, against the staging server, with the same code before and after:
+
+| | Before | After | Reduction |
+| --- | --- | --- | --- |
+| Sync requests per minute, idle app | ~43 | **3** | ~93% |
+| Data received in 10 min, phone, app on screen | 25.84 MB | **1.89 MB** | ~13.7x |
+| Data received in 10 min, phone, background | 24.53 MB | **1.80 MB** | ~13.6x |
+| 24 h projection, phone, app on screen | ~3.7 GB | **~270 MB** | ~13.7x |
+
+The 24-hour projection is usage per minute multiplied by the minutes in a day, not a full day measured. I also tested the edge cases: with no network for 5 minutes, the app made no requests and raised no errors. When the network came back with 135 queued events, it sent 3 batches (50, 50 and 35), emptied the queue and returned to 3 requests per minute.
+
+I also recorded what the investigation **didn't** prove: the loop explains the order of magnitude (3.5 to 4.7 GB per day projected before the fix, against about 6 GB per day reported), but not the exact figure. The gap may come from accounts with more orders or larger fleets in production, which weren't measured.
+
+## Explaining it to non-technical people
+
+The client didn't need to understand `SyncTask` or Room. They needed to understand why rolling back wouldn't help and why the fix was safe. I wrote a plain-language explanation with an analogy:
+
+> Picture a driver who delivers a letter and then keeps going back to the post office every few seconds to ask whether there are any letters left to deliver. The letter was already delivered, but he never "writes it down".
+
+The document included the before-and-after tables, the comparison between the old and current versions, the list of what the client would lose by rolling back, and the proposal: a new version identical to the current one **plus the fix, and nothing else**.
+
+## What I'd take to the next problem
+
+- **Rule out suspects with math.** A worst-case estimate took a few minutes and removed the logs from the investigation without a single test.
+- **Measure before changing anything.** Without instrumentation, I would have been debating opinions about which version used more data.
+- **Prove the cause by changing one thing.** The causal experiment turned a suspicion into certainty before any final fix.
+- **Question your own conclusions.** Midway through, I concluded the old version used less data. Then I realized my measurement windows had caught network stalls, and I corrected the conclusion. It would have been easy to miss.
+- **A loop needs a progress check and a cap.** "Repeat while there is data" is a fragile rule. "Repeat while there is progress, up to a limit" can't become an infinite loop.
