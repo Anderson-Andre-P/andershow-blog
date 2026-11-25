@@ -8,6 +8,7 @@ import projectsData from '@/data/projectsData'
 import ExperienceCard from '@/components/ExperienceCard'
 import experienceData from '@/data/experienceData'
 import Skills from '@/components/Skills'
+import Recommendations from '@/components/Recommendations'
 import ResumeButton from '@/components/ResumeButton'
 import EmailButton from '@/components/EmailButton'
 import { secondaryButton } from '@/components/buttonStyles'
@@ -156,6 +157,8 @@ export default function Home({ posts, hasResume }) {
           ))}
         </ul>
       </div>
+
+      <Recommendations />
 
       <div className="mt-12 sm:mt-24">
         <Skills />
