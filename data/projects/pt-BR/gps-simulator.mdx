@@ -1,0 +1,46 @@
+---
+year: 2026
+type: Projeto pessoal
+stack:
+  [
+    'Flutter',
+    'Kotlin',
+    'BLoC',
+    'Clean Architecture',
+    'flutter_foreground_task',
+    'Google Maps',
+    'flutter_map',
+    'Valhalla',
+    'sembast',
+    'home_widget',
+  ]
+---
+
+## Visão geral
+
+Um app Android que faz o celular **acreditar** que está percorrendo uma rota de verdade. Ele publica posições simuladas pelos provedores de teste do próprio Android, então qualquer outro app do aparelho que pedir a localização recebe essas posições. Serve para testar apps que dependem de localização sem sair andando ou dirigindo com o celular.
+
+## O problema
+
+Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálculo de velocidade exige uma de duas coisas: ir para a rua com o celular, ou usar um app de localização falsa que teleporta o aparelho de um ponto a outro. O primeiro é lento. O segundo não se parece com um GPS real, e os bugs de localização costumam aparecer justamente nos detalhes: o ruído, a velocidade, a perda de sinal e a tela desligada.
+
+## O que o app faz
+
+- **Rotas reais:** a rota vem do OSRM, do GraphHopper, de um servidor próprio ou é uma linha reta. Também importa GPX, KML e GeoJSON, e exporta ou compartilha em GPX e KML.
+- **Ida e volta**, com a volta roteirizada pelo sentido das ruas.
+- **Imperfeições de GPS:** perfis prontos (Cidade, Rodovia e Área coberta) ou ruído, variação de velocidade e curvas ajustados à mão.
+- **Túneis e altitude a partir do mapa:** dentro de um túnel o GPS fica sem sinal, e a altitude vem do terreno real, com pontes e túneis interpolados.
+- **Cenário de cerca virtual**, para simular a entrada e a saída de uma área.
+- **Segundo plano:** a simulação continua com a tela desligada, com uma notificação de progresso.
+- **Widget na tela inicial**, que acompanha a simulação e inicia a última rota com um toque.
+- **Busca de endereços** e lugares favoritos, com mapa do Google ou do OpenStreetMap.
+
+## Destaques técnicos
+
+- **Plugin próprio em Kotlin** para registrar provedores de teste de GPS e de rede e publicar posições neles, já que o Flutter não expõe essa API.
+- **Nenhum dado inventado:** altitude e túneis vêm de um servidor Valhalla, a partir do OpenStreetMap. Sem dados, a posição sai sem altitude, em vez de com um número falso.
+- **Altitude como a de um GPS real:** no Android 14 ou mais novo, o app converte a altura acima do nível do mar para a altura acima do elipsoide WGS84, que é o que um chip de GPS informa.
+- **Uso responsável de servidores públicos:** no máximo uma requisição por segundo ao servidor de terreno, endereço configurável e os créditos exigidos na tela.
+- **Clean Architecture e BLoC**, com o motor da simulação na camada de domínio, sem depender do Flutter nem do Android, e testes para casos de uso, BLoCs e o serviço em segundo plano.
+
+Contei como ele foi construído, com trechos de código, no post [Construí um simulador de GPS para testar apps de localização](/blog/building-a-gps-simulator-for-android).

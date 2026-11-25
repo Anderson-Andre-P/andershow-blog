@@ -1,0 +1,46 @@
+---
+year: 2026
+type: Personal project
+stack:
+  [
+    'Flutter',
+    'Kotlin',
+    'BLoC',
+    'Clean Architecture',
+    'flutter_foreground_task',
+    'Google Maps',
+    'flutter_map',
+    'Valhalla',
+    'sembast',
+    'home_widget',
+  ]
+---
+
+## Overview
+
+An Android app that makes the phone **believe** it is driving a real route. It publishes simulated positions through Android's own test providers, so any other app on the device that asks for the location receives those positions. It's for testing location-based apps without walking or driving around with the phone.
+
+## The problem
+
+Testing background tracking, arrival at a point, geofences or speed calculation requires one of two things: going outside with the phone, or using a fake-location app that teleports the device from one point to another. The first is slow. The second looks nothing like a real GPS, and location bugs usually show up precisely in the details: noise, speed, signal loss and the screen being off.
+
+## What the app does
+
+- **Real routes:** the route comes from OSRM, GraphHopper, your own server or a straight line. It also imports GPX, KML and GeoJSON, and exports or shares GPX and KML.
+- **Round trips**, with the way back routed along the direction of the streets.
+- **GPS imperfections:** ready-made profiles (City, Highway and Covered area) or noise, speed variation and curves tuned by hand.
+- **Tunnels and altitude from the map:** inside a tunnel the GPS loses signal, and altitude comes from the real terrain, with bridges and tunnels interpolated.
+- **Geofence scenario**, to simulate entering and leaving an area.
+- **Background:** the simulation keeps running with the screen off, with a progress notification.
+- **Home screen widget** that follows the simulation and starts the last route with one tap.
+- **Address search** and favorite places, on a Google or OpenStreetMap map.
+
+## Technical highlights
+
+- **A custom Kotlin plugin** to register GPS and network test providers and publish positions to them, since Flutter doesn't expose that API.
+- **No invented data:** altitude and tunnels come from a Valhalla server, based on OpenStreetMap. Without data, the position is published without altitude instead of with a fake number.
+- **Altitude like a real GPS:** on Android 14 or newer, the app converts height above sea level to height above the WGS84 ellipsoid, which is what a GPS chip reports.
+- **Responsible use of public servers:** at most one request per second to the terrain server, a configurable address and the required credits on screen.
+- **Clean Architecture and BLoC**, with the simulation engine in the domain layer, independent of Flutter and Android, and tests for use cases, BLoCs and the background service.
+
+I wrote about how it was built, with code samples, in [I built a GPS simulator to test location apps](/blog/building-a-gps-simulator-for-android).

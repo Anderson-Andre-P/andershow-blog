@@ -28,6 +28,14 @@ const projectsData = [
     links: { github: 'https://github.com/Anderson-Andre-P/onboarding_and_signin' },
   },
   {
+    title: 'GPS Simulator',
+    slug: 'gps-simulator',
+    description: {
+      'en-US': `An Android app that makes the phone believe it is driving a real route, to test location apps: real routes, GPS noise, tunnels and altitude from map data, running with the screen off.`,
+      'pt-BR': `Um app Android que faz o celular acreditar que está percorrendo uma rota de verdade, para testar apps de localização: rotas reais, ruído de GPS, túneis e altitude a partir do mapa, com a tela desligada.`,
+    },
+  },
+  {
     title: 'IMC Flutter',
     slug: 'imc-flutter',
     description: {
