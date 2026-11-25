@@ -1,0 +1,127 @@
+---
+title: 'Por que joguei fora minha primeira suíte de testes, e o que coloquei no lugar'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Testes', 'BLoC', 'Qualidade de Software', 'Desenvolvimento Mobile']
+draft: false
+summary: 'Na reconstrução de dois apps Flutter em produção, um começou sem nenhum teste e o outro com 321 testes herdados que ninguém revisava. Hoje os dois somam mais de 500 arquivos de teste. No caminho, descartei uma suíte inteira que eu mesmo tinha escrito, auditei testes um por um e criei testes que vigiam os próprios testes.'
+authors: ['default']
+---
+
+## O ponto de partida
+
+Este post faz parte da série sobre [a migração de dois apps Flutter para Clean Architecture e BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc). Lá, contei que um dos resultados foi a entrada dos testes automatizados. Aqui conto como isso aconteceu, incluindo a parte que não deu certo de primeira.
+
+Os dois apps partiram de situações diferentes:
+
+- **Um app de monitoramento em tempo real** não tinha **nenhum** teste automatizado.
+- **Um app usado em campo** tinha **321 testes herdados**, que nunca tinham sido revisados como conjunto. Ninguém sabia quais ainda testavam algo útil.
+
+Hoje, os dois somam **mais de 500 arquivos de teste**, entre testes de unidade, de BLoC, de widget e de integração. O número, porém, é a parte menos interessante. O que importa é por que esses testes merecem confiança.
+
+## Por que joguei fora a primeira suíte
+
+No app que não tinha testes, comecei pela infraestrutura: um harness que **bloqueia acesso à rede em todos os testes**, fakes para WebSocket e armazenamento seguro, pontos de injeção para trocar o cliente HTTP e a detecção de conexão, e um workflow de CI com análise estática, testes e relatório de cobertura.
+
+Em cima disso, escrevi uma primeira suíte. Ela passava, gerava cobertura e parecia ótima no relatório. Mas, quando chegou a hora de usar essa suíte para **validar o código depois da refatoração**, percebi que não confiava nela. Ela tinha sido escrita junto com um código que ainda estava mudando, e não estava claro se os testes verificavam o comportamento ou só repetiam a implementação.
+
+Então tomei uma decisão que parece desperdício: **apaguei a suíte inteira e reconstruí do zero**, feature por feature, sobre o código já estabilizado. A infraestrutura ficou, os testes não.
+
+Foi a decisão certa. Uma suíte em que você não confia é pior do que nenhuma suíte: ela dá uma sensação de segurança que não existe.
+
+## Auditando testes, não só escrevendo
+
+Escrever testes novos não basta. No app de campo, os 321 testes herdados passaram por uma **auditoria teste a teste**, e cada um recebeu uma de quatro decisões: manter, corrigir, reescrever ou apagar. Nenhum foi apagado sem uma decisão explícita.
+
+No app de monitoramento, depois de reconstruir a suíte, fiz uma auditoria de qualidade com uma pergunta simples: **essa cobertura cobre comportamento real?** Ela encontrou três problemas que relatórios de cobertura não mostram:
+
+### Testes tautológicos
+
+São testes que não conseguem falhar. Por exemplo:
+
+```dart
+test('retorna o total formatado', () {
+  final formatter = MockFormatter();
+  when(() => formatter.total(10)).thenReturn('R\$ 10,00');
+
+  expect(formatter.total(10), 'R\$ 10,00');
+});
+```
+
+O teste configura o mock para devolver um valor e depois confere que o mock devolveu esse valor. Ele passa sempre, cobre linhas e não testa nada do código real.
+
+### Excesso de mocks
+
+Quando quase tudo ao redor é mock, o teste acaba verificando a ordem das chamadas, e não o resultado. Qualquer refatoração quebra o teste, mesmo sem mudar o comportamento, e um bug real pode passar despercebido.
+
+### Branches sem cobertura
+
+Caminhos de erro, listas vazias e respostas malformadas do servidor, justamente os casos que mais causam problemas em produção, ficavam de fora.
+
+Corrigi esses pontos e fechei as lacunas encontradas.
+
+## As regras que sustentam a suíte
+
+Para a suíte não se degradar de novo, algumas regras ficaram escritas nos dois projetos:
+
+- **Teste não é descartável.** Nunca enfraquecer, remover, pular ou mockar o comportamento testado só para um teste passar. Se um teste conflita com o comportamento esperado, o conflito é discutido antes de mudar o teste.
+- **Todo bug corrigido ganha primeiro um teste que falha.** Uma regressão é um bug de verdade, e o teste garante que ela não volta.
+- **Cada camada tem o seu tipo de teste.** Casos de uso com caminhos de sucesso e de erro; conversão de dados com o caso feliz **e** com um payload malformado; BLoCs com `bloc_test`, verificando a sequência de estados; telas com seus estados de carregando, erro, vazio e preenchido, nos temas claro e escuro.
+- **Uma funcionalidade só conta como testada depois do teste de ponta a ponta no aparelho.** Teste de unidade passando não basta.
+
+Uma decisão importante foi o que **não** fazer: a migração em si não seguiu TDD. O comportamento de referência já existia, que era o app antigo, e a validação dessa parte era a comparação no aparelho. Os testes vieram como um marco próprio da reconstrução, organizados por especificações e planos por área.
+
+## Testes que vigiam os próprios testes
+
+Algumas regras são fáceis de esquecer. Em vez de depender de revisão de código, transformei as mais importantes em testes:
+
+- **Toda interação precisa de uma chave.** Os testes encontram widgets por chaves constantes, e não por texto ou ícone, que mudam com tradução e redesign. Um teste percorre o código das telas e **falha se um widget interativo não tem chave**, ou se duas chaves têm o mesmo valor.
+- **Todo toque em teste de integração usa o helper certo**, que garante que o widget está visível antes de tocar.
+- **Nenhum arquivo de teste de integração fica de fora** do ponto de entrada que roda a suíte combinada.
+
+Um exemplo simplificado da ideia:
+
+```dart
+test('todo botão das telas tem uma key', () {
+  final screens = Directory('lib/features')
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((f) => f.path.contains('/presentation/'));
+
+  final missing = [
+    for (final file in screens)
+      if (hasButtonWithoutKey(file.readAsStringSync())) file.path,
+  ];
+
+  expect(missing, isEmpty, reason: 'Botões sem key: $missing');
+});
+```
+
+## Dados de teste confiáveis
+
+Testes de integração dependem de dados que pareçam com os do servidor. Dois cuidados fizeram diferença:
+
+- **Fixtures em JSON compartilhadas**, com cenários completos, como uma frota inteira em vez de um único veículo. Um teste com um item só não revela problemas de lista.
+- **Fixtures validadas contra o contrato da API.** Um script confere cada fixture com a especificação OpenAPI do servidor de homologação. Se o contrato muda, o teste com dado desatualizado não passa em silêncio.
+
+Os testes de integração foram reescritos como **jornadas de usuário**, como login, troca de conta, vínculo de veículo, checklist e uma ordem de serviço, com o backend simulado. Existe também um teste opcional contra o servidor real, somente leitura e bloqueado para produção.
+
+## Pequenos detalhes que economizam horas
+
+- **Um relatório legível no fim da suíte**, com uma tabela por grupo de funcionalidade, as falhas com arquivo e linha e os 10 testes mais lentos. Ninguém precisa percorrer o log inteiro.
+- **Ler o código de saída real** do comando de testes, e não confiar só no texto da saída.
+- **Instabilidade tem causa.** Em um dos apps, o primeiro teste de widget de cerca de 36 arquivos falhava com "an animation is still running". A causa: as fontes eram carregadas dentro do primeiro teste, o que agendava um frame extra. Carregar as fontes uma vez, antes dos testes de cada arquivo, resolveu.
+
+## O resultado
+
+- De **zero** e de **321 testes nunca revisados** para **mais de 500 arquivos de teste** nos dois apps.
+- Uma suíte em que dá para confiar na hora de refatorar, porque cada teste verifica comportamento, e não implementação.
+- Regras escritas e testes que vigiam as regras, para a qualidade não depender da memória de ninguém.
+
+## O que eu levaria para o próximo projeto
+
+- **Cobertura alta não é sinônimo de suíte boa.** Um teste tautológico aumenta a cobertura e não protege nada.
+- **Tenha coragem de apagar.** Uma suíte em que você não confia custa manutenção e dá falsa segurança.
+- **Teste o comportamento observável.** Estados emitidos, o que aparece na tela, o resultado devolvido. Não a ordem das chamadas internas.
+- **Transforme regras em testes.** Uma convenção que depende de revisão humana vai ser esquecida um dia.
+- **O teste no aparelho continua necessário.** Testes automatizados reduzem muito o risco, mas a funcionalidade só está pronta quando funciona no celular.
