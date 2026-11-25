@@ -1,10 +1,25 @@
 // Each project can link to GitHub, the stores and/or a live demo (shown on its case study page):
 // links: { github, playStore, appStore, demo }
 // `slug` must match the case study file in data/projects/<slug>.mdx
-// `featured: true` projects show up on the homepage (an even number fills the 2-column grid);
-// the first one is highlighted on /projects.
+// `featured: true` projects show up on the homepage: the first one in a large card, the rest in a
+// 2-column grid (an even number fills it). The first featured one is also highlighted on /projects.
+// `previewScreens` (optional): app screens shown on the card while a project has no `imgSrc` banner.
 // `description` has one text per language (see lib/locales.js).
 const projectsData = [
+  {
+    title: 'GPS Simulator',
+    slug: 'gps-simulator',
+    featured: true,
+    previewScreens: [
+      '/static/images/projects/gps-simulator/screens/route.webp',
+      '/static/images/projects/gps-simulator/screens/simulating.webp',
+      '/static/images/projects/gps-simulator/screens/saved-routes.webp',
+    ],
+    description: {
+      'en-US': `An Android app that makes the phone believe it is driving a real route, to test location apps: real routes, GPS noise, tunnels and altitude from map data, running with the screen off.`,
+      'pt-BR': `Um app Android que faz o celular acreditar que está percorrendo uma rota de verdade, para testar apps de localização: rotas reais, ruído de GPS, túneis e altitude a partir do mapa, com a tela desligada.`,
+    },
+  },
   {
     title: 'Vibraguard',
     slug: 'vibraguard',
@@ -26,14 +41,6 @@ const projectsData = [
     },
     imgSrc: '/static/images/projects/onboarding-and-sign-in-banner.png',
     links: { github: 'https://github.com/Anderson-Andre-P/onboarding_and_signin' },
-  },
-  {
-    title: 'GPS Simulator',
-    slug: 'gps-simulator',
-    description: {
-      'en-US': `An Android app that makes the phone believe it is driving a real route, to test location apps: real routes, GPS noise, tunnels and altitude from map data, running with the screen off.`,
-      'pt-BR': `Um app Android que faz o celular acreditar que está percorrendo uma rota de verdade, para testar apps de localização: rotas reais, ruído de GPS, túneis e altitude a partir do mapa, com a tela desligada.`,
-    },
   },
   {
     title: 'IMC Flutter',
