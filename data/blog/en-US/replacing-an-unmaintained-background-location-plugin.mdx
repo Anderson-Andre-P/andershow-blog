@@ -1,0 +1,96 @@
+---
+title: 'Replacing an Unmaintained Background Location Plugin Without Spreading the Change Across the App'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Dependencies', 'Geolocation', 'Architecture', 'Mobile Development']
+draft: false
+summary: 'A Flutter app used in the field depended on an unmaintained background location plugin. Here is how I chose its replacement among three options, why the swap stayed within a single layer, and the silent problems that only showed up when testing on a real device.'
+authors: ['default']
+---
+
+## The context
+
+One of the Flutter apps I maintain is used in the field and tracks the device's location in the background. Those positions feed tracking and automatic service orders, which rely on geofences. For confidentiality reasons, I won't name the app or describe business rules.
+
+On Android, collecting GPS reliably while the app is in the background requires a **foreground service**, with its persistent notification, and a separate **isolate** to run the Dart code. The app used `background_locator_2` for this, an **unmaintained** plugin. During the [rebuild of the app with Clean Architecture and BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc), it was even kept as a local copy inside the project, precisely because the upstream package no longer received updates.
+
+## The rule: swap it, never patch it mid-feature
+
+During the rebuild, we set a rule for dependencies: **an unmaintained plugin is replaced by a maintained, free package**. And the swap is decided in its own analysis and done as separate work, **never in the middle of a feature**.
+
+The second part matters as much as the first. Swapping the foundation of tracking while building something else mixes two risks in the same commit. If something breaks, you can't tell which change caused it. That's why the swap was postponed once and picked up later, as a task of its own.
+
+## The three options
+
+| Option | Why yes | Why no |
+| --- | --- | --- |
+| `flutter_foreground_task` | Maintained, free, uses the same foreground service mechanism | Needed care with versions and with communication between isolates |
+| `flutter_background_service` | Free, same mechanism | Its last release had been 21 months earlier |
+| `flutter_background_geolocation` | The most battle-tested | Requires a paid license for commercial use, which the rule excludes |
+
+One detail is quite telling: in the first round of research, both `flutter_foreground_task` and `flutter_background_service` looked maintained. Only while writing the spec, checking pub.dev again, did I see that the second hadn't been published in 21 months, while the first had a release from 18 days earlier. **The "both are maintained" premise was out of date.** I chose `flutter_foreground_task`.
+
+## Why the swap fit in one layer
+
+Tracking sits behind a _gateway_, a domain interface the rest of the app uses without knowing which plugin is underneath:
+
+```dart
+abstract interface class LocationTrackingGateway {
+  Future<void> start();
+  Future<void> stop();
+}
+```
+
+The plugin's specific location type only appeared in one file: the implementation of that gateway, in the data layer. Position entities and the code that builds them only received plain values such as `double` and `String`. So the swap stayed within tracking's data layer. No screen, no BLoC and no entity had to change.
+
+That was the best argument for the architecture I could have asked for: replacing the foundation of a critical feature without touching the rest of the app.
+
+## A version adjustment along the way
+
+The spec called for version 11 of the package, but it requires a newer Dart version than the project's. There were two paths: upgrade the Flutter SDK for the whole project, or use version 10 of the package. I chose version 10, which had the same API the plan assumed, with one small compile-time difference. Upgrading the SDK would have been another big change, and mixing the two would have gone against the very rule that motivated the swap.
+
+## The problems that only showed up on a device
+
+The swap compiled and passed the tests. The real problems appeared when testing on a phone.
+
+### 1. Data that never arrived, with no error
+
+The background isolate sends data to the main isolate. That channel **silently does nothing** unless the main isolate calls `FlutterForegroundTask.initCommunicationPort()` first. This wasn't in the API docs. I found it in the package's own README and example.
+
+### 2. A start failure nobody could see
+
+The old plugin threw an exception when the native service failed to start. The new one **never throws**: it returns a success or failure result. The first version of the gateway returned that result as a `Future<void>`, which is valid Dart but discards the result. If the service didn't start, the app still marked tracking as active. No positions were collected, and the only symptom was a status screen that never updated. No crash, no log, no Sentry event.
+
+The fix was to check the result and turn a real failure back into an exception, restoring the old contract:
+
+```dart
+Future<void> start() async {
+  final result = await service.start();
+  if (result is ServiceFailure) {
+    throw result.error; // reaches the global handler and Sentry
+  }
+}
+```
+
+Stopping a service that was never started is still treated as safe, because the app calls `stop()` on every logout, whether tracking was active or not.
+
+### 3. A database locked by the background isolate
+
+The same day, a device test froze the screen for finishing a checklist while tracking was active. The confirmation kept loading forever, and the checklist was never saved.
+
+The cause: the background isolate wrote positions **to the same database file** every other feature used. That database is only safe with one isolate writing at a time. While tracking held the file, any write from the main app could wait indefinitely, with no exception, because it's a file lock and not a `Future` that fails.
+
+The fix was to give tracking **its own database file**. The background isolate no longer shares anything with the main database, which also holds the upload queue.
+
+## A known limitation
+
+On iOS, `flutter_foreground_task` only runs the background task for about 30 seconds every 15 minutes, a platform limitation. The old plugin used a continuous mode. Since iOS isn't in scope for this app yet, this doesn't affect anything today, but it's documented for when it is.
+
+## What I'd take to the next dependency swap
+
+- **Check maintenance on the day of the decision.** Research from a week earlier was already wrong.
+- **Swap dependencies as separate work.** A foundation change should never share a commit with a feature.
+- **Keep plugins behind an interface.** The cost of a swap is proportional to how many files know about the package. Here, it was one.
+- **Read the README and the example, not just the API.** The detail that made data disappear wasn't in the API docs.
+- **Be wary of APIs that never fail.** A `Future<void>` that discards a failure result turns an error into silence.
+- **Test on a device.** All three problems in this swap got past the automated tests and only showed up on the phone.

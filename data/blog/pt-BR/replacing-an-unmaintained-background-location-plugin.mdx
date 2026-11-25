@@ -1,0 +1,96 @@
+---
+title: 'Trocando um plugin de localização em segundo plano abandonado, sem espalhar a mudança pelo app'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Dependências', 'Geolocalização', 'Arquitetura', 'Desenvolvimento Mobile']
+draft: false
+summary: 'Um app Flutter usado em campo dependia de um plugin de localização em segundo plano sem manutenção. Conto como escolhi o substituto entre três opções, por que a troca ficou restrita a uma única camada e os dois problemas silenciosos que só apareceram nos testes em aparelho.'
+authors: ['default']
+---
+
+## O contexto
+
+Um dos apps Flutter que mantenho é usado em campo e rastreia a localização do aparelho em segundo plano. Essas posições alimentam o rastreamento e as ordens de serviço automáticas, que usam geofences. Por confidencialidade, não vou citar o app nem regras de negócio.
+
+No Android, coletar GPS de forma confiável com o app em segundo plano exige um **foreground service**, com a notificação persistente, e um **isolate** separado para rodar o código Dart. O app usava o `background_locator_2` para isso, um plugin **sem manutenção**. Na [reconstrução do app com Clean Architecture e BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc), ele chegou a ficar como uma cópia local dentro do projeto, justamente porque o pacote original não recebia mais atualizações.
+
+## A regra: trocar, nunca remendar no meio de uma feature
+
+Durante a reconstrução, definimos uma regra para dependências: **um plugin sem manutenção é substituído por um pacote mantido e gratuito**. E a troca é decidida em uma análise própria e feita como um trabalho separado, **nunca no meio de uma feature**.
+
+A segunda parte é tão importante quanto a primeira. Trocar a base do rastreamento enquanto se desenvolve outra coisa mistura dois riscos no mesmo commit. Se algo quebra, não dá para saber qual mudança causou o problema. Por isso, a troca foi adiada uma vez e retomada depois, como uma tarefa só dela.
+
+## As três opções
+
+| Opção | Por que sim | Por que não |
+| --- | --- | --- |
+| `flutter_foreground_task` | Mantido, gratuito, usa o mesmo mecanismo de foreground service | Exigiu cuidado com versão e com a comunicação entre isolates |
+| `flutter_background_service` | Gratuito, mesmo mecanismo | A última publicação tinha sido 21 meses antes |
+| `flutter_background_geolocation` | O mais testado em produção | Exige licença paga para uso comercial, o que a regra exclui |
+
+Um detalhe ensina bastante: na primeira pesquisa, tanto o `flutter_foreground_task` quanto o `flutter_background_service` pareciam mantidos. Só ao escrever a especificação, conferindo o pub.dev de novo, vi que o segundo não era publicado havia 21 meses, enquanto o primeiro tinha uma versão de 18 dias antes. **A premissa "os dois são mantidos" estava desatualizada.** Escolhi o `flutter_foreground_task`.
+
+## Por que a troca coube em uma camada
+
+O rastreamento fica atrás de um _gateway_, uma interface do domínio que o resto do app usa sem saber qual plugin está por baixo:
+
+```dart
+abstract interface class LocationTrackingGateway {
+  Future<void> start();
+  Future<void> stop();
+}
+```
+
+O tipo de localização específico do plugin só aparecia em um arquivo: a implementação desse gateway, na camada de dados. As entidades de posição e quem monta essas posições só recebiam valores simples, como `double` e `String`. Por isso, a troca ficou restrita à camada de dados do rastreamento. Nenhuma tela, nenhum BLoC e nenhuma entidade precisou mudar.
+
+Esse foi o melhor argumento a favor da arquitetura que eu poderia ter: trocar a base de uma funcionalidade crítica sem tocar no resto do app.
+
+## Um ajuste de versão no caminho
+
+A especificação previa a versão 11 do pacote, mas ela exige uma versão do Dart mais nova do que a do projeto. Havia dois caminhos: atualizar o SDK do Flutter de todo o projeto ou usar a versão 10 do pacote. Escolhi a versão 10, que tinha a mesma API que o plano assumia, com uma diferença de compilação pequena. Atualizar o SDK seria outra mudança grande, e misturar as duas iria contra a própria regra que motivou a troca.
+
+## Os problemas que só apareceram em aparelho
+
+A troca compilava e passava nos testes. Os problemas reais apareceram ao testar no celular.
+
+### 1. Dados que não chegavam, sem nenhum erro
+
+O isolate em segundo plano envia dados para o isolate principal. Esse envio **não faz nada, em silêncio**, se o isolate principal não chamar `FlutterForegroundTask.initCommunicationPort()` antes de tudo. Isso não estava na documentação da API. Encontrei no README e no exemplo do próprio pacote.
+
+### 2. Uma falha ao iniciar que ninguém via
+
+O plugin antigo lançava uma exceção quando o serviço nativo falhava ao iniciar. O novo **nunca lança**: ele devolve um resultado de sucesso ou de falha. A primeira versão do gateway devolvia esse resultado como `Future<void>`, o que é válido em Dart, mas descarta o resultado. Se o serviço não iniciasse, o app marcava o rastreamento como ativo mesmo assim. Nenhuma posição era coletada, e o único sintoma era uma tela de status que nunca atualizava. Não havia crash, log nem evento no Sentry.
+
+A correção foi verificar o resultado e transformar uma falha real de volta em exceção, restaurando o contrato antigo:
+
+```dart
+Future<void> start() async {
+  final result = await service.start();
+  if (result is ServiceFailure) {
+    throw result.error; // chega ao handler global e ao Sentry
+  }
+}
+```
+
+Parar um serviço que nunca foi iniciado continuou sendo tratado como algo seguro, porque o app chama `stop()` em todo logout, com o rastreamento ativo ou não.
+
+### 3. Um banco travado pelo isolate de segundo plano
+
+No mesmo dia, um teste em aparelho travou a tela de finalizar um checklist enquanto o rastreamento estava ativo. A confirmação ficava carregando para sempre, e o checklist nunca era salvo.
+
+A causa: o isolate de segundo plano gravava as posições **no mesmo arquivo de banco** que todas as outras funcionalidades usavam. Esse banco só é seguro com um isolate escrevendo por vez. Enquanto o rastreamento segurava o arquivo, qualquer gravação do app principal podia esperar indefinidamente, sem exceção, porque é uma trava de arquivo e não um `Future` com erro.
+
+A correção foi dar ao rastreamento **um arquivo de banco próprio**. O isolate de segundo plano não compartilha mais nada com o banco principal, onde também fica a fila de envios.
+
+## Uma limitação conhecida
+
+No iOS, o `flutter_foreground_task` só roda a tarefa em segundo plano por cerca de 30 segundos a cada 15 minutos, uma limitação da plataforma. O plugin antigo usava um modo contínuo. Como o iOS ainda não faz parte do escopo deste app, isso não afeta nada hoje, mas ficou documentado para quando entrar.
+
+## O que eu levaria para a próxima troca de dependência
+
+- **Confira a manutenção no dia da decisão.** Uma pesquisa de uma semana antes já estava errada.
+- **Troque dependências como um trabalho separado.** Uma mudança de base nunca deve dividir o commit com uma feature.
+- **Isole plugins atrás de uma interface.** O custo de trocar fica proporcional ao número de arquivos que conhecem o pacote. Aqui, era um.
+- **Leia o README e o exemplo, não só a API.** O detalhe que fazia os dados sumirem não estava na documentação da API.
+- **Desconfie de APIs que nunca falham.** Um `Future<void>` que descarta um resultado de falha transforma um erro em silêncio.
+- **Teste em aparelho.** Os três problemas desta troca passaram pelos testes automatizados e só apareceram no celular.
