@@ -1,0 +1,85 @@
+---
+title: 'Usando agentes de IA numa refatoração grande de Flutter: o que deleguei e o que ficou comigo'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Inteligência Artificial', 'Refatoração', 'Arquitetura', 'Desenvolvimento Mobile']
+draft: false
+summary: 'Na reconstrução de um app Flutter em produção, decidi que um agente de IA implementaria o código em todas as camadas. Isso só funcionou porque o trabalho foi estruturado para ser verificável: regras de arquitetura escritas, specs e planos antes de qualquer código, um plano por vez, checagens automáticas e teste em aparelho feito por mim antes de seguir. Este post conta como organizei isso, o que ficou nas minhas mãos e o custo que aceitei.'
+authors: ['default']
+---
+
+## O contexto
+
+Contei em outro post como [migrei dois apps Flutter em produção para Clean Architecture e BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc). Uma parte que ficou de fora daquele texto é **como** o código foi escrito: em grande parte, por um agente de IA, o Claude Code, trabalhando dentro do repositório.
+
+Quero contar isso com honestidade, porque o assunto costuma aparecer em dois extremos: "a IA faz tudo" ou "a IA não serve para código sério". Na minha experiência, nenhum dos dois é verdade. O que fez diferença foi a forma como o trabalho foi organizado.
+
+Por confidencialidade, não cito os apps, regras de negócio nem trechos reais das instruções.
+
+## A decisão: a IA implementa, eu conduzo
+
+No começo da reconstrução de um dos apps, eu tinha montado um modo de trabalho "aprender primeiro": eu escreveria algumas camadas, a IA outras, e havia um passo de verificação de entendimento antes de avançar. A ideia era sair do projeto dominando cada linha.
+
+Poucos dias depois, pausei esse modo e decidi que **a IA implementaria o app inteiro, em todas as camadas**. Registrei a decisão no repositório como provisória, "por enquanto": a IA faria o app, e eu estudaria o código depois, com o projeto pronto. O material do modo de aprendizado ficou guardado.
+
+É um trade-off, e falo dele no fim. Mas essa decisão mudou o meu papel: deixei de ser quem digita o código e passei a ser quem define as regras, quebra o trabalho, revisa e valida.
+
+## Regras escritas, não lembradas
+
+Um agente de IA não lembra da conversa de ontem. Tudo o que ele precisa respeitar tem que estar escrito no repositório. Por isso, o primeiro trabalho foi transformar as decisões de arquitetura em instruções:
+
+- **Um arquivo de instruções do projeto**, lido em toda sessão, com as "regras de ouro": o sentido das dependências entre camadas, BLoC como único gerenciador de estado, offline-first como regra, serialização escrita à mão, nunca inventar uma versão de dependência e nunca adicionar uma sem perguntar.
+- **Skills por tipo de tarefa.** Em vez de um documento gigante, as regras foram divididas em pacotes que o agente carrega conforme o que está fazendo: criar uma feature, escrever um BLoC, mexer na sincronização offline, escrever uma tela, escrever um teste, fazer um commit. Uma tabela no arquivo principal diz qual skill usar em cada situação.
+- **Decisões com alternativas viram ADRs.** Quando havia uma escolha real, como a troca de um plugin de localização ou usar só `Bloc` em vez de `Cubit`, a decisão e o motivo ficavam registrados em um ADR. Assim o agente não reabre uma discussão já encerrada.
+- **Um registro de lacunas.** Qualquer coisa que não tinha correspondência clara, como um dado que a tela antiga mostrava sem uma fonte óbvia, ia para um log de lacunas, em vez de ser inventada ou contornada em silêncio.
+
+Essas mesmas regras e skills depois foram para o [template que usei para recriar um app Java em Flutter](/blog/rewriting-a-legacy-java-android-app-in-flutter). Um app novo já começa com o agente seguindo o padrão do time.
+
+## Nunca direto para o código
+
+A regra de processo mais importante foi: **nunca pular direto para o código**. Todo trabalho seguia a mesma cadeia:
+
+1. **Brainstorm** do problema e das alternativas.
+2. **Spec**, com o que precisa ser feito e o que não pode mudar.
+3. **Plano**, quebrado em passos pequenos, um por tela ou funcionalidade.
+4. **Execução de um plano por vez.**
+5. **Parar e devolver para mim**, para testar no aparelho antes do próximo.
+
+Eu aprovava a spec e o plano antes da execução. Um sinal de como isso pesou: na reconstrução de um dos apps, foram cerca de 1.189 commits em umas 6 semanas, e os commits de documentação (320) e de testes (243) passaram dos de funcionalidade (265). Grande parte do trabalho foi escrever o que fazer antes de fazer.
+
+## Guardrails: o que o agente não pode fazer
+
+Regras escritas ajudam, mas algumas coisas precisavam ser **impossíveis**, não só desaconselhadas. As configurações do agente no repositório impõem:
+
+- **Confirmação antes de comandos destrutivos**, como `reset`, `clean`, apagar branch ou mudar dependências.
+- **Nada de push, criação de branch nem merge.** O agente faz commits locais. Subir código e promover para produção é sempre meu.
+- **Pull requests só para o branch de homologação**, nunca para produção.
+- **Nada de emulador nem de testes de integração em aparelho.** O agente escreve os testes de ponta a ponta, mas só eu os executo no dispositivo.
+- **Disciplina de escopo.** Mexer só nos arquivos que o plano atual exige, sem refatorações oportunistas nem formatação de arquivos não relacionados.
+
+Também criei **scripts de verificação** que o agente roda antes de devolver um plano: um confere se nenhuma camada importa o que não deve, outro procura violações das regras de ouro. Um plano só é considerado pronto com a análise estática limpa, os dois scripts sem nada novo e o app compilando.
+
+## O que ficou comigo
+
+Delegar a implementação não significou delegar o julgamento. Algumas coisas ficaram explicitamente nas minhas mãos:
+
+- **As decisões de arquitetura.** Clean Architecture por feature, BLoC sem exceções, offline-first com outbox, a ordem da migração (camadas sem UI primeiro, telas por último). Cada uma foi uma decisão minha, registrada com data.
+- **Validar cada tela no aparelho.** Nenhum plano de tela avançava sem eu testar no celular e dar o sinal verde explícito. É a mesma validação lado a lado com a versão de produção que descrevi no post da migração.
+- **Decidir o que não replicar.** A meta era comportamento idêntico ao app antigo, mas alguns comportamentos eram bugs reais de produção. A decisão de não copiá-los foi minha.
+- **Aprovar mudanças nos testes.** Os 321 testes herdados passaram por uma auditoria em que cada um seria mantido, corrigido, reescrito ou apagado, **com a minha aprovação por teste**. E a regra é que testes nunca são enfraquecidos para passar.
+- **Mudar de ideia.** Reestruturei o plano no meio do caminho e cheguei a reverter uma decisão minha de cortar uma funcionalidade. Um agente executa bem um plano, mas perceber que o plano está errado continua sendo trabalho humano.
+
+## O custo que aceitei
+
+Pausar o modo "aprender primeiro" teve um preço: há código no projeto que eu não digitei e que conheço pela spec, pelo plano e pela revisão, não pela escrita linha a linha. Para um projeto que eu mantenho, isso exige estudo deliberado depois. Por isso a documentação ficou no repositório, junto com o código: specs, planos, ADRs, o log de lacunas e o registro dos bugs conhecidos.
+
+Escolhi velocidade agora e estudo depois, sabendo disso.
+
+## O que eu levaria para o próximo projeto com IA
+
+- **O agente é tão bom quanto as regras escritas no repositório.** O que não está escrito não existe para ele.
+- **Divida as regras por tarefa.** Skills pequenas, carregadas quando necessário, funcionam melhor que um documento gigante.
+- **Torne impossível o que é perigoso.** Push, merge, produção e comandos destrutivos ficam bloqueados na configuração, não só no texto.
+- **Spec e plano antes de código, um plano por vez.** Passos pequenos são fáceis de revisar e de desfazer.
+- **Verificação automática e validação humana se complementam.** Os scripts pegam a violação de regra. O teste no aparelho pega o que nenhum script vê.
+- **Delegar a digitação não é delegar a responsabilidade.** Arquitetura, validação e o que vai para produção continuam sendo meus.

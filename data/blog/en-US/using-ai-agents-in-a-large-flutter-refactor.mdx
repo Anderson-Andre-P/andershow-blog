@@ -1,0 +1,85 @@
+---
+title: 'Using AI Agents in a Large Flutter Refactor: What I Delegated and What I Kept'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Artificial Intelligence', 'Refactoring', 'Architecture', 'Mobile Development']
+draft: false
+summary: 'While rebuilding a production Flutter app, I decided an AI agent would implement the code across every layer. It only worked because the work was set up to be verifiable: written architecture rules, specs and plans before any code, one plan at a time, automated checks and on-device testing by me before moving on. This post covers how I organized it, what stayed in my hands and the cost I accepted.'
+authors: ['default']
+---
+
+## The context
+
+In another post, I described how I [migrated two production Flutter apps to Clean Architecture and BLoC](/blog/migrating-flutter-apps-to-clean-architecture-with-bloc). One part I left out of that post is **how** the code was written: largely by an AI agent, Claude Code, working inside the repository.
+
+I want to be honest about it, because the topic tends to show up at two extremes: "AI does everything" or "AI is useless for serious code". In my experience, neither is true. What made the difference was how the work was organized.
+
+For confidentiality reasons, I won't name the apps, describe business rules or quote the real instructions.
+
+## The decision: the AI implements, I lead
+
+At the start of one app's rebuild, I had set up a "learning-first" way of working: I would write some layers, the AI others, and there was a comprehension check before moving on. The idea was to come out of the project knowing every line.
+
+A few days later, I paused that mode and decided that **the AI would implement the whole app, across every layer**. I recorded the decision in the repository as provisional, "for now": the AI would build the app, and I would study the code later, once the project was done. The learning-mode material was kept.
+
+It's a trade-off, and I come back to it at the end. But that decision changed my role: I stopped being the one typing the code and became the one who sets the rules, breaks down the work, reviews and validates.
+
+## Written rules, not remembered ones
+
+An AI agent doesn't remember yesterday's conversation. Everything it has to respect must be written in the repository. So the first job was turning architecture decisions into instructions:
+
+- **A project instructions file**, read in every session, with the "golden rules": the direction of dependencies between layers, BLoC as the only state manager, offline-first as a rule, hand-written serialization, never inventing a dependency version and never adding one without asking.
+- **Skills per type of task.** Instead of one giant document, the rules were split into packages the agent loads depending on what it's doing: creating a feature, writing a BLoC, touching offline sync, writing a screen, writing a test, making a commit. A table in the main file says which skill to use in each situation.
+- **Decisions with alternatives become ADRs.** When there was a real choice, such as replacing a location plugin or using only `Bloc` instead of `Cubit`, the decision and its reasoning were recorded in an ADR. That way the agent doesn't reopen a settled discussion.
+- **A gaps log.** Anything without a clear mapping, such as data the old screen showed without an obvious source, went into a gaps log instead of being invented or silently worked around.
+
+These same rules and skills later went into the [template I used to rebuild a Java app in Flutter](/blog/rewriting-a-legacy-java-android-app-in-flutter). A new app starts with the agent already following the team's standard.
+
+## Never straight to code
+
+The most important process rule was: **never jump straight to code**. All work followed the same chain:
+
+1. **Brainstorm** the problem and the alternatives.
+2. **Spec**, with what needs to be done and what must not change.
+3. **Plan**, broken into small steps, one per screen or feature.
+4. **Execute one plan at a time.**
+5. **Stop and hand it back to me**, for on-device testing before the next one.
+
+I approved the spec and the plan before execution. One sign of how much weight this carried: in one app's rebuild, there were about 1,189 commits in roughly 6 weeks, and documentation commits (320) and test commits (243) outnumbered feature commits (265). A large part of the work was writing down what to do before doing it.
+
+## Guardrails: what the agent can't do
+
+Written rules help, but some things had to be **impossible**, not just discouraged. The agent's settings in the repository enforce:
+
+- **Confirmation before destructive commands**, such as `reset`, `clean`, deleting a branch or changing dependencies.
+- **No push, no branch creation, no merge.** The agent commits locally. Pushing code and promoting it to production is always mine.
+- **Pull requests only into the staging branch**, never into production.
+- **No emulators and no integration tests on devices.** The agent writes the end-to-end tests, but only I run them on a device.
+- **Scope discipline.** Touch only the files the current plan requires, with no opportunistic refactors or formatting of unrelated files.
+
+I also created **verification scripts** the agent runs before handing a plan back: one checks that no layer imports what it shouldn't, the other looks for golden-rule violations. A plan only counts as done with clean static analysis, nothing new from either script, and the app building.
+
+## What stayed with me
+
+Delegating implementation didn't mean delegating judgment. Some things stayed explicitly in my hands:
+
+- **Architecture decisions.** Feature-based Clean Architecture, BLoC with no exceptions, offline-first with an outbox, the migration order (non-UI layers first, screens last). Each was my call, recorded with a date.
+- **Validating every screen on a device.** No screen plan moved forward until I tested it on a phone and gave an explicit go-ahead. It's the same side-by-side validation against the production version I described in the migration post.
+- **Deciding what not to replicate.** The goal was behavior identical to the old app, but some behaviors were real production bugs. The decision not to copy them was mine.
+- **Approving test changes.** The 321 inherited tests went through an audit where each one would be kept, fixed, rewritten or deleted, **with my approval per test**. And the rule is that tests are never weakened to make them pass.
+- **Changing my mind.** I restructured the plan midway and even reverted my own decision to cut a feature. An agent executes a plan well, but noticing the plan is wrong is still human work.
+
+## The cost I accepted
+
+Pausing the learning-first mode came at a price: there is code in the project I didn't type, and I know it through the spec, the plan and the review, not through writing it line by line. For a project I maintain, that requires deliberate study later. That's why the documentation lives in the repository, next to the code: specs, plans, ADRs, the gaps log and the known-bugs log.
+
+I chose speed now and study later, knowing that.
+
+## What I'd take to the next project with AI
+
+- **The agent is only as good as the rules written in the repository.** What isn't written doesn't exist for it.
+- **Split the rules by task.** Small skills, loaded when needed, work better than one giant document.
+- **Make dangerous things impossible.** Push, merge, production and destructive commands are blocked in the configuration, not just in the text.
+- **Spec and plan before code, one plan at a time.** Small steps are easy to review and easy to undo.
+- **Automated checks and human validation complement each other.** Scripts catch rule violations. Testing on a device catches what no script sees.
+- **Delegating the typing isn't delegating the responsibility.** Architecture, validation and what goes to production are still mine.
