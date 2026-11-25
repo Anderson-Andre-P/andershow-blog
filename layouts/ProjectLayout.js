@@ -1,6 +1,6 @@
 import Link from '@/components/Link'
 import Image from '@/components/Image'
-import { PageSEO } from '@/components/SEO'
+import { PageSEO, ogImagePath } from '@/components/SEO'
 import PrevNextNav from '@/components/PrevNextNav'
 import siteMetadata from '@/data/siteMetadata'
 import { localize, useLocale, useT } from '@/lib/i18n'
@@ -10,14 +10,18 @@ const LINK_KEYS = ['github', 'playStore', 'appStore', 'demo']
 export default function ProjectLayout({ project, frontMatter = {}, prev, next, children }) {
   const t = useT()
   const locale = useLocale()
-  const { title, imgSrc, links = {} } = project
+  const { title, slug, imgSrc, links = {} } = project
   const description = localize(project.description, locale)
   const { year, type, stack = [] } = frontMatter
   const availableLinks = LINK_KEYS.filter((key) => links[key])
 
   return (
     <>
-      <PageSEO title={`${title} - ${siteMetadata.author}`} description={description} />
+      <PageSEO
+        title={`${title} - ${siteMetadata.author}`}
+        description={description}
+        ogImage={ogImagePath(locale, `projects/${slug}`)}
+      />
       <article className="pb-12 pt-6">
         <Link
           href="/projects"
