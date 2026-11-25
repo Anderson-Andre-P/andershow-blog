@@ -1,15 +1,26 @@
+import { BriefcaseIcon } from '@heroicons/react/outline'
 import Image from './Image'
 import { localize, useLocale } from '@/lib/i18n'
 
-const CompanyLogo = ({ logo, company }) => (
-  <Image
-    src={logo}
-    alt={company}
-    width="56"
-    height="56"
-    className="rounded-md border border-zinc-200 dark:border-zinc-700"
-  />
-)
+const CompanyLogo = ({ logo, company }) =>
+  logo ? (
+    <Image
+      src={logo}
+      alt={company}
+      width="56"
+      height="56"
+      className="rounded-md border border-zinc-200 dark:border-zinc-700"
+    />
+  ) : (
+    // Fallback for experiences without a company logo (e.g. freelance work).
+    <div
+      role="img"
+      aria-label={company}
+      className="flex h-14 w-14 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
+    >
+      <BriefcaseIcon className="h-7 w-7" aria-hidden="true" />
+    </div>
+  )
 
 const ExperienceCard = ({ company, href, logo, ...localized }) => {
   const locale = useLocale()
