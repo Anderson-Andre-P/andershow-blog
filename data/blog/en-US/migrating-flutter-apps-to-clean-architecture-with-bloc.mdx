@@ -1,0 +1,140 @@
+---
+title: 'Migrating Two Production Flutter Apps to Clean Architecture and BLoC, One Screen at a Time'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'BLoC', 'Clean Architecture', 'Refactoring', 'Mobile Development']
+draft: false
+summary: 'How I reorganized two B2B Flutter apps that had passed through many hands with no shared standards. The migration happened in stages, without pulling the apps from the stores. Afterwards, a feature that used to take 3 days took a few hours, a redesign I had failed to finish in 2 months shipped in under 2 weeks, and the apps went from almost no tests to hundreds of automated tests.'
+authors: ['default']
+---
+
+## The context
+
+Over the past few months, I migrated two B2B Flutter apps that are in production on Google Play and the App Store. One is used in the field and has to work offline. The other tracks an operation in real time, with a map and WebSockets.
+
+For confidentiality reasons, I won't name the apps or describe business rules. What matters here is the technical path, which applies to any app that grew without a defined architecture.
+
+## The problem: every developer did it their own way
+
+Both apps had years of history and had passed through many hands, with no shared rules or standards. Each developer built features the way they thought best. In practice, that meant:
+
+- **Three ways of managing state in the same app.** One of them used `setState`, Provider and global singleton controllers at the same time. To find out where a piece of data came from, you first had to figure out which of the three patterns that screen followed.
+- **Huge files.** There were screens close to 1,500 lines and a controller over 1,800, mixing UI, business rules, API calls and local database access.
+- **Sync issues in the offline-first app.** Some network failures were read as valid API responses, and records were queued for upload before being written locally. If the app closed at the wrong moment, data was lost.
+- **Fragile API consumption.** Datasources returned raw `Map`s to the UI, every screen handled errors differently, and some streams and WebSocket connections were never closed.
+- **Almost no tests.** One app had zero tests. The other had a few inherited ones that nobody reviewed.
+
+The most visible effect was fear of change. Any fix risked breaking something else, and a simple UI change meant touching state, data and API code at the same time.
+
+## Why Clean Architecture, BLoC and a feature-based structure
+
+I chose **feature-based Clean Architecture**, with **BLoC** as the only way to manage state.
+
+The mobile team is small, so I used **the same architecture in both apps**. Anyone who knows one project can work on the other without relearning its structure, and maintenance gets simpler: the same conventions, the same folder layout and the same solutions to common problems such as networking, errors and dependency injection.
+
+I did consider other state management options. I went with BLoC because these are large projects with many features, and it gave me more confidence in that setting:
+
+- **Predictability:** every state change starts from an explicit event, so you can trace what happened and in what order.
+- **Testability:** with `bloc_test`, testing a flow becomes "given this state, when this event arrives, I expect these states".
+- **One rule:** the goal wasn't just to switch libraries, it was to end the coexistence of three patterns. That's why I used only `Bloc`, without mixing in Cubit, so everyone follows the same shape.
+
+Each feature is structured like this:
+
+```text
+lib/
+├── core/                 # networking, errors, DI, sync, theme, logging
+└── features/
+    └── orders/
+        ├── presentation/ # screens and widgets, no business rules
+        ├── application/  # BLoCs
+        ├── domain/       # entities, use cases, repository contracts
+        ├── data/         # datasources, models, repository implementations
+        └── di.dart       # the feature's dependency registration
+```
+
+Organizing by feature instead of by global layer (`/screens`, `/blocs`, `/services`) keeps everything about a feature in one place. To change a feature, you work in one folder.
+
+### Errors as values, not exceptions
+
+One decision that greatly improved code quality was making every use case return a `Result` instead of throwing:
+
+```dart
+sealed class Result<T> {
+  const Result();
+}
+
+final class Success<T> extends Result<T> {
+  const Success(this.value);
+  final T value;
+}
+
+final class Failure<T> extends Result<T> {
+  const Failure(this.error);
+  final AppError error;
+}
+```
+
+Because the class is `sealed`, the compiler forces the BLoC to handle both cases:
+
+```dart
+final result = await getOrders(const NoParams());
+
+switch (result) {
+  case Success(:final value):
+    emit(OrdersLoaded(value));
+  case Failure(:final error):
+    emit(OrdersError(error.message));
+}
+```
+
+This removed a whole class of bugs: a network error can no longer be mistaken for a valid response, because the data layer turns HTTP failures, timeouts and expired sessions into typed errors before they reach the domain.
+
+### Offline sync with an outbox
+
+In the offline-first app, sync became an architecture rule instead of a set of patches. Every operation is **written to the local database first**, inside a transaction, together with an entry in an outgoing queue (the _outbox_ pattern). A syncer drains that queue when there is a connection, with backoff between attempts, and only removes what the server confirmed. If the app closes mid-upload, nothing is lost: on the next connection, it picks up where it left off.
+
+## How the migration went: one screen at a time
+
+Rewriting everything from scratch and switching over in one go would have been too risky for apps used every day. So the migration happened **in stages, one screen at a time**:
+
+1. **I froze a copy of the production version** as the behavior reference.
+2. **I built the non-UI parts first:** `core`, the domain and data layers, use cases and BLoCs, with tests from the start.
+3. **I migrated the screens one by one**, each reproducing the original UI and behavior exactly. During the transition, new and old code lived side by side in the same app.
+4. **I removed the old code** only after every screen had been migrated and validated.
+
+One app took about 3 months and the other about 4.
+
+## The hard part: making sure nothing changed
+
+The biggest challenge wasn't technical, it was validation. The goal of the migration was for users to **notice nothing**: same interface, same flows, same behavior, edge cases included.
+
+I solved it with patience and two phones side by side. One ran the refactored version. The other ran the production version from the store. For each use case, I repeated the same steps on both devices and compared the results: screens, messages, loading states, offline behavior.
+
+A few things helped:
+
+- A visual marker in test builds showing whether the app was the production or the refactored version, so the devices never got mixed up.
+- A log of every difference found, to fix and test again.
+- A non-technical validation guide for QA and Product, listing what should stay the same and which improvements were intentional.
+
+## The results
+
+The clearest gain was development speed. **A feature that used to take about 3 days now takes a few hours**, because everything has a defined place and changes in one layer don't spread to the others.
+
+The best example is the **redesign**. Before the migration, I tried to update the interface of one of the apps and, after 2 months, still hadn't finished: the UI was so coupled to state, data and API code that every screen I touched broke something else. With the new structure, **updating 100% of the interface took 1 week in one app and 2 weeks in the other**. The presentation layer now depends only on BLoC states, so the whole UI could be replaced without touching anything else.
+
+Automated tests also became real. Today the two apps have **almost 500 test files** between them, covering unit, BLoC and widget tests. Before, one had zero and the other only a few inherited tests.
+
+Other gains:
+
+- **A single state management pattern** in each app, instead of three.
+- **Faster, safer API consumption**, with a single network client, centralized error handling, connections closed properly and credentials in secure storage.
+- **Reliable offline sync**, with no data loss when the connection drops or the app is closed.
+- **No more abandoned dependencies.** The apps relied on unmaintained local packages, in one case untouched for more than 5 years. With the code decoupled, they could be replaced with maintained alternatives.
+- **More confidence when changing code.** With tests in place, refactoring stopped being a gamble.
+
+## What I'd take to the next project
+
+- **Migrating in stages is worth the extra time.** One screen at a time is slower on paper, but the app never stops working and every step can be validated.
+- **Architecture pays off in every change, not just the big ones.** Day to day, it shows up when fixing an inconsistency, adding a feature or adjusting a screen: each change stays within its layer and its feature. The redesign was just the most visible proof.
+- **Pick one pattern and make it the rule.** The problem was never the lack of a good library, but the lack of a standard: each approach worked on its own, but together they made the code unpredictable.
+- **Validating parity is slow, manual work, and you can't skip it.** Automated tests help a lot, but comparing both apps side by side on real phones found differences no test would have caught.
