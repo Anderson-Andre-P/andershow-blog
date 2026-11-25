@@ -89,6 +89,8 @@ By default, terrain comes from the public Valhalla server run by the FOSSGIS com
 
 The same goes for the map. The default is Google Maps, but you can switch to OpenStreetMap, which needs no key and whose usage policy is also respected.
 
+For Google Maps to work, I had to set up the key in the [Google Cloud Console](https://console.cloud.google.com/): create a project, enable the **Maps SDK for Android** and generate an API key for the app. Without it, the SDK draws only an empty background and logs an authorization error (`Authorization failure`). It's a simple setup, but easy to forget when running the app on a new machine, which is exactly why the key-free OpenStreetMap option is useful.
+
 ## How it's built
 
 The app was created from the same template I use for Flutter apps at work: **feature-based Clean Architecture**, **BLoC** for all state, `get_it` for dependency injection, `go_router` for navigation and a `Result` in use cases instead of exceptions. The simulation logic, the engine that computes each position, lives entirely in the domain layer, with no dependency on Flutter or Android, which makes it easy to test.

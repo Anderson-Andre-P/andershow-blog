@@ -89,6 +89,8 @@ O terreno usa por padrão o servidor público do Valhalla mantido pela comunidad
 
 O mesmo vale para o mapa. O padrão é o Google Maps, mas dá para trocar pelo OpenStreetMap, que não usa chave e cuja política de uso também é respeitada.
 
+Para o Google Maps funcionar, precisei configurar a chave no [Google Cloud Console](https://console.cloud.google.com/): criar um projeto, ativar o **Maps SDK for Android** e gerar uma chave de API para o app. Sem isso, o SDK desenha só um fundo vazio e registra no log um erro de autorização (`Authorization failure`). É uma configuração simples, mas fácil de esquecer ao rodar o app numa máquina nova, e é justamente por isso que a opção do OpenStreetMap, sem chave, é útil.
+
 ## Como ele é construído
 
 O app foi criado a partir do mesmo template que uso nos apps Flutter do trabalho: **Clean Architecture por feature**, **BLoC** em todo o estado, `get_it` para injeção de dependências, `go_router` para navegação e um `Result` nos casos de uso em vez de exceções. A lógica da simulação, o motor que calcula cada posição, fica toda na camada de domínio, sem depender do Flutter nem do Android, o que facilita testar.
