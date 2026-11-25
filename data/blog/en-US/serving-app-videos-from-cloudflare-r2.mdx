@@ -1,0 +1,115 @@
+---
+title: 'Moving Hundreds of Videos Out of a Flutter App With Cloudflare R2 and an On-Device Cache'
+date: '2026-11-25'
+lastmod: '2026-11-25'
+tags: ['Flutter', 'Cloudflare R2', 'Caching', 'Performance', 'Mobile Development']
+draft: false
+summary: 'A B2C Flutter app showed hundreds of short videos, and the media added up to about 430 MB. Instead of shipping it all inside the app, I kept only the cover images and moved the videos to a Cloudflare R2 bucket. The app downloads each video the first time it plays and keeps it on the device, and without internet it shows the cover instead.'
+authors: ['default']
+---
+
+## The problem
+
+I'm building a B2C Flutter app that shows **hundreds of short demo videos**: silent, looping clips that appear in lists, on detail screens and during the app's main flow. Since the project is still confidential, I won't name it or its market.
+
+The first version was the simplest possible: every video and cover image bundled in the app's assets. It worked, but the media added up to **about 430 MB**. An app that size:
+
+- takes a long time to download and puts off people installing over mobile data;
+- forces users to store hundreds of videos they may never watch;
+- requires a new store release just to replace or fix a single video.
+
+## The decision: covers in the app, videos outside
+
+I split the media into two parts with different roles:
+
+- **The covers (JPG) stay in the app.** They're small and guarantee that every screen has an image, even on first launch and without internet.
+- **The videos (MP4) moved out of the app** into a **Cloudflare R2** bucket. The app downloads each video the first time it needs to play it and keeps a copy on the device. From then on, offline included, it plays the local copy.
+
+For users, it works like this: online, the video appears after a short load over the cover. Offline, videos they've already seen play normally, and the rest show their cover. No screen is ever empty.
+
+## Why Cloudflare R2
+
+R2 is object storage compatible with the S3 API, and the key difference for this case is that **it doesn't charge for data egress**. In an app that delivers video, download traffic is exactly what grows with the number of users, so that's the cost line that matters most.
+
+To start, I used the bucket's public development URL (`r2.dev`). Cloudflare itself recommends that URL for development only, since it's rate-limited and doesn't go through the CDN cache. That's why I made the address **configurable at build time** instead of hard-coding it:
+
+```dart
+abstract final class MediaUrls {
+  /// Switching to a custom domain is just a different --dart-define,
+  /// with no code change.
+  static const baseUrl = String.fromEnvironment(
+    'MEDIA_BASE_URL',
+    defaultValue: 'https://<bucket>.r2.dev/media',
+  );
+
+  static String video(String id) => '$baseUrl/videos/$id.mp4';
+}
+```
+
+That way, pointing the app at a custom domain with a CDN, or at a staging bucket, is just a matter of passing `--dart-define=MEDIA_BASE_URL=...` in the build.
+
+## The on-device cache
+
+The core piece is a small class that returns a video's local file, downloading it first if it isn't on the device yet. A simplified version:
+
+```dart
+class VideoCache {
+  VideoCache({required this.client, required this.directory});
+
+  final http.Client client;
+  final Future<Directory> Function() directory;
+  final Map<String, Future<File?>> _downloads = {};
+
+  /// The video's local file, downloading it first if needed.
+  /// `null` when it can't be had (offline, server error):
+  /// the caller keeps showing the cover.
+  Future<File?> fileFor(String url) {
+    // A second request for the same video waits for the first download.
+    return _downloads[url] ??= _fetch(Uri.parse(url)).whenComplete(() {
+      _downloads.remove(url);
+    });
+  }
+
+  Future<File?> _fetch(Uri uri) async {
+    try {
+      final dir = await directory();
+      final target = File('${dir.path}/${uri.pathSegments.last}');
+      if (await target.exists() && await target.length() > 0) return target;
+
+      final response = await client.get(uri);
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) return null;
+
+      // Write to a separate file and rename at the end,
+      // so an interrupted download is never read as a video.
+      final partial = File('${target.path}.part');
+      await partial.writeAsBytes(response.bodyBytes, flush: true);
+      return await partial.rename(target.path);
+    } on Object {
+      return null;
+    }
+  }
+}
+```
+
+Three details make a difference:
+
+1. **One download per video, even with several requests.** The same video can appear in more than one place on screen at once. The map of `Future`s makes the second request wait for the first download instead of fetching the file twice.
+2. **Temporary file and rename.** The video is written to a `.part` file and only renamed to its final name once complete. If the app closes or the connection drops midway, what's left is a `.part`, never a corrupted MP4 the player would try to open.
+3. **Failure becomes `null`, not an exception.** With no network or a server error, the class returns `null`, and the video widget simply keeps the cover. The UI doesn't have to handle network errors on every screen.
+
+The cache is registered in dependency injection and reaches the widgets through an `InheritedWidget`. In tests, the HTTP client is replaced with a fake, which covers successful downloads, files already cached, server errors and concurrent requests without touching the network.
+
+## What can still improve
+
+This first version solves the main problem, but it has limits I already know about:
+
+- **The download goes entirely through memory** (`bodyBytes`) before reaching disk. That works for short clips, but the natural next step is streaming straight to the file.
+- **The cache has no size limit.** Right now it only grows. An eviction policy for the least-used videos would avoid taking too much space on devices with little storage.
+- **The `r2.dev` URL needs to give way to a custom domain** before launch, to get CDN caching and leave the rate limit behind. Since the base is already configurable, that switch requires no code change.
+
+## What I'd take to the next app
+
+- **Not all media needs to be in the bundle.** Separate what the app must always have, like covers, from what can arrive on demand, like videos.
+- **Design the offline state before the online one.** Deciding that "no video means show the cover" kept the app useful in any network condition.
+- **Downloads must be atomic.** Writing to a temporary file and renaming at the end is cheap and prevents a whole class of corrupted files.
+- **Make the media origin configurable from day one.** Development bucket, staging bucket and production domain become a single build parameter.
