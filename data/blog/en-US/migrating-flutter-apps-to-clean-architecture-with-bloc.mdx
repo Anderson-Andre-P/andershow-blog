@@ -4,7 +4,7 @@ date: '2026-11-25'
 lastmod: '2026-11-25'
 tags: ['Flutter', 'BLoC', 'Clean Architecture', 'Refactoring', 'Mobile Development']
 draft: false
-summary: 'How I reorganized two B2B Flutter apps that had passed through many hands with no shared standards. The migration happened in stages, without pulling the apps from the stores. Afterwards, a feature that used to take 3 days took a few hours, a redesign I had failed to finish in 2 months shipped in under 2 weeks, and the apps went from almost no tests to hundreds of automated tests.'
+summary: 'How I reorganized two B2B Flutter apps that had passed through many hands with no shared standards. The migration happened in stages, without pulling the apps from the stores. Afterwards, a feature that used to take 3 days took a few hours, a redesign I had failed to finish in 2 months shipped in under 2 weeks, and the apps gained hundreds of reliable automated tests.'
 authors: ['default']
 ---
 
@@ -22,7 +22,7 @@ Both apps had years of history and had passed through many hands, with no shared
 - **Huge files.** There were screens close to 1,500 lines and a controller over 1,800, mixing UI, business rules, API calls and local database access.
 - **Sync issues in the offline-first app.** Some network failures were read as valid API responses, and records were queued for upload before being written locally. If the app closed at the wrong moment, data was lost.
 - **Fragile API consumption.** Datasources returned raw `Map`s to the UI, every screen handled errors differently, and some streams and WebSocket connections were never closed.
-- **Almost no tests.** One app had zero tests. The other had a few inherited ones that nobody reviewed.
+- **Tests nobody trusted.** One app had zero tests. The other had 321 inherited tests that had never been reviewed as a whole.
 
 The most visible effect was fear of change. Any fix risked breaking something else, and a simple UI change meant touching state, data and API code at the same time.
 
@@ -122,7 +122,7 @@ The clearest gain was development speed. **A feature that used to take about 3 d
 
 The best example is the **redesign**. Before the migration, I tried to update the interface of one of the apps and, after 2 months, still hadn't finished: the UI was so coupled to state, data and API code that every screen I touched broke something else. With the new structure, **updating 100% of the interface took 1 week in one app and 2 weeks in the other**. The presentation layer now depends only on BLoC states, so the whole UI could be replaced without touching anything else.
 
-Automated tests also became real. Today the two apps have **almost 500 test files** between them, covering unit, BLoC and widget tests. Before, one had zero and the other only a few inherited tests.
+Automated tests also became real. Today the two apps have **more than 500 test files** between them, covering unit, BLoC and widget tests. Before, one had zero and the other had inherited tests nobody had reviewed. I wrote about that part in [why I threw away my first test suite](/blog/why-i-threw-away-my-first-test-suite).
 
 Other gains:
 

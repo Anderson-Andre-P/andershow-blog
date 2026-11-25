@@ -4,7 +4,7 @@ date: '2026-11-25'
 lastmod: '2026-11-25'
 tags: ['Flutter', 'BLoC', 'Clean Architecture', 'Refatoração', 'Desenvolvimento Mobile']
 draft: false
-summary: 'Como reorganizei dois apps Flutter B2B que passaram por muitas mãos e não tinham padrão nenhum. A migração foi feita por etapas, sem tirar os apps das lojas. Depois dela, uma feature que levava 3 dias passou a levar poucas horas, um redesign que eu não tinha conseguido terminar em 2 meses saiu em menos de 2 semanas, e os apps passaram de praticamente zero para centenas de testes automatizados.'
+summary: 'Como reorganizei dois apps Flutter B2B que passaram por muitas mãos e não tinham padrão nenhum. A migração foi feita por etapas, sem tirar os apps das lojas. Depois dela, uma feature que levava 3 dias passou a levar poucas horas, um redesign que eu não tinha conseguido terminar em 2 meses saiu em menos de 2 semanas, e os apps passaram a ter centenas de testes automatizados confiáveis.'
 authors: ['default']
 ---
 
@@ -22,7 +22,7 @@ Os dois apps tinham anos de história e já tinham passado pela mão de muitas p
 - **Arquivos gigantes.** Havia telas com quase 1.500 linhas e um controller com mais de 1.800, misturando UI, regra de negócio, chamadas de API e acesso ao banco local.
 - **Problemas de sincronização no app offline-first.** Algumas falhas de rede eram interpretadas como resposta válida da API, e registros entravam na fila de envio antes de serem gravados localmente. Se o app fechasse no momento errado, o dado se perdia.
 - **Consumo de API frágil.** Os datasources devolviam `Map` cru para a UI, cada tela tratava erro de um jeito e havia streams e conexões WebSocket que nunca eram fechadas.
-- **Praticamente nenhum teste.** Um app tinha zero testes. O outro tinha alguns herdados, que ninguém revisava.
+- **Testes em que ninguém confiava.** Um app tinha zero testes. O outro tinha 321 testes herdados que nunca tinham sido revisados em conjunto.
 
 O efeito mais visível era o medo de mexer. Qualquer correção corria o risco de quebrar outra coisa, e uma mudança simples de interface obrigava a mexer em estado, dados e API ao mesmo tempo.
 
@@ -122,7 +122,7 @@ O ganho mais claro foi a velocidade de desenvolvimento. **Uma feature que levava
 
 O melhor exemplo é o **redesign**. Antes da migração, tentei atualizar a interface de um dos apps e, depois de 2 meses, não tinha conseguido terminar: a UI estava tão acoplada a estado, dados e API que cada tela mexida quebrava outra coisa. Com a nova estrutura, **atualizar 100% da interface levou 1 semana em um app e 2 semanas no outro**. A camada de apresentação passou a depender só dos estados do BLoC, então deu para trocar a UI inteira sem tocar no resto.
 
-Os testes automatizados também passaram a existir de verdade. Hoje os dois apps somam **quase 500 arquivos de teste**, entre testes de unidade, de BLoC e de widget. Antes, um deles tinha zero, e o outro tinha só alguns testes herdados.
+Os testes automatizados também passaram a existir de verdade. Hoje os dois apps somam **mais de 500 arquivos de teste**, entre testes de unidade, de BLoC e de widget. Antes, um deles tinha zero, e o outro tinha testes herdados que ninguém tinha revisado. Contei essa parte em [por que joguei fora minha primeira suíte de testes](/blog/why-i-threw-away-my-first-test-suite).
 
 Outros ganhos:
 
