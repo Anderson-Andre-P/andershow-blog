@@ -95,6 +95,7 @@ const dictionary = {
     about: {
       title: 'About',
       career: 'Career',
+      education: 'Education',
       roleAt: (occupation, company) => `${occupation} at ${company}`,
       photoAlt: (name) => `${name} profile picture`,
       description: (name, occupation, company) =>
@@ -202,6 +203,7 @@ const dictionary = {
     about: {
       title: 'Sobre',
       career: 'Carreira',
+      education: 'Formação',
       roleAt: (occupation, company) => `${occupation} na ${company}`,
       photoAlt: (name) => `Foto de perfil de ${name}`,
       description: (name, occupation, company) =>

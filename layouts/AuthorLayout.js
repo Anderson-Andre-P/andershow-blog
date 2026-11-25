@@ -5,6 +5,7 @@ import EmailButton from '@/components/EmailButton'
 import { primaryButton, secondaryButton } from '@/components/buttonStyles'
 import { PageSEO } from '@/components/SEO'
 import experienceData from '@/data/experienceData'
+import educationData from '@/data/educationData'
 import { localize, useLocale, useT } from '@/lib/i18n'
 
 export default function AuthorLayout({ children, frontMatter, hasResume }) {
@@ -83,6 +84,45 @@ export default function AuthorLayout({ children, frontMatter, hasResume }) {
                 </li>
               ))}
             </ol>
+          </section>
+
+          <section className="mt-12">
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-800 dark:text-white">
+              {t.about.education}
+            </h2>
+            <ul className="mt-6 space-y-8">
+              {educationData.map(({ institution, href, degree, period, highlights }) => (
+                <li key={institution}>
+                  <p className="font-semibold text-zinc-800 dark:text-zinc-100">
+                    {localize(degree, locale)}
+                  </p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-primary-600 dark:hover:text-primary-400"
+                      >
+                        {institution}
+                      </a>
+                    ) : (
+                      institution
+                    )}
+                  </p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    {localize(period, locale)}
+                  </p>
+                  {highlights && (
+                    <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                      {localize(highlights, locale).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
           </section>
         </div>
       </div>

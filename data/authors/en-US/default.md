@@ -25,10 +25,6 @@ Most of my work has been in logistics and industrial IoT:
 
 I like working close to the problem: understanding the operational context behind a requirement, working with product, design, and customers, and adapting the solution to real constraints. That's why I'm drawn to Forward Deployed Engineering as well as mobile roles.
 
-## Education
-
-I'm finishing an M.Sc. in Computer Science at Universidade Federal de Itajubá (2026), focused on software architecture and distributed systems. I graduated in Information Systems from [FEPI](https://fepi.br/) in 2023.
-
 ## Stack
 
 Flutter, Dart, Kotlin, Swift, BLoC, Clean Architecture, DDD, TDD, REST, WebSockets, Sentry, Graylog, Elasticsearch, CI/CD.

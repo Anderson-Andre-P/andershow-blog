@@ -25,10 +25,6 @@ A maior parte do meu trabalho é em logística e IoT industrial:
 
 Gosto de trabalhar perto do problema: entender o contexto operacional por trás de um requisito, trabalhar junto com produto, design e clientes, e adaptar a solução às restrições reais. Por isso me interesso por Forward Deployed Engineering, além de vagas mobile.
 
-## Formação
-
-Estou concluindo o mestrado em Ciência da Computação na Universidade Federal de Itajubá (2026), com foco em arquitetura de software e sistemas distribuídos. Me formei em Sistemas de Informação na [FEPI](https://fepi.br/) em 2023.
-
 ## Stack
 
 Flutter, Dart, Kotlin, Swift, BLoC, Clean Architecture, DDD, TDD, REST, WebSockets, Sentry, Graylog, Elasticsearch, CI/CD.
