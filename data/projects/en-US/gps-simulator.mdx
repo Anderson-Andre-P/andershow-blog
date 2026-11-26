@@ -27,6 +27,64 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
 
 ## What the app does
 
+### First launch
+
+- **Guided setup in two steps:** permissions (location, notifications and battery), each with a dialog that explains why, and choosing the simulator as the mock location app.
+- **A map with a bar that guides each step:** mark points, pick the **vehicle** (car, motorcycle, bus, truck, bicycle or on foot), the **mode** and the path, and build the route.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions.webp',
+      alt: 'Permissions',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/location-dialog.webp',
+      alt: 'Why it asks for location',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notifications-dialog.webp',
+      alt: 'Why it asks for notifications',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/battery-dialog.webp',
+      alt: 'Why it asks about the battery',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions-granted.webp',
+      alt: 'All granted',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mock-app.webp',
+      alt: 'Mock location app',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/map.webp',
+      alt: 'Map and bottom bar',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mode.webp',
+      alt: 'Travel mode',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
 ### Simulation
 
 - **Real routes:** the route comes from OSRM, GraphHopper, your own server or a straight line. It also imports GPX, KML and GeoJSON, and exports or shares GPX and KML.
@@ -101,6 +159,112 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
   ]}
 />
 
+### Saved routes and editing
+
+- **Routes that work offline:** the geometry is stored with the points, the vehicle, the speed and the mode.
+- **Route menu:** open on the map, simulate now, rename, duplicate, export as GPX, share as GPX or KML and delete.
+- **Point-by-point editing:** coordinates, distance from point A, move earlier or later, add a point nearby or remove it. The route is flagged as out of date until it's built again.
+- **Confirmations:** stopping the simulation and clearing the points both ask first.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-route-open.webp',
+      alt: 'Saved route details',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/point.webp',
+      alt: 'Point options',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/save-route.webp',
+      alt: 'Save route',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/stop-dialog.webp',
+      alt: 'Stop confirmation',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
+      alt: 'Clear points',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+### Realism settings
+
+- Tick interval, GPS and network providers, accuracy profile, noise, speed variation and slowing down on curves.
+- Default speed per vehicle, routing service (OSRM, GraphHopper or your own) and terrain server, both with a connection test.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Settings: map',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Settings: simulation',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/tick-interval.webp',
+      alt: 'Tick interval',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/accuracy-profile.webp',
+      alt: 'Accuracy profile',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/position-noise.webp',
+      alt: 'Position noise',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Default speeds',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/routing-service.webp',
+      alt: 'Routing service',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/terrain-server.webp',
+      alt: 'Terrain server',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/start-city.webp',
+      alt: 'Start city',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
 ### Outside the app
 
 - **Floating panel** on top of any app: state, pause and stop, speed in steps of 5 km/h, a **joystick** to move by hand and **jumps** to favorite places.
@@ -127,6 +291,19 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       height: 1200,
     },
     {
+      src: '/static/images/projects/gps-simulator/screens/overlay-dialog.webp',
+      alt: 'Why it asks for the overlay',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-home.webp',
+      noDark: true,
+      alt: 'Panel on the home screen',
+      width: 540,
+      height: 1200,
+    },
+    {
       src: '/static/images/projects/gps-simulator/screens/notification.webp',
       alt: 'Notification',
       width: 540,
@@ -144,6 +321,12 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       width: 540,
       height: 1200,
     },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-picker.webp',
+      alt: 'Widget picker',
+      width: 540,
+      height: 1200,
+    },
   ]}
 />
 
@@ -152,7 +335,7 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
 - **Google Maps** (standard, satellite, hybrid or terrain, with traffic and place icons) or **OpenStreetMap**, with no key.
 - **Address search** and favorite places to teleport the device.
 - **Five languages** (Portuguese, English, Spanish, French and Italian), with Mexican, Canadian and Québec variants, and kilometers or miles.
-- **Light, dark or system theme.**
+- **Light, dark or system theme.** Every screen has a dark version: use the Light/Dark switch above each gallery.
 - **Help in the app:** a searchable FAQ, privacy policy and terms of use.
 
 <Screenshots
@@ -193,48 +376,27 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       width: 540,
       height: 1200,
     },
-  ]}
-/>
-
-### Dark theme
-
-Every screen also has a dark version, the widgets and the floating panel included.
-
-<Screenshots
-  images={[
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-route.webp',
-      alt: 'Route (dark)',
+      src: '/static/images/projects/gps-simulator/screens/faq-answer.webp',
+      alt: 'An open answer',
       width: 540,
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-simulating.webp',
-      alt: 'Simulating (dark)',
+      src: '/static/images/projects/gps-simulator/screens/faq-search.webp',
+      alt: 'Search the questions',
       width: 540,
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-floating-panel.webp',
-      alt: 'Floating panel (dark)',
+      src: '/static/images/projects/gps-simulator/screens/privacy-sections.webp',
+      alt: 'Policy sections',
       width: 540,
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-widgets.webp',
-      alt: 'Widgets (dark)',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/dark-widget-map.webp',
-      alt: 'Live map (dark)',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/dark-settings.webp',
-      alt: 'Settings (dark)',
+      src: '/static/images/projects/gps-simulator/screens/terms.webp',
+      alt: 'Terms of use',
       width: 540,
       height: 1200,
     },

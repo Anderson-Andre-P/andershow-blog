@@ -27,6 +27,64 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
 
 ## O que o app faz
 
+### Primeiro uso
+
+- **Configuração guiada em duas etapas:** permissões (localização, notificações e bateria), cada uma com um diálogo que explica o porquê, e a escolha do simulador como app de local fictício.
+- **Mapa com uma barra que guia cada passo:** marcar pontos, escolher **veículo** (carro, moto, ônibus, caminhão, bicicleta ou a pé), **modo** e trajeto, e gerar a rota.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions.webp',
+      alt: 'Permissões',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/location-dialog.webp',
+      alt: 'Por que pede a localização',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notifications-dialog.webp',
+      alt: 'Por que pede notificações',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/battery-dialog.webp',
+      alt: 'Por que pede a bateria',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions-granted.webp',
+      alt: 'Tudo concedido',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mock-app.webp',
+      alt: 'App de local fictício',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/map.webp',
+      alt: 'Mapa e barra inferior',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mode.webp',
+      alt: 'Modo de viagem',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
 ### Simulação
 
 - **Rotas reais:** a rota vem do OSRM, do GraphHopper, de um servidor próprio ou é uma linha reta. Também importa GPX, KML e GeoJSON, e exporta ou compartilha em GPX e KML.
@@ -101,6 +159,112 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
   ]}
 />
 
+### Rotas salvas e edição
+
+- **Rotas que funcionam offline:** a geometria é guardada junto com os pontos, o veículo, a velocidade e o modo.
+- **Menu da rota:** abrir no mapa, simular agora, renomear, duplicar, exportar em GPX, compartilhar em GPX ou KML e excluir.
+- **Edição ponto a ponto:** coordenadas, distância desde o ponto A, mover para antes ou depois, adicionar um ponto por perto ou remover. A rota fica marcada como desatualizada até ser gerada de novo.
+- **Confirmações:** parar a simulação e limpar os pontos pedem confirmação.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-route-open.webp',
+      alt: 'Detalhes da rota salva',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/point.webp',
+      alt: 'Ajustes de um ponto',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/save-route.webp',
+      alt: 'Salvar a rota',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/stop-dialog.webp',
+      alt: 'Confirmar a parada',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
+      alt: 'Limpar os pontos',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+### Ajustes de realismo
+
+- Intervalo entre posições, provedores de GPS e de rede, perfil de precisão, ruído, variação de velocidade e freada nas curvas.
+- Velocidade padrão por veículo, serviço de rotas (OSRM, GraphHopper ou próprio) e servidor de terreno, ambos com teste de conexão.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Configurações: mapa',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Configurações: simulação',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/tick-interval.webp',
+      alt: 'Intervalo entre posições',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/accuracy-profile.webp',
+      alt: 'Perfil de precisão',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/position-noise.webp',
+      alt: 'Ruído na posição',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Velocidades padrão',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/routing-service.webp',
+      alt: 'Serviço de rotas',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/terrain-server.webp',
+      alt: 'Servidor de terreno',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/start-city.webp',
+      alt: 'Cidade inicial',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
 ### Fora do app
 
 - **Painel flutuante** por cima de qualquer app: estado, pausar e parar, velocidade de 5 em 5 km/h, **joystick** para andar à mão e **salto** para os lugares favoritos.
@@ -127,6 +291,19 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
       height: 1200,
     },
     {
+      src: '/static/images/projects/gps-simulator/screens/overlay-dialog.webp',
+      alt: 'Por que pede a sobreposição',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-home.webp',
+      noDark: true,
+      alt: 'Painel na tela inicial',
+      width: 540,
+      height: 1200,
+    },
+    {
       src: '/static/images/projects/gps-simulator/screens/notification.webp',
       alt: 'Notificação',
       width: 540,
@@ -144,6 +321,12 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
       width: 540,
       height: 1200,
     },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-picker.webp',
+      alt: 'Escolhendo um widget',
+      width: 540,
+      height: 1200,
+    },
   ]}
 />
 
@@ -152,7 +335,7 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
 - **Google Maps** (comum, satélite, híbrido ou relevo, com trânsito e ícones de lugares) ou **OpenStreetMap**, sem chave.
 - **Busca de endereços** e lugares favoritos para teletransportar o aparelho.
 - **Cinco idiomas** (português, inglês, espanhol, francês e italiano), com variantes do México, do Canadá e do Québec, e unidades em quilômetros ou milhas.
-- **Tema claro, escuro ou do sistema.**
+- **Tema claro, escuro ou do sistema.** Todas as telas têm versão escura: use o alternador Claro/Escuro acima de cada galeria.
 - **Ajuda no app:** perguntas frequentes com busca, política de privacidade e termos de uso.
 
 <Screenshots
@@ -193,48 +376,27 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
       width: 540,
       height: 1200,
     },
-  ]}
-/>
-
-### Tema escuro
-
-Todas as telas também têm versão escura, inclusive os widgets e o painel flutuante.
-
-<Screenshots
-  images={[
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-route.webp',
-      alt: 'Rota (escuro)',
+      src: '/static/images/projects/gps-simulator/screens/faq-answer.webp',
+      alt: 'Uma resposta aberta',
       width: 540,
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-simulating.webp',
-      alt: 'Simulando (escuro)',
+      src: '/static/images/projects/gps-simulator/screens/faq-search.webp',
+      alt: 'Busca nas perguntas',
       width: 540,
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-floating-panel.webp',
-      alt: 'Painel flutuante (escuro)',
+      src: '/static/images/projects/gps-simulator/screens/privacy-sections.webp',
+      alt: 'Seções da política',
       width: 540,
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-widgets.webp',
-      alt: 'Widgets (escuro)',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/dark-widget-map.webp',
-      alt: 'Mapa ao vivo (escuro)',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/dark-settings.webp',
-      alt: 'Configurações (escuro)',
+      src: '/static/images/projects/gps-simulator/screens/terms.webp',
+      alt: 'Termos de uso',
       width: 540,
       height: 1200,
     },
