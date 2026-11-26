@@ -108,6 +108,35 @@ During a test, the screen belongs to the app being tested, not to the simulator.
 
 The panel collapses into a bubble and hides when the simulator itself is on screen, so it never gets in the way.
 
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      alt: 'Floating panel over Google Maps',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/joystick.webp',
+      alt: 'Joystick in use',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-bubble.webp',
+      alt: 'Panel collapsed',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-floating-panel.webp',
+      alt: 'Floating panel (dark)',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
 It's written in Kotlin, in a `TYPE_APPLICATION_OVERLAY` window, not in Flutter. A second Flutter engine just for the panel would be heavy and would complicate talking to the simulation, which already runs in its own isolate inside the foreground service. Instead, the panel talks to the service through the same path the notification buttons already used, an app-internal broadcast:
 
 ```kotlin
@@ -148,6 +177,35 @@ The home screen widget became four:
 - **Live map (4x2, resizable):** the route and the position moving on the map, in real time.
 
 They all use the app's colors and font, and the pause, resume and stop buttons work without opening the app, through the same broadcast as the floating panel.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/widgets.webp',
+      alt: 'Simulation, quick control and dashboard',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-map.webp',
+      alt: 'Live map',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-widget-map.webp',
+      alt: 'Live map (dark)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-widgets.webp',
+      alt: 'Widgets (dark)',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
 The map widget runs into an Android limit: a home screen widget can't run a real map. It only shows ready-made images and text, through `RemoteViews`. The solution was to draw the picture in Kotlin at each simulation step: the app fetches the OpenStreetMap tiles of the area, draws the route, the start, the end and the position with an arrow pointing where it's heading, and hands the bitmap to the widget.
 

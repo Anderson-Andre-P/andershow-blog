@@ -36,19 +36,6 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
 - **Geofence scenario**, to simulate entering an area, waiting inside it and leaving.
 - **Background:** the simulation keeps running with the screen off, with a progress notification and pause and stop buttons.
 
-### Outside the app
-
-- **Floating panel** on top of any app: state, pause and stop, speed in steps of 5 km/h, a **joystick** to move by hand and **jumps** to favorite places.
-- **Four home screen widgets:** a one-line status, a quick control, a dashboard with speed, distance and time, and a **live map** with the route and the position moving.
-
-### Map and preferences
-
-- **Google Maps** (standard, satellite, hybrid or terrain, with traffic and place icons) or **OpenStreetMap**, with no key.
-- **Address search** and favorite places to teleport the device.
-- **Five languages** (Portuguese, English, Spanish, French and Italian), with Mexican, Canadian and Québec variants, and kilometers or miles.
-- **Light, dark or system theme.**
-- **Help in the app:** a searchable FAQ, privacy policy and terms of use.
-
 <Screenshots
   images={[
     {
@@ -58,20 +45,32 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/ready.webp',
-      alt: 'Ready to simulate',
+      src: '/static/images/projects/gps-simulator/screens/permission-dialog.webp',
+      alt: 'Why each permission',
       width: 540,
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/address-search.webp',
-      alt: 'Address search',
+      src: '/static/images/projects/gps-simulator/screens/ready.webp',
+      alt: 'All set',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/points.webp',
+      alt: 'Points from the search',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/vehicle.webp',
+      alt: 'Vehicle and speed',
       width: 540,
       height: 1200,
     },
     {
       src: '/static/images/projects/gps-simulator/screens/route.webp',
-      alt: 'Generated route',
+      alt: 'Route with altitude and tunnels',
       width: 540,
       height: 1200,
     },
@@ -82,8 +81,8 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/vehicle.webp',
-      alt: 'Vehicle and speed',
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Paused',
       width: 540,
       height: 1200,
     },
@@ -99,9 +98,143 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       width: 540,
       height: 1200,
     },
+  ]}
+/>
+
+### Outside the app
+
+- **Floating panel** on top of any app: state, pause and stop, speed in steps of 5 km/h, a **joystick** to move by hand and **jumps** to favorite places.
+- **Four home screen widgets:** a one-line status, a quick control, a dashboard with speed, distance and time, and a **live map** with the route and the position moving.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      alt: 'Floating panel over Google Maps',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/joystick.webp',
+      alt: 'Joystick in use',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-bubble.webp',
+      alt: 'Panel collapsed',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notification',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widgets.webp',
+      alt: 'Home screen widgets',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-map.webp',
+      alt: 'Live map widget',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+### Map and preferences
+
+- **Google Maps** (standard, satellite, hybrid or terrain, with traffic and place icons) or **OpenStreetMap**, with no key.
+- **Address search** and favorite places to teleport the device.
+- **Five languages** (Portuguese, English, Spanish, French and Italian), with Mexican, Canadian and Québec variants, and kilometers or miles.
+- **Light, dark or system theme.**
+- **Help in the app:** a searchable FAQ, privacy policy and terms of use.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Favorite places',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/teleport.webp',
+      alt: 'Teleport',
+      width: 540,
+      height: 1200,
+    },
     {
       src: '/static/images/projects/gps-simulator/screens/settings.webp',
       alt: 'Settings',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/language.webp',
+      alt: 'Language',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/faq.webp',
+      alt: 'FAQ',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/privacy.webp',
+      alt: 'Privacy policy',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+### Dark theme
+
+Every screen also has a dark version, the widgets and the floating panel included.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-route.webp',
+      alt: 'Route (dark)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-simulating.webp',
+      alt: 'Simulating (dark)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-floating-panel.webp',
+      alt: 'Floating panel (dark)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-widgets.webp',
+      alt: 'Widgets (dark)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-widget-map.webp',
+      alt: 'Live map (dark)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-settings.webp',
+      alt: 'Settings (dark)',
       width: 540,
       height: 1200,
     },

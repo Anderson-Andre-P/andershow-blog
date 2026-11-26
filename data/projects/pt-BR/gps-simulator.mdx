@@ -36,24 +36,17 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
 - **Cenário de cerca virtual**, para simular a entrada, a espera e a saída de uma área.
 - **Segundo plano:** a simulação continua com a tela desligada, com uma notificação de progresso e botões de pausar e parar.
 
-### Fora do app
-
-- **Painel flutuante** por cima de qualquer app: estado, pausar e parar, velocidade de 5 em 5 km/h, **joystick** para andar à mão e **salto** para os lugares favoritos.
-- **Quatro widgets para a tela inicial:** uma linha com o estado, um controle rápido, um painel com velocidade, distância e tempo, e um **mapa ao vivo** com a rota e a posição andando.
-
-### Mapa e preferências
-
-- **Google Maps** (comum, satélite, híbrido ou relevo, com trânsito e ícones de lugares) ou **OpenStreetMap**, sem chave.
-- **Busca de endereços** e lugares favoritos para teletransportar o aparelho.
-- **Cinco idiomas** (português, inglês, espanhol, francês e italiano), com variantes do México, do Canadá e do Québec, e unidades em quilômetros ou milhas.
-- **Tema claro, escuro ou do sistema.**
-- **Ajuda no app:** perguntas frequentes com busca, política de privacidade e termos de uso.
-
 <Screenshots
   images={[
     {
       src: '/static/images/projects/gps-simulator/screens/permissions.webp',
       alt: 'Permissões',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/permission-dialog.webp',
+      alt: 'O porquê de cada permissão',
       width: 540,
       height: 1200,
     },
@@ -64,14 +57,20 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/address-search.webp',
-      alt: 'Busca de endereço',
+      src: '/static/images/projects/gps-simulator/screens/points.webp',
+      alt: 'Pontos vindos da busca',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/vehicle.webp',
+      alt: 'Veículo e velocidade',
       width: 540,
       height: 1200,
     },
     {
       src: '/static/images/projects/gps-simulator/screens/route.webp',
-      alt: 'Rota gerada',
+      alt: 'Rota com altitude e túneis',
       width: 540,
       height: 1200,
     },
@@ -82,8 +81,8 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/vehicle.webp',
-      alt: 'Veículo e velocidade',
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Pausada',
       width: 540,
       height: 1200,
     },
@@ -99,9 +98,143 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
       width: 540,
       height: 1200,
     },
+  ]}
+/>
+
+### Fora do app
+
+- **Painel flutuante** por cima de qualquer app: estado, pausar e parar, velocidade de 5 em 5 km/h, **joystick** para andar à mão e **salto** para os lugares favoritos.
+- **Quatro widgets para a tela inicial:** uma linha com o estado, um controle rápido, um painel com velocidade, distância e tempo, e um **mapa ao vivo** com a rota e a posição andando.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      alt: 'Painel flutuante sobre o Google Maps',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/joystick.webp',
+      alt: 'Joystick em uso',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-bubble.webp',
+      alt: 'Painel recolhido',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notificação',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widgets.webp',
+      alt: 'Widgets da tela inicial',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-map.webp',
+      alt: 'Widget do mapa ao vivo',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+### Mapa e preferências
+
+- **Google Maps** (comum, satélite, híbrido ou relevo, com trânsito e ícones de lugares) ou **OpenStreetMap**, sem chave.
+- **Busca de endereços** e lugares favoritos para teletransportar o aparelho.
+- **Cinco idiomas** (português, inglês, espanhol, francês e italiano), com variantes do México, do Canadá e do Québec, e unidades em quilômetros ou milhas.
+- **Tema claro, escuro ou do sistema.**
+- **Ajuda no app:** perguntas frequentes com busca, política de privacidade e termos de uso.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Lugares favoritos',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/teleport.webp',
+      alt: 'Teletransporte',
+      width: 540,
+      height: 1200,
+    },
     {
       src: '/static/images/projects/gps-simulator/screens/settings.webp',
       alt: 'Configurações',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/language.webp',
+      alt: 'Idioma',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/faq.webp',
+      alt: 'Perguntas frequentes',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/privacy.webp',
+      alt: 'Política de privacidade',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+### Tema escuro
+
+Todas as telas também têm versão escura, inclusive os widgets e o painel flutuante.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-route.webp',
+      alt: 'Rota (escuro)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-simulating.webp',
+      alt: 'Simulando (escuro)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-floating-panel.webp',
+      alt: 'Painel flutuante (escuro)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-widgets.webp',
+      alt: 'Widgets (escuro)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-widget-map.webp',
+      alt: 'Mapa ao vivo (escuro)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-settings.webp',
+      alt: 'Configurações (escuro)',
       width: 540,
       height: 1200,
     },

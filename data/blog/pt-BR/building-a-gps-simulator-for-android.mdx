@@ -108,6 +108,35 @@ Durante um teste, quem está na tela é o app que está sendo testado, não o si
 
 O painel recolhe numa bolha e some quando o próprio simulador está na tela, para não atrapalhar.
 
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      alt: 'Painel flutuante sobre o Google Maps',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/joystick.webp',
+      alt: 'Joystick em uso',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-bubble.webp',
+      alt: 'Painel recolhido',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-floating-panel.webp',
+      alt: 'Painel flutuante (escuro)',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
 Ele é escrito em Kotlin, numa janela do tipo `TYPE_APPLICATION_OVERLAY`, e não em Flutter. Um segundo motor Flutter só para ele seria pesado e complicaria a comunicação com a simulação, que já roda num isolate próprio dentro do serviço em primeiro plano. Em vez disso, o painel conversa com o serviço pelo mesmo caminho que os botões da notificação já usavam, um broadcast interno do app:
 
 ```kotlin
@@ -148,6 +177,35 @@ O widget da tela inicial virou quatro:
 - **Mapa ao vivo (4x2, redimensionável):** a rota e a posição andando no mapa, em tempo real.
 
 Todos usam as cores e a fonte do app, e os botões de pausar, retomar e parar funcionam sem abrir o app, pelo mesmo broadcast do painel flutuante.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/widgets.webp',
+      alt: 'Simulação, controle rápido e painel',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-map.webp',
+      alt: 'Mapa ao vivo',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-widget-map.webp',
+      alt: 'Mapa ao vivo (escuro)',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/dark-widgets.webp',
+      alt: 'Widgets (escuro)',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
 O widget do mapa esbarra num limite do Android: um widget da tela inicial não roda um mapa de verdade. Ele só mostra imagens e textos prontos, através de `RemoteViews`. A solução foi desenhar a imagem em Kotlin a cada passo da simulação: o app busca os pedaços do mapa do OpenStreetMap da região, desenha a rota, o início, o fim e a posição com uma seta para onde ela vai, e entrega o bitmap ao widget.
 
