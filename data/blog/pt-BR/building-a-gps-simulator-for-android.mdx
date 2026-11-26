@@ -1,10 +1,10 @@
 ---
 title: 'Construí um simulador de GPS para testar apps de localização, com altitude e túneis do mapa real'
 date: '2026-11-25'
-lastmod: '2026-11-25'
+lastmod: '2026-11-26'
 tags: ['Flutter', 'Android', 'Kotlin', 'Geolocalização', 'Desenvolvimento Mobile']
 draft: false
-summary: 'Testar um app de localização exige andar pela rua ou confiar em posições falsas que não se parecem com um GPS de verdade. Construí um app Android em Flutter que publica posições simuladas pelos provedores de teste do sistema, segue rotas reais, roda com a tela desligada e usa dados do mapa para altitude e túneis, sem inventar nenhum número.'
+summary: 'Testar um app de localização exige andar pela rua ou confiar em posições falsas que não se parecem com um GPS de verdade. Construí um app Android em Flutter que publica posições simuladas pelos provedores de teste do sistema, segue rotas reais, roda com a tela desligada, usa dados do mapa para altitude e túneis e pode ser controlado por cima do app que está sendo testado.'
 authors: ['default']
 ---
 
@@ -14,17 +14,22 @@ Boa parte do meu trabalho é em apps que dependem de localização: rastreamento
 
 Eu queria uma ferramenta que fizesse o celular **acreditar** que está percorrendo uma rota de verdade, na velocidade certa, com as imperfeições de um GPS real, e que continuasse funcionando com a tela desligada, que é justamente quando os bugs de localização em segundo plano aparecem. Como não encontrei uma que fizesse tudo isso, construí o **Simulador de GPS**.
 
+Este post foi atualizado um dia depois da primeira versão. Nesse meio-tempo o app ganhou um painel flutuante com joystick, quatro widgets para a tela inicial (um deles com o mapa ao vivo), cinco idiomas e muitos ajustes de interface. As seções novas estão da metade para o fim.
+
 ## O que ele faz
 
 É um app Android, para Android 12 ou mais novo, feito em Flutter. Você marca pontos no mapa, gera a rota e inicia a simulação. A partir daí, qualquer outro app do aparelho que pedir a localização recebe as posições simuladas.
 
-- **Rotas de verdade:** a rota pode vir do OSRM, do GraphHopper, de um servidor próprio ou ser uma linha reta. Também dá para importar rotas em GPX, KML ou GeoJSON e exportar ou compartilhar em GPX e KML.
-- **Ida e volta**, com a volta roteirizada pelo sentido das ruas.
+- **Rotas de verdade:** a rota pode vir do OSRM, do GraphHopper, de um servidor próprio ou ser uma linha reta. Também dá para buscar um endereço e usá-lo como ponto, importar rotas em GPX, KML ou GeoJSON e exportar ou compartilhar em GPX e KML.
+- **Só ida, ida e volta ou em loop**, com a volta roteirizada pelo sentido das ruas.
 - **Imperfeições de GPS:** perfis prontos (Cidade, Rodovia e Área coberta) ou ruído, variação de velocidade e curvas ajustados à mão. Um ponto parado oscila como um celular parado de verdade, em vez de ficar cravado numa coordenada.
-- **Cenário de cerca virtual**, para simular a entrada e a saída de uma área.
-- **Segundo plano:** a simulação continua com a tela desligada, com uma notificação mostrando o tempo decorrido.
-- **Widget na tela inicial**, que acompanha a simulação e inicia a última rota com um toque.
-- **Busca de endereços** e lugares favoritos para teleportar o aparelho.
+- **Túneis e altitude a partir do mapa real**, sem nenhum número inventado.
+- **Cenário de cerca virtual**, para simular a entrada, a espera e a saída de uma área.
+- **Segundo plano:** a simulação continua com a tela desligada, com uma notificação que mostra o progresso e tem os botões de pausar e parar.
+- **Painel flutuante** por cima de qualquer app, com joystick, ajuste de velocidade e salto para os lugares favoritos.
+- **Quatro widgets para a tela inicial**, incluindo um com o mapa e a posição andando em tempo real.
+- **Cinco idiomas**, com variantes regionais, e tema claro, escuro ou do sistema.
+- **Ajuda dentro do app:** perguntas frequentes com busca, política de privacidade e termos de uso.
 
 ## Publicando posições pelo próprio Android
 
@@ -87,26 +92,123 @@ No Android 14 ou mais novo, o sistema tem o `AltitudeConverter`, que conhece ess
 
 O terreno usa por padrão o servidor público do Valhalla mantido pela comunidade FOSSGIS, que pede no máximo uma requisição por segundo e que os apps não deixem o endereço fixo no código. O cliente respeita esse limite, o endereço pode ser trocado nas configurações, com um botão para testar o servidor, e o crédito exigido aparece na tela.
 
-O mesmo vale para o mapa. O padrão é o Google Maps, mas dá para trocar pelo OpenStreetMap, que não usa chave e cuja política de uso também é respeitada.
+O mesmo vale para o mapa. O padrão é o Google Maps, com mapa comum, satélite, híbrido ou relevo, além de trânsito e ícones de lugares. Dá para trocar pelo OpenStreetMap, que não usa chave e cuja política de uso também é respeitada.
 
 Para o Google Maps funcionar, precisei configurar a chave no [Google Cloud Console](https://console.cloud.google.com/): criar um projeto, ativar o **Maps SDK for Android** e gerar uma chave de API para o app. Sem isso, o SDK desenha só um fundo vazio e registra no log um erro de autorização (`Authorization failure`). É uma configuração simples, mas fácil de esquecer ao rodar o app numa máquina nova, e é justamente por isso que a opção do OpenStreetMap, sem chave, é útil.
 
+## Controlando a simulação por cima do app testado
+
+Durante um teste, quem está na tela é o app que está sendo testado, não o simulador. Voltar para o simulador só para pausar ou mudar a velocidade quebra o fluxo do teste. Por isso o simulador ganhou um **painel flutuante**: uma janela pequena e arrastável, que aparece por cima de qualquer app enquanto a simulação roda. Ela tem:
+
+- o estado da simulação, a rota e o progresso;
+- pausar, retomar e parar;
+- botões de mais e menos velocidade, de 5 em 5 km/h;
+- um **joystick** para andar com a posição à mão, em qualquer direção;
+- os lugares favoritos, para **saltar** até um deles com um toque.
+
+O painel recolhe numa bolha e some quando o próprio simulador está na tela, para não atrapalhar.
+
+Ele é escrito em Kotlin, numa janela do tipo `TYPE_APPLICATION_OVERLAY`, e não em Flutter. Um segundo motor Flutter só para ele seria pesado e complicaria a comunicação com a simulação, que já roda num isolate próprio dentro do serviço em primeiro plano. Em vez disso, o painel conversa com o serviço pelo mesmo caminho que os botões da notificação já usavam, um broadcast interno do app:
+
+```kotlin
+fun send(context: Context, command: String) {
+    context.sendBroadcast(
+        Intent("onNotificationButtonPressed")
+            .setPackage(context.packageName)
+            .putExtra("intentData", command),
+    )
+}
+```
+
+Como esse canal só leva uma palavra, os comandos novos viraram texto: `faster`, `slower`, `joy:90:60` (direção em graus e força em porcentagem) e `jump:-23.55:-46.63`. Do lado do Dart, quem calcula o movimento é o mesmo motor da simulação, que continua sem depender do Flutter nem do Android. O primeiro toque no joystick tira a posição da linha da rota, no ponto onde o veículo está, e a partir daí cada passo anda na direção e na fração da velocidade escolhidas:
+
+```dart
+SimulationProgress steer(SimulationProgress p, double bearing, double power) {
+  final push = power.clamp(0.0, 1.0);
+  if (p.status != SimulationStatus.teleport && push == 0) return p;
+  final free = p.status == SimulationStatus.teleport ? p : _leaveLine(p);
+  return free.copyWith(
+    joystickBearing: (bearing % 360 + 360) % 360,
+    joystickPower: push,
+  );
+}
+```
+
+O joystick gera vários movimentos por segundo, então o painel envia no máximo um a cada 150 ms, e o serviço só move a posição no próximo passo da simulação. Soltar o joystick é sempre enviado na hora.
+
+O painel precisa da permissão "Sobrepor a outros apps", que fica numa tela do próprio Android. Antes de mandar a pessoa para lá, o app explica num diálogo para que ela serve. Isso virou regra para todas as permissões do app: localização, notificações, bateria e sobreposição. A tela de permissão do Android diz o que está sendo pedido, mas nunca o porquê.
+
+## Quatro widgets, um deles com o mapa ao vivo
+
+O widget da tela inicial virou quatro:
+
+- **Simulação (4x1):** estado, progresso e os botões principais numa linha.
+- **Controle rápido (2x1):** um botão grande para iniciar, pausar ou retomar.
+- **Painel da simulação (4x2):** velocidade, distância, tempo e volta.
+- **Mapa ao vivo (4x2, redimensionável):** a rota e a posição andando no mapa, em tempo real.
+
+Todos usam as cores e a fonte do app, e os botões de pausar, retomar e parar funcionam sem abrir o app, pelo mesmo broadcast do painel flutuante.
+
+O widget do mapa esbarra num limite do Android: um widget da tela inicial não roda um mapa de verdade. Ele só mostra imagens e textos prontos, através de `RemoteViews`. A solução foi desenhar a imagem em Kotlin a cada passo da simulação: o app busca os pedaços do mapa do OpenStreetMap da região, desenha a rota, o início, o fim e a posição com uma seta para onde ela vai, e entrega o bitmap ao widget.
+
+Alguns cuidados que essa abordagem pediu:
+
+- **Os pedaços do mapa são baixados uma vez e guardados por 7 dias**, com no máximo dois downloads ao mesmo tempo e um User-Agent que identifica o app, como pede a política de uso do OpenStreetMap. O crédito "© OpenStreetMap" aparece no canto da imagem.
+- **A imagem passa por um binder**, que tem limite de tamanho. Por isso ela é desenhada em `RGB_565` e com um teto de pixels, e perde um pouco de nitidez quando o widget é esticado até ocupar a tela toda.
+- **O desenho roda fora da thread principal**, e só o pedido mais recente é desenhado. Texto e imagem vão juntos para o widget, para o mapa não piscar vazio a cada segundo.
+- **Uma rota curta aparece inteira.** Numa rota longa, o mapa acompanha a posição de perto.
+
+## Cinco idiomas, sem esquecer nenhum texto
+
+O app fala português do Brasil, inglês dos EUA, espanhol da Espanha, francês da França e italiano, além de três variantes regionais: espanhol do México, inglês do Canadá e francês do Québec. O idioma segue o do celular e pode ser trocado nas configurações, numa lista com a bandeira de cada país.
+
+Em vez de arquivos de tradução, os textos são classes Dart. A classe em português define cada texto, e cada idioma a implementa:
+
+```dart
+base class SimulatorCopyEn with SimulatorHelpCopyEn implements SimulatorCopy {
+  @override
+  String get buildRoute => 'Build route';
+  // ...
+}
+```
+
+Como cada idioma **implementa** a classe em português, esquecer uma tradução é um erro de compilação, e não um texto em branco descoberto em produção. As variantes regionais estendem o idioma base e trocam só o que muda na região: "carro" e "celular" no México, "favourite" e "metre" no Canadá, e no Québec o ponto de interrogação sem o espaço antes, que o francês da França usa.
+
+As unidades também seguem o idioma: milhas no inglês dos EUA e quilômetros nos demais. As cidades de partida sugeridas são do país do idioma escolhido.
+
+Um teste de widget renderiza as telas principais em cada idioma e falha se algum texto for cortado. Francês e italiano costumam ser os mais longos, e a regra é encurtar o texto, nunca o teste.
+
+## Os ajustes de interface
+
+Boa parte do trabalho desde a primeira versão foi em detalhes que não aparecem numa lista de funcionalidades, mas mudam o uso:
+
+- **Tema claro, escuro ou do sistema**, com cada tela conferida nos dois temas.
+- **Botões com papéis fixos:** um botão principal por grupo, ações de cancelar neutras e a ação destrutiva em vermelho só dentro do diálogo de confirmação. Toda exclusão pergunta antes.
+- **Escolhas curtas direto na tela de configurações**, como o tipo de mapa numa grade com ícones, em vez de abrir uma folha só para escolher entre duas ou três opções.
+- **Velocidade sempre com unidade**, limitada de 0 a 140 km/h.
+- **Perguntas frequentes com busca**, que acha a resposta mesmo sem acento, além da política de privacidade e dos termos de uso dentro do app.
+
+Cada uma dessas decisões ficou registrada num documento do projeto, com o motivo. Assim a próxima tela segue o mesmo padrão sem precisar redescobrir a regra.
+
 ## Como ele é construído
 
-O app foi criado a partir do mesmo template que uso nos apps Flutter do trabalho: **Clean Architecture por feature**, **BLoC** em todo o estado, `get_it` para injeção de dependências, `go_router` para navegação e um `Result` nos casos de uso em vez de exceções. A lógica da simulação, o motor que calcula cada posição, fica toda na camada de domínio, sem depender do Flutter nem do Android, o que facilita testar.
+O app foi criado a partir do mesmo template que uso nos apps Flutter do trabalho: **Clean Architecture por feature**, **BLoC** em todo o estado, `get_it` para injeção de dependências, `go_router` para navegação e um `Result` nos casos de uso em vez de exceções. A lógica da simulação, o motor que calcula cada posição, fica toda na camada de domínio, sem depender do Flutter nem do Android, o que facilita testar. O joystick e o salto para um lugar entraram nesse mesmo motor.
 
 Alguns pacotes que fazem o trabalho pesado:
 
 - `flutter_foreground_task` para manter a simulação viva com a tela desligada.
 - `google_maps_flutter` e `flutter_map` para os dois tipos de mapa.
-- `home_widget` para o widget da tela inicial.
+- `home_widget` para levar os dados da simulação aos widgets.
 - `sembast` para guardar rotas, favoritos e configurações.
 
-O projeto tem testes para os casos de uso, os BLoCs e o serviço de simulação em segundo plano. O resumo do app está na [página do projeto](/projects/gps-simulator).
+A parte nativa em Kotlin cresceu: o plugin dos provedores de teste, o painel flutuante com o joystick e o desenho do mapa dos widgets. O projeto tem mais de 750 testes, que cobrem os casos de uso, os BLoCs, o serviço em segundo plano, as telas em todos os idiomas e nos dois temas, e os textos nativos do Android. O resumo do app está na [página do projeto](/projects/gps-simulator).
 
 ## O que eu aprendi
 
 - **Ferramentas internas valem o investimento.** Um bom simulador transforma um teste de campo de meia hora em alguns toques, e torna testáveis casos que seriam difíceis de reproduzir na rua, como entrar num túnel no meio de uma rota.
 - **Realismo falso é pior que nenhum realismo.** Uma altitude inventada pode fazer um teste passar por engano. Publicar "sem altitude" é mais honesto e mais útil.
 - **Dados geográficos escondem detalhes.** Nível do mar e elipsoide parecem a mesma coisa até você comparar com um GPS real.
-- **Servidores públicos têm regras.** Limitar as requisições, permitir trocar o servidor e mostrar os créditos faz parte de usar bem um serviço gratuito.
+- **A ferramenta precisa estar onde o teste acontece.** O painel flutuante e os widgets existem porque, durante um teste, a tela é do app testado, e não do simulador.
+- **Nem tudo precisa ser Flutter.** O painel e o desenho do mapa ficaram mais simples e mais leves em Kotlin, conversando com o Dart por um canal que já existia.
+- **Deixe o compilador cobrar as traduções.** Com os textos em classes que implementam o português, um idioma incompleto nem compila.
+- **Servidores públicos têm regras.** Limitar as requisições, guardar o que já foi baixado, permitir trocar o servidor e mostrar os créditos faz parte de usar bem um serviço gratuito.

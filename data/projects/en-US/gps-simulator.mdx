@@ -10,6 +10,7 @@ stack:
     'flutter_foreground_task',
     'Google Maps',
     'flutter_map',
+    'OpenStreetMap',
     'Valhalla',
     'sembast',
     'home_widget',
@@ -18,7 +19,7 @@ stack:
 
 ## Overview
 
-An Android app that makes the phone **believe** it is driving a real route. It publishes simulated positions through Android's own test providers, so any other app on the device that asks for the location receives those positions. It's for testing location-based apps without walking or driving around with the phone.
+An Android app that makes the phone **believe** it is driving a real route. It publishes simulated positions through Android's own test providers, so any other app on the device that asks for the location receives those positions. It's for testing location-based apps without walking or driving around with the phone, and it can be controlled on top of the app being tested.
 
 ## The problem
 
@@ -26,14 +27,27 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
 
 ## What the app does
 
+### Simulation
+
 - **Real routes:** the route comes from OSRM, GraphHopper, your own server or a straight line. It also imports GPX, KML and GeoJSON, and exports or shares GPX and KML.
-- **Round trips**, with the way back routed along the direction of the streets.
+- **One way, round trip or loop**, with the way back routed along the direction of the streets.
 - **GPS imperfections:** ready-made profiles (City, Highway and Covered area) or noise, speed variation and curves tuned by hand.
 - **Tunnels and altitude from the map:** inside a tunnel the GPS loses signal, and altitude comes from the real terrain, with bridges and tunnels interpolated.
-- **Geofence scenario**, to simulate entering and leaving an area.
-- **Background:** the simulation keeps running with the screen off, with a progress notification.
-- **Home screen widget** that follows the simulation and starts the last route with one tap.
-- **Address search** and favorite places, on a Google or OpenStreetMap map.
+- **Geofence scenario**, to simulate entering an area, waiting inside it and leaving.
+- **Background:** the simulation keeps running with the screen off, with a progress notification and pause and stop buttons.
+
+### Outside the app
+
+- **Floating panel** on top of any app: state, pause and stop, speed in steps of 5 km/h, a **joystick** to move by hand and **jumps** to favorite places.
+- **Four home screen widgets:** a one-line status, a quick control, a dashboard with speed, distance and time, and a **live map** with the route and the position moving.
+
+### Map and preferences
+
+- **Google Maps** (standard, satellite, hybrid or terrain, with traffic and place icons) or **OpenStreetMap**, with no key.
+- **Address search** and favorite places to teleport the device.
+- **Five languages** (Portuguese, English, Spanish, French and Italian), with Mexican, Canadian and Québec variants, and kilometers or miles.
+- **Light, dark or system theme.**
+- **Help in the app:** a searchable FAQ, privacy policy and terms of use.
 
 <Screenshots
   images={[
@@ -99,7 +113,10 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
 - **A custom Kotlin plugin** to register GPS and network test providers and publish positions to them, since Flutter doesn't expose that API.
 - **No invented data:** altitude and tunnels come from a Valhalla server, based on OpenStreetMap. Without data, the position is published without altitude instead of with a fake number.
 - **Altitude like a real GPS:** on Android 14 or newer, the app converts height above sea level to height above the WGS84 ellipsoid, which is what a GPS chip reports.
+- **A native floating panel:** an overlay window in Kotlin that talks to the simulation through the same broadcast as the notification buttons, with no second Flutter engine. The joystick and the jump to a place are computed by the same simulation engine.
+- **A live map in a widget:** since a widget can't run a map, the app draws the route and the position over OpenStreetMap tiles at each step, keeps the tiles for 7 days and follows the server's usage policy.
+- **Translations enforced by the compiler:** every language implements the Portuguese copy class, so a missing translation doesn't compile. A test fails if any text is cut off in any language.
 - **Responsible use of public servers:** at most one request per second to the terrain server, a configurable address and the required credits on screen.
-- **Clean Architecture and BLoC**, with the simulation engine in the domain layer, independent of Flutter and Android, and tests for use cases, BLoCs and the background service.
+- **Clean Architecture and BLoC**, with the simulation engine in the domain layer, independent of Flutter and Android, and more than 750 tests covering use cases, BLoCs, the background service and the screens in every language and both themes.
 
 I wrote about how it was built, with code samples, in [I built a GPS simulator to test location apps](/blog/building-a-gps-simulator-for-android).
