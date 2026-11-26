@@ -22,6 +22,8 @@ Este post foi atualizado um dia depois da primeira versão. Nesse meio-tempo o a
 
 - **Rotas de verdade:** a rota pode vir do OSRM, do GraphHopper, de um servidor próprio ou ser uma linha reta. Também dá para buscar um endereço e usá-lo como ponto, importar rotas em GPX, KML ou GeoJSON e exportar ou compartilhar em GPX e KML.
 - **Só ida, ida e volta ou em loop**, com a volta roteirizada pelo sentido das ruas.
+- **Seis veículos**, com velocidade padrão própria: carro, moto, ônibus, caminhão, bicicleta e a pé.
+- **Rotas salvas que funcionam offline**, com renomear, duplicar, exportar e editar ponto a ponto.
 - **Imperfeições de GPS:** perfis prontos (Cidade, Rodovia e Área coberta) ou ruído, variação de velocidade e curvas ajustados à mão. Um ponto parado oscila como um celular parado de verdade, em vez de ficar cravado numa coordenada.
 - **Túneis e altitude a partir do mapa real**, sem nenhum número inventado.
 - **Cenário de cerca virtual**, para simular a entrada, a espera e a saída de uma área.
@@ -30,6 +32,171 @@ Este post foi atualizado um dia depois da primeira versão. Nesse meio-tempo o a
 - **Quatro widgets para a tela inicial**, incluindo um com o mapa e a posição andando em tempo real.
 - **Cinco idiomas**, com variantes regionais, e tema claro, escuro ou do sistema.
 - **Ajuda dentro do app:** perguntas frequentes com busca, política de privacidade e termos de uso.
+
+## Do primeiro uso à primeira rota
+
+O app guia a configuração inicial em duas etapas. Na primeira, pede as permissões de localização, notificações e bateria, e cada uma abre um diálogo que explica **para que serve** antes de levar à tela do Android. Na segunda, ensina a escolher o simulador como app de local fictício, com o atalho para as Opções do desenvolvedor.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions.webp',
+      alt: 'Permissões',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/location-dialog.webp',
+      alt: 'Por que pede a localização',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notifications-dialog.webp',
+      alt: 'Por que pede notificações',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/battery-dialog.webp',
+      alt: 'Por que pede a bateria',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions-granted.webp',
+      alt: 'Tudo concedido',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mock-app.webp',
+      alt: 'App de local fictício',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+Depois disso, a tela é o mapa, com uma barra inferior que guia cada passo. Basta tocar para marcar os pontos, ou buscar um endereço, escolher o **veículo** e a velocidade, o **modo** (só ida, ida e volta ou loop) e o tipo de trajeto (pelas ruas ou em linha reta). Com dois pontos ou mais, aparece o botão de gerar a rota, que mostra distância, tempo estimado, altitude e túneis. Durante a simulação, a tela mostra o tempo, a velocidade atual e a volta, e os pontos ficam travados. Parar pede confirmação, porque encerra os provedores de teste e devolve o aparelho ao GPS de verdade.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/map.webp',
+      alt: 'Mapa e barra inferior',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/points.webp',
+      alt: 'Pontos vindos da busca',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/vehicle.webp',
+      alt: 'Veículo e velocidade',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mode.webp',
+      alt: 'Modo de viagem',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Rota com altitude e túneis',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/save-route.webp',
+      alt: 'Salvar a rota',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'Simulando',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Pausada',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/stop-dialog.webp',
+      alt: 'Confirmar a parada',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notificação',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Rotas salvas e edição de pontos
+
+Salvar uma rota guarda os pontos, a geometria, o veículo, a velocidade e o modo, então ela **pode ser simulada offline**, sem consultar o serviço de rotas de novo. Ao abrir uma rota salva, dá para ver a distância e o tempo de cada sentido (só ida, só volta ou os dois), o trecho com altitude e túneis e as escolhas feitas. O menu de cada rota tem abrir no mapa, **simular agora** a partir do ponto A, renomear, duplicar, exportar em GPX, compartilhar em GPX ou KML e excluir.
+
+Os pontos também podem ser ajustados um a um. Tocar num marcador mostra a latitude, a longitude e a distância desde o ponto A, e permite mover o ponto para antes ou depois na ordem, adicionar um ponto perto dele ou removê-lo. Quando os pontos mudam, a rota é marcada como desatualizada até você gerá-la de novo. Limpar tudo pergunta antes e não apaga as rotas salvas.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-routes.webp',
+      alt: 'Rotas salvas',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-route-open.webp',
+      alt: 'Detalhes da rota salva',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/route-menu.webp',
+      alt: 'Opções da rota',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/point.webp',
+      alt: 'Ajustes de um ponto',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
+      alt: 'Limpar os pontos',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Lugares favoritos',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/teleport.webp',
+      alt: 'Teletransporte',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
 ## Publicando posições pelo próprio Android
 
@@ -129,8 +296,15 @@ O painel recolhe numa bolha e some quando o próprio simulador está na tela, pa
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/dark-floating-panel.webp',
-      alt: 'Painel flutuante (escuro)',
+      src: '/static/images/projects/gps-simulator/screens/overlay-dialog.webp',
+      alt: 'Por que pede a sobreposição',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-home.webp',
+      noDark: true,
+      alt: 'Painel na tela inicial',
       width: 540,
       height: 1200,
     },
@@ -187,20 +361,14 @@ Todos usam as cores e a fonte do app, e os botões de pausar, retomar e parar fu
       height: 1200,
     },
     {
+      src: '/static/images/projects/gps-simulator/screens/widget-picker.webp',
+      alt: 'Escolhendo um widget',
+      width: 540,
+      height: 1200,
+    },
+    {
       src: '/static/images/projects/gps-simulator/screens/widget-map.webp',
       alt: 'Mapa ao vivo',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/dark-widget-map.webp',
-      alt: 'Mapa ao vivo (escuro)',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/dark-widgets.webp',
-      alt: 'Widgets (escuro)',
       width: 540,
       height: 1200,
     },
@@ -215,6 +383,85 @@ Alguns cuidados que essa abordagem pediu:
 - **A imagem passa por um binder**, que tem limite de tamanho. Por isso ela é desenhada em `RGB_565` e com um teto de pixels, e perde um pouco de nitidez quando o widget é esticado até ocupar a tela toda.
 - **O desenho roda fora da thread principal**, e só o pedido mais recente é desenhado. Texto e imagem vão juntos para o widget, para o mapa não piscar vazio a cada segundo.
 - **Uma rota curta aparece inteira.** Numa rota longa, o mapa acompanha a posição de perto.
+
+## Ajustes de realismo e de servidores
+
+As configurações concentram o que muda o comportamento do GPS simulado, cada uma com uma explicação curta embaixo:
+
+- **Intervalo entre posições:** de 0,5 s a 5 s, com 1 s como padrão. Cada posição leva latitude, longitude, velocidade, direção, precisão e horário.
+- **Provedores de teste:** o GPS e o de rede podem ser ligados e desligados separadamente.
+- **Perfil de precisão:** Cidade, Rodovia ou Área coberta, que ajustam ruído e variação de velocidade de uma vez.
+- **Ruído na posição:** nenhum, baixo, médio ou alto, e a precisão publicada acompanha a escolha.
+- **Variação de velocidade e freada nas curvas**, cada uma com seu interruptor.
+- **Velocidades padrão:** uma por veículo, ajustáveis com mais e menos e com um botão para restaurar.
+- **Serviço de rotas:** OSRM, GraphHopper ou um servidor próprio, com um botão para testar a conexão. Se o serviço não responder, o app oferece o trecho em linha reta, que não depende dele.
+- **Servidor de terreno** para altitude e túneis, com o aviso do limite de uso do servidor público e o crédito exigido.
+- **Mapa, unidades, cidade inicial, tema e idioma**, além do interruptor do painel flutuante.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Configurações: mapa',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/start-city.webp',
+      alt: 'Cidade inicial',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Configurações: simulação',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/tick-interval.webp',
+      alt: 'Intervalo entre posições',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/accuracy-profile.webp',
+      alt: 'Perfil de precisão',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/position-noise.webp',
+      alt: 'Ruído na posição',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Velocidades padrão',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/routing-service.webp',
+      alt: 'Serviço de rotas',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/terrain-server.webp',
+      alt: 'Servidor de terreno',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-about.webp',
+      alt: 'Configurações: tema e ajuda',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
 ## Cinco idiomas, sem esquecer nenhum texto
 
@@ -245,6 +492,53 @@ Boa parte do trabalho desde a primeira versão foi em detalhes que não aparecem
 - **Escolhas curtas direto na tela de configurações**, como o tipo de mapa numa grade com ícones, em vez de abrir uma folha só para escolher entre duas ou três opções.
 - **Velocidade sempre com unidade**, limitada de 0 a 140 km/h.
 - **Perguntas frequentes com busca**, que acha a resposta mesmo sem acento, além da política de privacidade e dos termos de uso dentro do app.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/faq.webp',
+      alt: 'Perguntas frequentes',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/faq-answer.webp',
+      alt: 'Uma resposta aberta',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/faq-search.webp',
+      alt: 'Busca nas perguntas',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/privacy.webp',
+      alt: 'Política de privacidade',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/privacy-sections.webp',
+      alt: 'Seções da política',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/terms.webp',
+      alt: 'Termos de uso',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/language.webp',
+      alt: 'Idioma',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
 Cada uma dessas decisões ficou registrada num documento do projeto, com o motivo. Assim a próxima tela segue o mesmo padrão sem precisar redescobrir a regra.
 
