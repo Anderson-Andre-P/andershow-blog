@@ -6,6 +6,7 @@ tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocalização', 'Rotas']
 draft: false
 summary: 'Como o Simulador de GPS monta uma rota: pontos marcados ou buscados no mapa, seis veículos, ida, ida e volta ou loop, trajeto pelas ruas (OSRM, GraphHopper ou servidor próprio) ou em linha reta, importação e exportação de arquivos e rotas salvas que funcionam offline.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **Série Simulador de GPS · Parte 2 de 6.** Antes: [como o Android aceita posições falsas](/blog/gps-simulator-1-how-android-accepts-fake-locations). Depois: [um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
@@ -210,6 +211,3 @@ Nem todo teste precisa de uma rota. Os **lugares favoritos** guardam um ponto co
 - **A volta também é uma rota.** Calcular a volta pelas ruas em vez de inverter a ida pega as mãos únicas e deixa o teste mais próximo da realidade.
 
 Na próxima parte, a rota ganha as imperfeições de um GPS de verdade: ruído, variação de velocidade e freada nas curvas.
-
-**Anterior:** [Parte 1, como o Android aceita posições falsas](/blog/gps-simulator-1-how-android-accepts-fake-locations)  
-**Próximo:** [Parte 3, um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)

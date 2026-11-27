@@ -1,11 +1,12 @@
 ---
-title: 'A Floating Panel with a Joystick to Control the Simulated GPS on Top of Any App'
+title: 'GPS Simulator, part 5: a floating panel with a joystick on top of any app'
 date: '2026-11-26T13:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Android', 'Kotlin', 'Flutter', 'Mobile Development']
 draft: false
 summary: 'During a test, the screen belongs to the app under test, not to the simulator. I built a floating panel in Kotlin, in an overlay window, to pause, change the speed, walk with a joystick and jump to favorite places without leaving the app being tested.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **GPS Simulator series · Part 5 of 6.** In this part: the floating panel and the joystick. Before it, [a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one) and [altitude and tunnels from the map](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
@@ -115,5 +116,3 @@ That became a rule for every permission in the app: location, notifications, bat
 - **Not everything needs to be Flutter.** An overlay window is simpler and lighter in Kotlin, talking to Dart through a channel that already existed.
 - **Reusing the channel beats creating a new one.** The commands became plain text, and the panel, the notification and the widgets now use the same door.
 - **Continuous input needs a limit.** A joystick with no send limit floods the channel; releasing it, however, can never wait.
-
-**Previous:** [Altitude and tunnels from real map data](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) · **Next:** [Home screen widgets with a live map](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)

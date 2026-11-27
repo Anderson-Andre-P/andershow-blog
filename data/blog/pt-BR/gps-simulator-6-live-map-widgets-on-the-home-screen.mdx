@@ -1,11 +1,12 @@
 ---
-title: 'Widgets na tela inicial e um mapa ao vivo que o Android não deixa existir'
+title: 'Simulador de GPS, parte 6: widgets na tela inicial e um mapa ao vivo que o Android não deixa existir'
 date: '2026-11-26T14:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Android', 'Kotlin', 'Widgets', 'Desenvolvimento Mobile']
 draft: false
 summary: 'Um widget da tela inicial não roda um mapa de verdade, só mostra imagens e textos prontos. Para ter a rota e a posição andando em tempo real, o simulador desenha o mapa em Kotlin a cada passo. Esta parte conta os quatro widgets, os limites do RemoteViews e o que aprendi com a série.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **Série GPS Simulator · Parte 6 de 6.** Última parte: os widgets da tela inicial, com um mapa que anda em tempo real. A [Parte 5](/blog/gps-simulator-5-floating-panel-over-any-app) mostrou o painel flutuante, que usa o mesmo canal de comandos.
@@ -124,5 +125,3 @@ O que ficou fora da série, os cinco idiomas com tradução cobrada pelo compila
 - **Nem tudo precisa ser Flutter.** O painel e o desenho do mapa ficaram mais simples e mais leves em Kotlin, conversando com o Dart por um canal que já existia.
 - **Deixe o compilador cobrar as traduções.** Com os textos em classes que implementam o português, um idioma incompleto nem compila.
 - **Servidores públicos têm regras.** Limitar as requisições, guardar o que já foi baixado, permitir trocar o servidor e mostrar os créditos faz parte de usar bem um serviço gratuito.
-
-**Anterior:** [Parte 5, um painel flutuante por cima de qualquer app](/blog/gps-simulator-5-floating-panel-over-any-app)

@@ -1,11 +1,12 @@
 ---
-title: 'Um painel flutuante com joystick para controlar o GPS simulado por cima de qualquer app'
+title: 'Simulador de GPS, parte 5: um painel flutuante com joystick por cima de qualquer app'
 date: '2026-11-26T13:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Android', 'Kotlin', 'Flutter', 'Desenvolvimento Mobile']
 draft: false
 summary: 'Durante um teste, a tela é do app testado, e não do simulador. Construí em Kotlin um painel flutuante, numa janela de sobreposição, para pausar, mudar a velocidade, andar com um joystick e saltar para lugares favoritos sem sair do app que está sendo testado.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **Série GPS Simulator · Parte 5 de 6.** Nesta parte: o painel flutuante e o joystick. Antes, [um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one) e [altitude e túneis do mapa](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
@@ -115,5 +116,3 @@ Isso virou regra para todas as permissões do app: localização, notificações
 - **Nem tudo precisa ser Flutter.** Uma janela de sobreposição fica mais simples e mais leve em Kotlin, falando com o Dart por um canal que já existia.
 - **Reaproveitar o canal vale mais que criar um novo.** Os comandos viraram texto simples, e o painel, a notificação e os widgets passaram a usar a mesma porta.
 - **Entradas contínuas precisam de limite.** Um joystick sem limite de envio satura o canal; soltar, porém, nunca pode esperar.
-
-**Anterior:** [Altitude e túneis do mapa real](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) · **Próximo:** [Widgets na tela inicial, com um mapa ao vivo](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)

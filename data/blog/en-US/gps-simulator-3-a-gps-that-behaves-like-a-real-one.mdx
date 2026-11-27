@@ -1,11 +1,12 @@
 ---
-title: 'A GPS That Behaves Like a Real One: Noise, Curves and Geofences in GPS Simulator'
+title: 'GPS Simulator, part 3: a GPS that behaves like a real one, with noise, curves and geofences'
 date: '2026-11-26T11:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocation', 'Testing']
 draft: false
 summary: 'A perfect route, at constant speed and with zero error, hides the bugs that show up on a real GPS. In this post I explain how GPS Simulator publishes noise, speed variation, slowing down on curves, a parked point that drifts and a geofence scenario, and how the simulation keeps going with the screen off.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **GPS Simulator series · Part 3 of 6.** In [part 2](/blog/gps-simulator-2-routes-streets-or-straight-lines) I built the routes. Here, how the GPS behaves while following them. [Part 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) covers altitude and tunnels.
@@ -163,5 +164,3 @@ When paused, the service **keeps publishing the last position**, as a stationary
 The gain from simulating imperfections is that each one becomes a **test variable**: you can turn on only the noise, only the braking, or both, and see which one causes the bug. A perfect GPS would never let you isolate that.
 
 In [part 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) I cover the other half of realism, the one that isn't configured: altitude and tunnels that come from the real map.
-
-**Previous:** [Part 2, routes along streets or straight lines](/blog/gps-simulator-2-routes-streets-or-straight-lines) · **Next:** [Part 4, altitude and tunnels from real map data](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data)

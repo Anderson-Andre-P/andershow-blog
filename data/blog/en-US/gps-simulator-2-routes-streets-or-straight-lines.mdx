@@ -6,6 +6,7 @@ tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocation', 'Routing']
 draft: false
 summary: 'How the GPS Simulator builds a route: points marked or searched on the map, six vehicles, one way, round trip or loop, a path along the streets (OSRM, GraphHopper or your own server) or in a straight line, file import and export, and saved routes that work offline.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **GPS Simulator series · Part 2 of 6.** Before: [how Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations). Next: [a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
@@ -210,6 +211,3 @@ Not every test needs a route. **Favorite places** store a point with a name, and
 - **The way back is a route too.** Computing the return along the streets instead of reversing the outbound leg catches one-way streets and brings the test closer to reality.
 
 In the next part, the route gets the imperfections of a real GPS: noise, speed variation and slowing down on curves.
-
-**Previous:** [Part 1, how Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations)  
-**Next:** [Part 3, a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)

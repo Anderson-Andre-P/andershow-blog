@@ -1,11 +1,12 @@
 ---
-title: 'Um GPS que se comporta como o de verdade: ruído, curvas e cerca virtual no Simulador de GPS'
+title: 'Simulador de GPS, parte 3: um GPS que se comporta como o de verdade, com ruído, curvas e cerca virtual'
 date: '2026-11-26T11:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocalização', 'Testes']
 draft: false
 summary: 'Uma rota perfeita, a velocidade constante e sem erro nenhum, esconde os bugs que aparecem num GPS real. Neste post conto como o Simulador de GPS publica ruído, variação de velocidade, freada nas curvas, um ponto parado que oscila e um cenário de cerca virtual, e como a simulação continua com a tela desligada.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **Série Simulador de GPS · Parte 3 de 6.** Na [parte 2](/blog/gps-simulator-2-routes-streets-or-straight-lines) montei as rotas. Aqui, o comportamento do GPS ao percorrê-las. A [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) trata de altitude e túneis.
@@ -163,5 +164,3 @@ Ao pausar, o serviço **continua publicando a última posição**, como um celul
 O ganho de simular imperfeições é que cada uma vira uma **variável de teste**: dá para ligar só o ruído, só a freada, ou os dois, e ver qual causa o bug. Um GPS perfeito nunca deixaria isolar isso.
 
 Na [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) trato da outra metade do realismo, a que não é configurada: altitude e túneis que vêm do mapa real.
-
-**Anterior:** [Parte 2, rotas pelas ruas ou em linha reta](/blog/gps-simulator-2-routes-streets-or-straight-lines) · **Próximo:** [Parte 4, altitude e túneis a partir do mapa real](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data)

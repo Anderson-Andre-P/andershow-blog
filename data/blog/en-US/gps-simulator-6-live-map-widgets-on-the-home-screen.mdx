@@ -1,11 +1,12 @@
 ---
-title: 'Home Screen Widgets and a Live Map That Android Won’t Let Exist'
+title: 'GPS Simulator, part 6: home screen widgets and a live map Android won’t let exist'
 date: '2026-11-26T14:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Android', 'Kotlin', 'Widgets', 'Mobile Development']
 draft: false
 summary: 'A home screen widget can’t run a real map; it only shows ready-made images and text. To get the route and the position moving in real time, the simulator draws the map in Kotlin on every step. This part covers the four widgets, the limits of RemoteViews and what I learned from the series.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **GPS Simulator series · Part 6 of 6.** The last part: home screen widgets, with a map that moves in real time. [Part 5](/blog/gps-simulator-5-floating-panel-over-any-app) covered the floating panel, which uses the same command channel.
@@ -124,5 +125,3 @@ What stayed out of the series, the five languages with translations enforced by 
 - **Not everything has to be Flutter.** The panel and the map drawing turned out simpler and lighter in Kotlin, talking to Dart through a channel that already existed.
 - **Let the compiler enforce translations.** With the strings in classes that implement the Portuguese one, an incomplete language doesn't even compile.
 - **Public servers have rules.** Limiting requests, caching what was already downloaded, letting users switch servers and showing the credits is part of using a free service well.
-
-**Previous:** [Part 5, a floating panel on top of any app](/blog/gps-simulator-5-floating-panel-over-any-app)

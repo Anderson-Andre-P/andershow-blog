@@ -1,11 +1,12 @@
 ---
-title: 'Altitude e túneis de verdade num GPS simulado: Valhalla, geoide e servidores públicos'
+title: 'Simulador de GPS, parte 4: altitude e túneis reais a partir do mapa, com Valhalla e geoide'
 date: '2026-11-26T12:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Flutter', 'Android', 'Kotlin', 'Geolocalização']
 draft: false
 summary: 'Na série do Simulador de GPS, esta parte mostra como o app usa um servidor Valhalla para obter altitude e túneis do mapa real, por que a altura do terreno não é a altura que um chip de GPS informa e como respeitar os limites dos servidores públicos.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **Série Simulador de GPS · Parte 4 de 6.** Aqui entra o realismo que vem de dados do mapa: altitude, túneis e pontes. Antes: [a parte 3, o GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
@@ -86,5 +87,3 @@ Para o Google Maps funcionar, precisei configurar a chave no [Google Cloud Conso
 - **Realismo falso é pior que nenhum realismo.** Uma altitude inventada pode fazer um teste passar por engano. Publicar "sem altitude" é mais honesto e mais útil.
 - **Dados geográficos escondem detalhes.** Nível do mar e elipsoide parecem a mesma coisa até você comparar com um GPS real.
 - **Servidores públicos têm regras.** Limitar as requisições, guardar o que já foi baixado, permitir trocar o servidor e mostrar os créditos faz parte de usar bem um serviço gratuito.
-
-Anterior: [Parte 3, um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one) · Próximo: [Parte 5, o painel flutuante por cima de qualquer app](/blog/gps-simulator-5-floating-panel-over-any-app)

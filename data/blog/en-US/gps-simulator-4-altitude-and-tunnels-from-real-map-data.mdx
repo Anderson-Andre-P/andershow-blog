@@ -1,11 +1,12 @@
 ---
-title: 'Real Altitude and Tunnels in a Simulated GPS: Valhalla, the Geoid and Public Servers'
+title: 'GPS Simulator, part 4: real altitude and tunnels from map data, with Valhalla and the geoid'
 date: '2026-11-26T12:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Flutter', 'Android', 'Kotlin', 'Geolocation']
 draft: false
 summary: 'In the GPS Simulator series, this part shows how the app uses a Valhalla server to get altitude and tunnels from the real map, why terrain height is not the height a GPS chip reports, and how to respect the limits of public servers.'
 authors: ['default']
+series: 'GPS Simulator'
 ---
 
 > **GPS Simulator series · Part 4 of 6.** This is the realism that comes from map data: altitude, tunnels and bridges. Previous: [Part 3, a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
@@ -86,5 +87,3 @@ For Google Maps to work, I had to set up the key in the [Google Cloud Console](h
 - **Fake realism is worse than no realism.** An invented altitude can make a test pass by mistake. Publishing "no altitude" is more honest and more useful.
 - **Geographic data hides details.** Sea level and the ellipsoid look like the same thing until you compare them with a real GPS.
 - **Public servers have rules.** Limiting requests, keeping what was already downloaded, allowing the server to be swapped and showing the credits is part of using a free service well.
-
-Previous: [Part 3, a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one) · Next: [Part 5, the floating panel on top of any app](/blog/gps-simulator-5-floating-panel-over-any-app)
