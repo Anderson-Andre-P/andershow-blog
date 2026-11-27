@@ -4,7 +4,7 @@ date: '2026-11-26T14:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Android', 'Kotlin', 'Widgets', 'Mobile Development']
 draft: false
-summary: 'A home screen widget can’t run a real map; it only shows ready-made images and text. To get the route and the position moving in real time, the simulator draws the map in Kotlin on every step. This part covers the four widgets, the limits of RemoteViews and what I learned from the series.'
+summary: 'A home screen widget can’t run a real map; it only shows ready-made images and text. This part covers the four widgets, how the Dart service hands them state through shared preferences, how their buttons work without opening the app, and how the live map is drawn in Kotlin on every step: Web Mercator by hand, a tile cache that follows the OpenStreetMap policy, and a bitmap small enough to cross a binder. It closes the series with what I learned.'
 authors: ['default']
 series: 'GPS Simulator'
 ---
@@ -13,16 +13,20 @@ series: 'GPS Simulator'
 
 During a test, the floating panel helps when the app under test is on screen. But the simulator also needs to be within reach when **no app is open**: on the home screen, glancing at it to see if the simulation is still running, or pausing it without opening the app. That's what the widgets are for.
 
+They turned out to be the most "Android" part of the project. A widget has no Flutter engine, no `BuildContext` and no state of its own: it is a few views that the launcher draws from a description the app sends. Everything interesting happens in how that description is produced, and in how far it can be stretched.
+
 ## Four widgets
 
 The home screen widget became four, each for a different use:
 
-- **Simulation (4x1):** state, progress and the main buttons in one row.
-- **Quick control (2x1):** one big button to start, pause or resume.
-- **Simulation panel (4x2):** speed, distance, time and lap.
-- **Live map (4x2, resizable):** the route and the position moving on the map, in real time.
+| Widget           | Size | What it shows                                                                                         |
+| ---------------- | ---- | ----------------------------------------------------------------------------------------------------- |
+| Simulation       | 4x1  | state, title, the run in one line, progress, main button and stop                                     |
+| Quick control    | 2x1  | one round button that starts the last route, pauses or resumes, two short lines and stop              |
+| Simulation panel | 4x2  | state and route name, progress bar, up to four figures (speed, distance, time, lap or what's left)    |
+| Live map         | 4x2  | the route and the position moving on a map, with the state, the main button and stop in a strip below |
 
-All of them use the app's colors and font. The pause, resume and stop buttons work **without opening the app**, through the same internal broadcast that the notification and the floating panel use, which Part 5 explained. A widget is just one more place the same command word comes from. Tapping anywhere else on the widget opens the app.
+All four declare `resizeMode="horizontal|vertical"` and `updatePeriodMillis="0"`, and each has a description for the picker and a `previewLayout`, so the picker shows the real layout instead of a blank card. The line and the quick control stretch only up to 120dp tall; the panel and the map can grow much more. All of them use the app's colors and font.
 
 <Screenshots
   images={[
@@ -47,35 +51,172 @@ All of them use the app's colors and font. The pause, resume and stop buttons wo
   ]}
 />
 
-The data comes from the app itself: on every simulation step, the Dart side writes the state to shared preferences (through `home_widget`) and asks the widgets to update. That's why the widgets declare `updatePeriodMillis="0"`: there is no periodic system refresh, only the one the app pushes while the simulation runs.
+The widgets also change with the state. With nothing running, the panel shows the last route and offers to start it again. In a teleport, which has no route to fill, the progress bar goes away and the figures become speed, time and position. When a run has no saved name, the state becomes the title instead of being repeated above it. These are small decisions, but they're what keeps a 4x1 strip readable.
+
+## How the state gets there
+
+The widget providers are Kotlin classes that extend `HomeWidgetProvider`, from the `home_widget` package. When the launcher asks them to update, they receive a `SharedPreferences` and read from it. So the contract between Dart and Kotlin is a set of keys.
+
+On the Dart side, `HomeWidgetCopy` turns the simulation snapshot into a `HomeWidgetView`, with every text already in the app's language, and `HomeWidgetStore` flattens it into keys:
+
+```dart
+static Map<String, Object> entries(HomeWidgetView view) => {
+  'title': view.title,
+  'body': view.body,
+  'action': view.action == HomeWidgetAction.open ? '' : view.action.name,
+  'status': view.status.name,
+  'progress': view.progress, // tenths of a percent, so the bar moves smoothly
+  // `latitude,longitude,bearing`, empty with nothing running.
+  'mapPosition': switch (view.position) {
+    final GeoPoint p? => '${p.latitude},${p.longitude},${view.bearing}',
+    null => '',
+  },
+  for (var i = 0; i < statSlots; i++) ...{
+    'stat${i}Label': i < view.stats.length ? view.stats[i].label : '',
+    'stat${i}Value': i < view.stats.length ? view.stats[i].value : '',
+  },
+};
+```
+
+Two details are worth pointing out. Slots the view doesn't fill are written **empty**, so a figure from the last run never lingers; there's a test for that. And the Kotlin side does no translation: it only renders what was written. The `strings.xml` files, in Portuguese, Spanish, French and Italian, exist for the moment before the first write, when a new widget has nothing to show.
+
+Writing happens in two rhythms:
+
+- **On every tick**, the foreground service (the one from [Part 3](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)) publishes the position and then updates the notification and the widgets. `HomeWidgetStore.write` saves each key with `HomeWidget.saveWidgetData` and asks the four providers to update. The service runs in its own isolate, so the widget update is wrapped in a `try` that swallows `PlatformException` and `MissingPluginException`: a launcher without widget support must never stop a run.
+- **Once per run**, when the simulation starts, the app writes the route, its way back and the tile address for the map widget. The geometry can have thousands of points, so `lineJson` thins it to at most 400, evenly, always keeping both ends. That's enough to draw a line on a widget and cheap enough to write.
+
+The same `idle` view is written when the app opens with no run active and when a run ends, which is why the widgets go back to "last route" by themselves. With `updatePeriodMillis="0"` there is no system refresh at all: if nobody writes, nothing changes. The periodic refresh Android offers is far too slow for a simulation tick anyway, so the app pushes updates itself while the run lasts.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'The run in the app',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Paused, in the app',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notification, same lines as the widgets',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Buttons that don't open the app
+
+Pause, resume and stop work **without opening the app**. Part 5 showed that the floating panel talks to the foreground service with an internal broadcast, the one the notification buttons already used. A widget button is another place the same command comes from, wrapped in a `PendingIntent`:
+
+```kotlin
+private fun command(context: Context, command: String): PendingIntent {
+    val intent = Intent(SERVICE_BUTTON) // "onNotificationButtonPressed"
+        .setPackage(context.packageName)
+        .putExtra(SERVICE_EXTRA, command) // "intentData"
+    // Request codes away from the notification's own buttons (1, 2…).
+    return PendingIntent.getBroadcast(
+        context,
+        REQUEST_BASE + commands.indexOf(command),
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+}
+```
+
+The request code matters. `PendingIntent`s with the same intent and code are the same object, so reusing the notification's codes would make a widget button and a notification button overwrite each other. That's why the widgets start at 7100.
+
+Starting a route is different. The service isn't running yet, so there is nothing to broadcast to; the app has to start it. The button opens the app with a `gpssimulador://startLast` link. On the Dart side, `homeWidgetActions()` reads the link that launched the app (`initiallyLaunchedFromHomeWidget`) and the ones that arrive while it's open (`widgetClicked`) and hands them to the bloc, which loads the last plan and starts it, unless a run is already active. A tap on any other part of a widget just opens the app.
 
 ## The limit: a widget can't run a map
 
 The map widget runs into an Android limit. A home screen widget isn't a miniature app: it lives in the launcher's process and can only show what fits in a `RemoteViews`, a set of ready-made images and text. You can't put a `GoogleMap`, a `flutter_map` or a `WebView` in it.
 
-The solution was to **draw the image in Kotlin on every simulation step**. The app fetches the OpenStreetMap tiles for the area, draws the route, the start, the end and the position with an arrow pointing where it's heading, and hands the bitmap to the widget. Roughly, the `MapWidgetRenderer` does this:
+The solution was to **draw the image in Kotlin on every simulation step**. The app fetches the OpenStreetMap tiles for the area, draws the route, the start, the end and the position with an arrow pointing where it's heading, and hands the bitmap to the widget. A static image of the whole route would never show the position moving, so drawing it myself was the way to get a map that follows the run. It's more code, but it runs wherever the service runs.
 
-1. picks the highest zoom at which the whole route fits in the widget, with a margin;
-2. if the route is too long for that, **follows the position closely** at a fixed zoom instead of showing everything tiny;
-3. draws the map tiles, the route line (the return leg in a different color), the start and end markers and the position arrow.
+The widget layout is simple: an `ImageView` for the picture, a strip of 60dp below with the state and the buttons, and a text shown only when there's nothing to draw. All the work is in `MapWidgetRenderer`, about 370 lines of plain Android graphics, with no map library.
 
-A short route shows up whole. On a long route, the map follows the position.
+## Drawing a map by hand
 
-## What this approach demanded
-
-Drawing a map by hand sounds simple until you run it every second on someone's phone. Four things needed care:
-
-**Respecting the tile server.** Tiles are downloaded once and **kept for 7 days**, in memory and on disk, with a cap on tiles on disk. At most two downloads run at a time, with a User-Agent that identifies the app, as the OpenStreetMap usage policy asks. The "© OpenStreetMap" credit appears in the corner of the image. A tile that failed is only retried after a minute.
+**Web Mercator, in a few lines.** OpenStreetMap tiles use the Web Mercator projection. To place a latitude and longitude in the picture, I project it to "tile pixels" at a zoom level, where the world is `256 × 2^zoom` pixels wide:
 
 ```kotlin
-private const val TILE_DAYS = 7
-private const val RETRY_MILLIS = 60_000L
-private const val MAX_DISK_TILES = 800
-
-private val downloads = Executors.newFixedThreadPool(2)
+// Web Mercator, in tile pixels at [zoom].
+private fun project(p: MapPoint, zoom: Int): Pair<Double, Double> {
+    val world = TILE * (1 shl zoom).toDouble()
+    val lat = p.lat.coerceIn(-85.0511, 85.0511) * PI / 180
+    val x = (p.lng + 180) / 360 * world
+    val y = (1 - ln(tan(lat) + 1 / cos(lat)) / PI) / 2 * world
+    return x to y
+}
 ```
 
-**Not blocking on downloads.** A tile that hasn't arrived yet shows as a plain surface, and when it arrives the renderer says so and a new picture is drawn. The map fills itself in instead of waiting for the network.
+**Choosing the view.** The renderer starts at zoom 17 and goes down until the whole route, its way back and the position fit inside the picture with a 28dp margin. If that happens above zoom 13, the route is shown whole. If the route is so long that it would need a lower zoom, showing it whole would draw a tiny line on a gray square, so the renderer switches to **follow mode**: zoom 15, centered on the position.
+
+```kotlin
+var zoom = MAX_ZOOM
+while (zoom > 1 && !fits(everything, zoom, viewW - 2 * padding, viewH - 2 * padding)) zoom--
+val follow = map.position != null && zoom < MIN_FOLLOW_ZOOM
+if (follow) zoom = FOLLOW_ZOOM
+```
+
+A short route appears whole and the arrow moves inside it. On a long route, the map slides under the arrow.
+
+**Tiles.** With the view chosen, it works out which tiles cover it, wraps the x index around the world, and draws each one at its place, scaled to the picture. The address comes from the app's tile server setting, so it's a template with `{z}`, `{x}` and `{y}`. It's written once per run, which means a change in that setting applies to the next run. It's also the OpenStreetMap server even if the main map is Google Maps.
+
+**What goes on top.** The route is drawn twice, a white 7dp stroke and a 4dp colored one over it, so it stands out on any background. The way back is orange, drawn first so the outbound line stays on top. The start and end are dots, green and red. The position is a blue circle with a white ring and an arrow rotated by the bearing, computed with `sin` and `cos`. In dark mode a translucent black layer dims the tiles. And the "© OpenStreetMap" credit is drawn into the picture itself, in the app's font, in a small white box in the corner.
+
+## The tile cache, and being a good citizen
+
+A map that downloads tiles on every second would be a bad neighbor. The rules I follow, which are what the OpenStreetMap tile usage policy asks:
+
+- **Cache first.** A tile goes to an in-memory cache of 64 bitmaps and to a file in the app's cache directory, capped at 800 files; the oldest are deleted first.
+- **Seven days.** A tile younger than a week is used as is. An older one is still drawn, so the map doesn't go blank, and refreshed in the background.
+- **At most two downloads at a time**, in a fixed thread pool, with a User-Agent that identifies the app and its version.
+- **A failed tile waits a minute** before being tried again, so a bad network doesn't turn into a request storm.
+
+```kotlin
+val file = fileFor(context, url)
+val fresh = file.exists() &&
+    System.currentTimeMillis() - file.lastModified() < TILE_DAYS * 86_400_000L
+if (file.exists()) {
+    BitmapFactory.decodeFile(file.path)?.let { bitmap ->
+        memory.put(url, bitmap)
+        if (!fresh) fetch(context, url, file)
+        return bitmap
+    }
+}
+fetch(context, url, file)
+return null
+```
+
+**Not blocking on downloads.** A tile that hasn't arrived yet is simply not drawn; the area shows the plain surface color. When it arrives, the renderer calls `onTileArrived`, and the provider redraws every map widget. The map fills itself in instead of waiting on the network, and with no network at all the route and the arrow still move over a plain background.
+
+Using OpenStreetMap here also has a privacy side. The widget asks for tiles around the route even when the app is using Google Maps, so the privacy policy inside the app says it: the tiles around the route and the simulated position, kept on the phone for up to 7 days.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Map settings',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/privacy-sections.webp',
+      alt: 'The widget in the privacy policy',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Fitting through a binder, and staying current
 
 **Fitting through a binder.** A `RemoteViews` bitmap travels through a **binder**, which has a size limit; going over it makes the widget update fail. So the image is drawn in `RGB_565` (two bytes per pixel, no transparency) and with a pixel ceiling that lowers the scale when the widget is large:
 
@@ -88,9 +229,11 @@ val scale = minOf(density, MAX_SCALE, sqrt(MAX_PIXELS.toFloat() / area))
 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
 ```
 
-The price is a little sharpness when the widget is stretched to fill the whole screen. I traded that sharpness for a widget that doesn't fail.
+The price is a little sharpness when the widget is stretched to fill the whole screen. I traded that sharpness for a widget that doesn't fail. The drawing is in dp, scaled by the same factor, so the lines and markers keep their proportions at any size.
 
-**Not drawing what has already gone stale.** Drawing runs off the main thread, and every simulation step bumps a generation counter. If a drawing is ready but a newer request already exists, it is discarded. Only the latest reaches the widget. And text and image go **together** in the same update, so the map never blinks empty:
+**Knowing the size.** The size comes from the widget's own options: the minimum width and the maximum height the launcher reports, minus the 60dp strip. When the user resizes the widget, `onAppWidgetOptionsChanged` redraws it. Launchers that don't report a size get a 320 × 180dp default.
+
+**Not drawing what has already gone stale.** Drawing runs off the main thread, in a single-thread executor, and every request bumps a generation counter. If a drawing is ready but a newer request already exists, it is discarded. Only the latest reaches the widget. And text and image go **together** in the same update, so the map never blinks empty:
 
 ```kotlin
 val mine = generation.incrementAndGet()
@@ -102,6 +245,21 @@ painter.execute {
     }
 }
 ```
+
+## Dark mode without a new write
+
+The widget colors are a copy of the app's palette in `values/widget_colors.xml`, with the dark values in `values-night`. The state tiles and the progress bar are tinted with `setColorStateList` and a color resource, which the launcher resolves. So when the phone switches to dark mode, the widgets recolor themselves with no new write from the app. The map is the exception, because it's a bitmap: it is only dimmed the next time it's drawn, which is on the next tick.
+
+## Trying it
+
+If you install the app, this takes two minutes to see:
+
+1. Start any route, with the screen on.
+2. Long-press the home screen, open Widgets and search for "GPS". Add the live map and, if you want, the others.
+3. Stretch the map widget. The picture is redrawn for the new size.
+4. Pause and resume from the widget while another app is open, and watch the app and the notification follow.
+5. Stop the simulation: the widgets go back to "last route". Tap the start button: the app opens and starts it.
+6. Turn on airplane mode in the middle of a run on a new area. The tiles that aren't cached stay as plain surface, but the route and the arrow keep moving.
 
 ## Wrapping up the series
 
@@ -123,5 +281,6 @@ What stayed out of the series, the five languages with translations enforced by 
 - **Geographic data hides details.** Sea level and the ellipsoid look like the same thing until you compare against a real GPS.
 - **The tool has to be where the test happens.** The floating panel and the widgets exist because, during a test, the screen belongs to the app under test, not to the simulator.
 - **Not everything has to be Flutter.** The panel and the map drawing turned out simpler and lighter in Kotlin, talking to Dart through a channel that already existed.
+- **A platform limit is a design brief.** "A widget can't run a map" sounded like the end of the idea. It became a small renderer where every constraint, the binder, the thread, the tile policy, has a line of code.
 - **Let the compiler enforce translations.** With the strings in classes that implement the Portuguese one, an incomplete language doesn't even compile.
 - **Public servers have rules.** Limiting requests, caching what was already downloaded, letting users switch servers and showing the credits is part of using a free service well.

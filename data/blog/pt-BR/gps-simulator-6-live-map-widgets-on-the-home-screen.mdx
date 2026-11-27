@@ -4,7 +4,7 @@ date: '2026-11-26T14:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Android', 'Kotlin', 'Widgets', 'Desenvolvimento Mobile']
 draft: false
-summary: 'Um widget da tela inicial não roda um mapa de verdade, só mostra imagens e textos prontos. Para ter a rota e a posição andando em tempo real, o simulador desenha o mapa em Kotlin a cada passo. Esta parte conta os quatro widgets, os limites do RemoteViews e o que aprendi com a série.'
+summary: 'Um widget da tela inicial não roda um mapa de verdade, só mostra imagens e textos prontos. Esta parte conta os quatro widgets, como o serviço em Dart entrega o estado a eles por shared preferences, como os botões funcionam sem abrir o app e como o mapa ao vivo é desenhado em Kotlin a cada passo: Web Mercator à mão, um cache de pedaços que segue a política do OpenStreetMap e uma imagem pequena o bastante para atravessar um binder. Fecha a série com o que aprendi.'
 authors: ['default']
 series: 'GPS Simulator'
 ---
@@ -13,16 +13,20 @@ series: 'GPS Simulator'
 
 Durante um teste, o painel flutuante resolve quando o app testado está na tela. Mas o simulador também precisa estar à mão quando **nenhum app está aberto**: na tela inicial, olhando de relance para ver se a simulação ainda roda, ou pausando sem abrir o app. Para isso o simulador tem widgets.
 
+Eles acabaram sendo a parte mais "Android" do projeto. Um widget não tem motor Flutter, nem `BuildContext`, nem estado próprio: são algumas views que o launcher desenha a partir de uma descrição que o app envia. Tudo o que interessa está em como essa descrição é produzida e até onde ela pode ser esticada.
+
 ## Quatro widgets
 
 O widget da tela inicial virou quatro, cada um para um uso:
 
-- **Simulação (4x1):** estado, progresso e os botões principais numa linha.
-- **Controle rápido (2x1):** um botão grande para iniciar, pausar ou retomar.
-- **Painel da simulação (4x2):** velocidade, distância, tempo e volta.
-- **Mapa ao vivo (4x2, redimensionável):** a rota e a posição andando no mapa, em tempo real.
+| Widget              | Tamanho | O que mostra                                                                                                       |
+| ------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| Simulação           | 4x1     | estado, título, a corrida numa linha, progresso, botão principal e parar                                           |
+| Controle rápido     | 2x1     | um botão redondo que inicia a última rota, pausa ou retoma, duas linhas curtas e parar                             |
+| Painel da simulação | 4x2     | estado e nome da rota, barra de progresso, até quatro números (velocidade, distância, tempo, volta ou o que falta) |
+| Mapa ao vivo        | 4x2     | a rota e a posição andando no mapa, com o estado, o botão principal e parar numa faixa embaixo                     |
 
-Todos usam as cores e a fonte do app. Os botões de pausar, retomar e parar funcionam **sem abrir o app**, pelo mesmo broadcast interno que a notificação e o painel flutuante usam, o que foi explicado na Parte 5. Um widget é só mais um lugar de onde sai a mesma palavra de comando. Tocar no resto do widget abre o app.
+Os quatro declaram `resizeMode="horizontal|vertical"` e `updatePeriodMillis="0"`, e cada um tem uma descrição para o seletor e um `previewLayout`, então o seletor mostra o layout de verdade em vez de um cartão em branco. A linha e o controle rápido só esticam até 120dp de altura; o painel e o mapa podem crescer bem mais. Todos usam as cores e a fonte do app.
 
 <Screenshots
   images={[
@@ -47,37 +51,174 @@ Todos usam as cores e a fonte do app. Os botões de pausar, retomar e parar func
   ]}
 />
 
-Os dados vêm do próprio app: a cada passo da simulação, o lado Dart grava o estado nas preferências compartilhadas (via `home_widget`) e pede a atualização dos widgets. Por isso os widgets declaram `updatePeriodMillis="0"`: não existe atualização periódica do sistema, só a que o app empurra enquanto a simulação anda.
+Os widgets também mudam conforme o estado. Sem nada rodando, o painel mostra a última rota e oferece iniciá-la de novo. Num teletransporte, que não tem rota para preencher, a barra de progresso some e os números viram velocidade, tempo e posição. Quando uma corrida não tem nome salvo, o estado vira o título em vez de aparecer repetido acima. São decisões pequenas, mas é o que mantém uma faixa 4x1 legível.
+
+## Como o estado chega lá
+
+Os providers dos widgets são classes Kotlin que estendem `HomeWidgetProvider`, do pacote `home_widget`. Quando o launcher pede uma atualização, eles recebem um `SharedPreferences` e leem dele. Então o contrato entre Dart e Kotlin é um conjunto de chaves.
+
+Do lado do Dart, o `HomeWidgetCopy` transforma o retrato da simulação num `HomeWidgetView`, com todos os textos já no idioma do app, e o `HomeWidgetStore` o transforma em chaves:
+
+```dart
+static Map<String, Object> entries(HomeWidgetView view) => {
+  'title': view.title,
+  'body': view.body,
+  'action': view.action == HomeWidgetAction.open ? '' : view.action.name,
+  'status': view.status.name,
+  'progress': view.progress, // tenths of a percent, so the bar moves smoothly
+  // `latitude,longitude,bearing`, empty with nothing running.
+  'mapPosition': switch (view.position) {
+    final GeoPoint p? => '${p.latitude},${p.longitude},${view.bearing}',
+    null => '',
+  },
+  for (var i = 0; i < statSlots; i++) ...{
+    'stat${i}Label': i < view.stats.length ? view.stats[i].label : '',
+    'stat${i}Value': i < view.stats.length ? view.stats[i].value : '',
+  },
+};
+```
+
+Dois detalhes merecem destaque. Os espaços que o view não preenche são gravados **vazios**, para que um número da corrida anterior nunca fique por lá; há um teste para isso. E o lado Kotlin não traduz nada: só desenha o que foi gravado. Os arquivos `strings.xml`, em português, espanhol, francês e italiano, existem para o instante antes da primeira gravação, quando um widget recém-adicionado ainda não tem o que mostrar.
+
+A gravação acontece em dois ritmos:
+
+- **A cada passo**, o serviço em primeiro plano (o da [Parte 3](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)) publica a posição e depois atualiza a notificação e os widgets. O `HomeWidgetStore.write` grava cada chave com `HomeWidget.saveWidgetData` e pede aos quatro providers que se atualizem. O serviço roda num isolate próprio, então a atualização dos widgets fica num `try` que engole `PlatformException` e `MissingPluginException`: um launcher sem suporte a widgets nunca pode interromper uma simulação.
+- **Uma vez por corrida**, quando a simulação começa, o app grava a rota, a volta e o endereço dos pedaços de mapa para o widget do mapa. A geometria pode ter milhares de pontos, então o `lineJson` a reduz a no máximo 400, de forma uniforme, sempre mantendo as duas pontas. Basta para desenhar uma linha num widget e é barato de gravar.
+
+O mesmo estado `idle` é gravado quando o app abre sem corrida ativa e quando uma corrida termina, por isso os widgets voltam sozinhos para "última rota". Com `updatePeriodMillis="0"` não existe atualização periódica do sistema: se ninguém grava, nada muda. A atualização periódica que o Android oferece é lenta demais para um passo da simulação, então o app empurra as atualizações enquanto a corrida dura.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'A corrida no app',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Pausada, no app',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notificação, com as mesmas linhas dos widgets',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Botões que não abrem o app
+
+Pausar, retomar e parar funcionam **sem abrir o app**. A Parte 5 mostrou que o painel flutuante conversa com o serviço em primeiro plano por um broadcast interno, o mesmo que os botões da notificação já usavam. O botão de um widget é mais um lugar de onde sai o mesmo comando, embrulhado num `PendingIntent`:
+
+```kotlin
+private fun command(context: Context, command: String): PendingIntent {
+    val intent = Intent(SERVICE_BUTTON) // "onNotificationButtonPressed"
+        .setPackage(context.packageName)
+        .putExtra(SERVICE_EXTRA, command) // "intentData"
+    // Request codes away from the notification's own buttons (1, 2…).
+    return PendingIntent.getBroadcast(
+        context,
+        REQUEST_BASE + commands.indexOf(command),
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+}
+```
+
+O código de requisição importa. `PendingIntent`s com o mesmo intent e o mesmo código são o mesmo objeto, então reaproveitar os códigos da notificação faria o botão do widget e o da notificação se sobrescreverem. Por isso os widgets começam em 7100.
+
+Iniciar uma rota é diferente. O serviço ainda não está rodando, então não há para quem mandar um broadcast; quem precisa iniciá-lo é o app. O botão abre o app com um link `gpssimulador://startLast`. Do lado do Dart, o `homeWidgetActions()` lê o link que abriu o app (`initiallyLaunchedFromHomeWidget`) e os que chegam com ele aberto (`widgetClicked`) e os entrega ao bloc, que carrega o último plano e o inicia, a menos que já haja uma corrida ativa. Um toque em qualquer outra parte do widget só abre o app.
 
 ## O limite: um widget não roda um mapa
 
 O widget do mapa esbarra num limite do Android. Um widget da tela inicial não é um app em miniatura: ele vive no processo do launcher e só pode mostrar o que cabe num `RemoteViews`, um conjunto de imagens e textos prontos. Não dá para colocar nele um `GoogleMap`, um `flutter_map` ou uma `WebView`.
 
-A solução foi **desenhar a imagem em Kotlin a cada passo da simulação**. O app busca os pedaços do mapa do OpenStreetMap da região, desenha a rota, o início, o fim e a posição com uma seta para onde ela vai, e entrega o bitmap ao widget. Em linhas gerais, o `MapWidgetRenderer` faz isto:
+A solução foi **desenhar a imagem em Kotlin a cada passo da simulação**. O app busca os pedaços do mapa do OpenStreetMap da região, desenha a rota, o início, o fim e a posição com uma seta para onde ela vai, e entrega o bitmap ao widget. Uma imagem estática da rota inteira nunca mostraria a posição andando, então desenhar eu mesmo foi o caminho para ter um mapa que acompanha a corrida. Dá mais código, mas roda onde quer que o serviço rode.
 
-1. escolhe o maior zoom em que a rota toda cabe no widget, com uma margem;
-2. se a rota for longa demais para isso, passa a **acompanhar a posição de perto**, com um zoom fixo, em vez de mostrar tudo minúsculo;
-3. desenha os pedaços de mapa, a linha da rota (a volta numa cor diferente), os marcadores de início e fim e a seta da posição.
+O layout do widget é simples: um `ImageView` para a imagem, uma faixa de 60dp embaixo com o estado e os botões, e um texto que só aparece quando não há o que desenhar. Todo o trabalho está no `MapWidgetRenderer`, cerca de 370 linhas de gráficos do Android puros, sem biblioteca de mapas.
 
-Uma rota curta aparece inteira. Numa rota longa, o mapa acompanha a posição.
+## Desenhando um mapa à mão
 
-## Os cuidados que essa abordagem pediu
-
-Desenhar um mapa à mão parece simples até você rodar isso a cada segundo no celular de alguém. Foram quatro cuidados:
-
-**Respeitar o servidor de pedaços.** Os pedaços (tiles) são baixados uma vez e **guardados por 7 dias**, em memória e em disco, com um teto de pedaços no disco. No máximo dois downloads rodam ao mesmo tempo, com um User-Agent que identifica o app, como a política de uso do OpenStreetMap pede. O crédito "© OpenStreetMap" aparece no canto da imagem. Um pedaço que falhou só é tentado de novo depois de um minuto.
+**Web Mercator, em poucas linhas.** Os pedaços do OpenStreetMap usam a projeção Web Mercator. Para colocar uma latitude e uma longitude na imagem, eu a projeto em "pixels de pedaço" num nível de zoom, em que o mundo tem `256 × 2^zoom` pixels de largura:
 
 ```kotlin
-private const val TILE_DAYS = 7
-private const val RETRY_MILLIS = 60_000L
-private const val MAX_DISK_TILES = 800
-
-private val downloads = Executors.newFixedThreadPool(2)
+// Web Mercator, in tile pixels at [zoom].
+private fun project(p: MapPoint, zoom: Int): Pair<Double, Double> {
+    val world = TILE * (1 shl zoom).toDouble()
+    val lat = p.lat.coerceIn(-85.0511, 85.0511) * PI / 180
+    val x = (p.lng + 180) / 360 * world
+    val y = (1 - ln(tan(lat) + 1 / cos(lat)) / PI) / 2 * world
+    return x to y
+}
 ```
 
-**Não travar a tela com download.** Um pedaço que ainda não chegou aparece como uma superfície lisa, e, quando ele chega, o renderizador avisa e uma nova imagem é desenhada. O mapa se completa sozinho, em vez de esperar a rede.
+**Escolhendo o enquadramento.** O renderizador começa no zoom 17 e desce até que a rota inteira, a volta e a posição caibam na imagem com uma margem de 28dp. Se isso acontecer acima do zoom 13, a rota aparece inteira. Se a rota for tão longa que exigiria um zoom menor, mostrá-la inteira desenharia uma linha minúscula num quadrado cinza, então o renderizador passa ao **modo de acompanhamento**: zoom 15, centrado na posição.
 
-**Caber num binder.** Um bitmap de um `RemoteViews` viaja por um **binder**, que tem limite de tamanho; passar disso derruba a atualização do widget. Por isso a imagem é desenhada em `RGB_565` (dois bytes por pixel, sem transparência) e com um teto de pixels, que reduz a escala quando o widget é grande:
+```kotlin
+var zoom = MAX_ZOOM
+while (zoom > 1 && !fits(everything, zoom, viewW - 2 * padding, viewH - 2 * padding)) zoom--
+val follow = map.position != null && zoom < MIN_FOLLOW_ZOOM
+if (follow) zoom = FOLLOW_ZOOM
+```
+
+Uma rota curta aparece inteira e a seta anda dentro dela. Numa rota longa, o mapa desliza por baixo da seta.
+
+**Os pedaços.** Com o enquadramento escolhido, ele calcula quais pedaços o cobrem, dá a volta no mundo no índice x e desenha cada um no seu lugar, na escala da imagem. O endereço vem da configuração de servidor de mapa do app, então é um modelo com `{z}`, `{x}` e `{y}`. Ele é gravado uma vez por corrida, o que significa que uma mudança nessa configuração vale a partir da próxima corrida. E é o servidor do OpenStreetMap mesmo quando o mapa principal é o Google Maps.
+
+**O que vai por cima.** A rota é desenhada duas vezes, um traço branco de 7dp e um colorido de 4dp por cima, para se destacar em qualquer fundo. A volta é laranja, desenhada antes para que a ida fique por cima. O início e o fim são pontos, verde e vermelho. A posição é um círculo azul com um anel branco e uma seta girada pela direção, calculada com `sin` e `cos`. No modo escuro, uma camada preta translúcida escurece os pedaços. E o crédito "© OpenStreetMap" é desenhado na própria imagem, na fonte do app, numa caixinha branca no canto.
+
+## O cache de pedaços e ser um bom cidadão
+
+Um mapa que baixa pedaços a cada segundo seria um péssimo vizinho. As regras que sigo, que são o que a política de uso dos pedaços do OpenStreetMap pede:
+
+- **Cache primeiro.** Um pedaço vai para um cache em memória de 64 bitmaps e para um arquivo no diretório de cache do app, limitado a 800 arquivos; os mais antigos são apagados primeiro.
+- **Sete dias.** Um pedaço com menos de uma semana é usado como está. Um mais antigo ainda é desenhado, para o mapa não ficar em branco, e atualizado em segundo plano.
+- **No máximo dois downloads ao mesmo tempo**, num pool de threads fixo, com um User-Agent que identifica o app e a versão.
+- **Um pedaço que falhou espera um minuto** antes de ser tentado de novo, para que uma rede ruim não vire uma tempestade de requisições.
+
+```kotlin
+val file = fileFor(context, url)
+val fresh = file.exists() &&
+    System.currentTimeMillis() - file.lastModified() < TILE_DAYS * 86_400_000L
+if (file.exists()) {
+    BitmapFactory.decodeFile(file.path)?.let { bitmap ->
+        memory.put(url, bitmap)
+        if (!fresh) fetch(context, url, file)
+        return bitmap
+    }
+}
+fetch(context, url, file)
+return null
+```
+
+**Sem travar nos downloads.** Um pedaço que ainda não chegou simplesmente não é desenhado; a área mostra a cor da superfície. Quando ele chega, o renderizador chama o `onTileArrived` e o provider redesenha todos os widgets de mapa. O mapa se preenche sozinho em vez de esperar pela rede, e sem rede nenhuma a rota e a seta continuam andando sobre um fundo liso.
+
+Usar o OpenStreetMap aqui também tem um lado de privacidade. O widget pede pedaços ao redor da rota mesmo quando o app usa o Google Maps, e por isso a política de privacidade dentro do app diz: os pedaços ao redor da rota e a posição simulada, guardados no celular por até 7 dias.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Configurações do mapa',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/privacy-sections.webp',
+      alt: 'O widget na política de privacidade',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Cabendo num binder e se mantendo atual
+
+**Cabendo num binder.** O bitmap de um `RemoteViews` viaja por um **binder**, que tem limite de tamanho; passar dele faz a atualização do widget falhar. Por isso a imagem é desenhada em `RGB_565` (dois bytes por pixel, sem transparência) e com um teto de pixels, que diminui a escala quando o widget é grande:
 
 ```kotlin
 /** A RemoteViews bitmap travels through a binder: keep it small. */
@@ -88,9 +229,11 @@ val scale = minOf(density, MAX_SCALE, sqrt(MAX_PIXELS.toFloat() / area))
 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
 ```
 
-O preço é um pouco de nitidez quando o widget é esticado até ocupar a tela toda. Troquei essa nitidez por um widget que não falha.
+O preço é um pouco de nitidez quando o widget é esticado até ocupar a tela toda. Troquei essa nitidez por um widget que não falha. O desenho é feito em dp, multiplicado pelo mesmo fator, então as linhas e os marcadores mantêm a proporção em qualquer tamanho.
 
-**Não desenhar o que já ficou velho.** O desenho roda fora da thread principal, e cada passo da simulação incrementa um contador de geração. Se um desenho está pronto, mas já existe um pedido mais novo, ele é descartado. Só o mais recente chega ao widget. E o texto e a imagem vão **juntos** na mesma atualização, para o mapa não piscar vazio a cada segundo:
+**Sabendo o tamanho.** O tamanho vem das opções do próprio widget: a largura mínima e a altura máxima que o launcher informa, menos a faixa de 60dp. Quando a pessoa redimensiona o widget, o `onAppWidgetOptionsChanged` o redesenha. Launchers que não informam o tamanho recebem um padrão de 320 × 180dp.
+
+**Sem desenhar o que já ficou velho.** O desenho roda fora da thread principal, num executor de uma thread só, e cada pedido incrementa um contador de geração. Se um desenho fica pronto mas já existe um pedido mais novo, ele é descartado. Só o mais recente chega ao widget. E texto e imagem vão **juntos** na mesma atualização, para o mapa nunca piscar vazio:
 
 ```kotlin
 val mine = generation.incrementAndGet()
@@ -103,25 +246,41 @@ painter.execute {
 }
 ```
 
+## Modo escuro sem nova gravação
+
+As cores dos widgets são uma cópia da paleta do app em `values/widget_colors.xml`, com os valores escuros em `values-night`. Os blocos de estado e a barra de progresso são pintados com `setColorStateList` e um recurso de cor, que o launcher resolve. Então, quando o celular troca para o modo escuro, os widgets mudam de cor sozinhos, sem nenhuma gravação do app. O mapa é a exceção, porque é um bitmap: ele só escurece da próxima vez que é desenhado, o que acontece no passo seguinte.
+
+## Para experimentar
+
+Se você instalar o app, dá para ver tudo em dois minutos:
+
+1. Inicie uma rota qualquer, com a tela ligada.
+2. Segure o dedo na tela inicial, abra Widgets e procure por "GPS". Adicione o mapa ao vivo e, se quiser, os outros.
+3. Estique o widget do mapa. A imagem é redesenhada para o novo tamanho.
+4. Pause e retome pelo widget com outro app aberto, e veja o app e a notificação acompanharem.
+5. Pare a simulação: os widgets voltam para "última rota". Toque no botão de iniciar: o app abre e a inicia.
+6. Ative o modo avião no meio de uma corrida numa região nova. Os pedaços que não estão no cache ficam como superfície lisa, mas a rota e a seta continuam andando.
+
 ## Fechando a série
 
-Esta foi a última parte. O caminho todo, em seis passos:
+Essa foi a última parte. O caminho todo, em seis passos:
 
 1. [Como o Android aceita posições falsas](/blog/gps-simulator-1-how-android-accepts-fake-locations): os provedores de teste e a regra de não inventar dados.
 2. [Rotas pelas ruas ou em linha reta](/blog/gps-simulator-2-routes-streets-or-straight-lines).
-3. [Um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
-4. [Altitude e túneis a partir de dados reais do mapa](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+3. [Um GPS que se comporta como o de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+4. [Altitude e túneis do mapa real](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
 5. [Um painel flutuante por cima de qualquer app](/blog/gps-simulator-5-floating-panel-over-any-app).
 6. Widgets e o mapa ao vivo (esta parte).
 
-O que ficou fora da série, os cinco idiomas com tradução cobrada pelo compilador, a arquitetura em Clean Architecture e BLoC e os ajustes de interface, está na [página do projeto](/projects/gps-simulator).
+O que ficou fora da série, os cinco idiomas com traduções cobradas pelo compilador, a estrutura de Clean Architecture e BLoC e os ajustes de interface, está na [página do projeto](/projects/gps-simulator).
 
 ## O que eu aprendi
 
-- **Ferramentas internas valem o investimento.** Um bom simulador transforma um teste de campo de meia hora em alguns toques, e torna testáveis casos difíceis de reproduzir na rua, como entrar num túnel no meio de uma rota.
+- **Ferramentas internas valem o investimento.** Um bom simulador transforma um teste de campo de meia hora em alguns toques, e torna testáveis casos que seriam difíceis de reproduzir na rua, como entrar num túnel no meio de uma rota.
 - **Realismo falso é pior que nenhum realismo.** Uma altitude inventada pode fazer um teste passar por engano. Publicar "sem altitude" é mais honesto e mais útil.
 - **Dados geográficos escondem detalhes.** Nível do mar e elipsoide parecem a mesma coisa até você comparar com um GPS real.
 - **A ferramenta precisa estar onde o teste acontece.** O painel flutuante e os widgets existem porque, durante um teste, a tela é do app testado, e não do simulador.
 - **Nem tudo precisa ser Flutter.** O painel e o desenho do mapa ficaram mais simples e mais leves em Kotlin, conversando com o Dart por um canal que já existia.
+- **Um limite da plataforma é um briefing de design.** "Um widget não roda um mapa" parecia o fim da ideia. Virou um renderizador pequeno em que cada restrição, o binder, a thread, a política dos pedaços, tem uma linha de código.
 - **Deixe o compilador cobrar as traduções.** Com os textos em classes que implementam o português, um idioma incompleto nem compila.
 - **Servidores públicos têm regras.** Limitar as requisições, guardar o que já foi baixado, permitir trocar o servidor e mostrar os créditos faz parte de usar bem um serviço gratuito.
