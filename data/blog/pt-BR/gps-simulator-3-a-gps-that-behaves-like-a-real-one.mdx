@@ -4,7 +4,7 @@ date: '2026-11-26T11:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocalização', 'Testes']
 draft: false
-summary: 'Uma rota perfeita, a velocidade constante e sem erro nenhum, esconde os bugs que aparecem num GPS real. Neste post conto como o Simulador de GPS publica ruído, variação de velocidade, freada nas curvas, um ponto parado que oscila e um cenário de cerca virtual, e como a simulação continua com a tela desligada.'
+summary: 'Uma rota perfeita, a velocidade constante e sem erro nenhum, esconde os bugs que aparecem num GPS real. Um passeio pelo motor de simulação do Simulador de GPS: uma função pura do tempo, o laço de ticks no serviço em primeiro plano, ruído repetível, variação de velocidade, freada antes das curvas, um ponto parado que oscila, a máquina de estados da cerca virtual e como testar cada imperfeição você mesmo.'
 authors: ['default']
 series: 'GPS Simulator'
 ---
@@ -13,23 +13,69 @@ series: 'GPS Simulator'
 
 ## Uma posição perfeita é uma posição suspeita
 
-O primeiro teste que fiz com o simulador foi o mais ingênuo: uma rota limpa, a 40 km/h constantes, uma posição por segundo, todas exatamente em cima da linha. Funcionou, e foi justamente esse o problema. Um app de rastreamento que passa nesse teste não prova nada, porque **nenhum GPS real se comporta assim**.
+O primeiro teste que fiz com o simulador foi o mais ingênuo: uma rota limpa, a 40 km/h constantes, uma posição por segundo, todas exatamente sobre a linha. Funcionou, e esse era justamente o problema. Um app de rastreamento que passa nesse teste não prova nada, porque **nenhum GPS de verdade se comporta assim**.
 
-Num celular de verdade, a posição oscila alguns metros para os lados, a velocidade sobe e desce, o motorista freia antes de uma curva fechada e um aparelho parado na mesa nunca informa exatamente a mesma coordenada. Os bugs de localização costumam morar nesses detalhes: um filtro de distância mínima que descarta pontos demais, um cálculo de velocidade que dispara com o ruído, uma cerca virtual que dispara duas vezes na borda.
+Num celular real, a posição balança alguns metros para os lados, a velocidade sobe e desce, o motorista freia antes de uma curva fechada e um aparelho parado sobre a mesa nunca informa a mesma coordenada duas vezes. Os bugs de localização costumam morar nesses detalhes: um filtro de distância mínima que descarta pontos demais, um cálculo de velocidade que dispara com o ruído, uma cerca virtual que dispara duas vezes na borda.
 
-Então o motor da simulação, que fica na camada de domínio e não depende do Flutter nem do Android, aplica cada imperfeição de forma separada e configurável.
+Por isso cada imperfeição é aplicada separadamente e é configurável. Isso transforma cada uma delas numa **variável de teste**: dá para ligar só o ruído, só a freada, ou os dois, e descobrir qual deles causa o bug. Este post mostra como isso funciona, até o código, e termina com um roteiro curto para reproduzir cada comportamento no app.
 
-## O intervalo entre posições
+## O motor é uma função pura do tempo
 
-A unidade básica é o _tick_: uma posição publicada. O intervalo padrão é de **1 s**, e dá para escolher 0,5 s, 1 s, 2 s ou 5 s. Cada tick carrega latitude, longitude, velocidade, direção, precisão e horário.
+Tudo neste post está numa classe, o `SimulationEngine`, na camada de domínio. Ele não conhece Flutter, Android nem o relógio. O contrato é pequeno: dado o `SimulationProgress` atual e o tempo que passou, ele responde o próximo progresso; dado um progresso, responde a posição a publicar.
 
-O serviço que roda em segundo plano mede o tempo real entre dois ticks e avança o motor por esse tempo, com um teto de 10 segundos por passo. Se o sistema atrasar o serviço, a posição recupera o atraso, mas um aparelho que ficou parado por um minuto não dá um salto absurdo quando acorda.
+```dart
+/// Advances [progress] by [elapsedMillis]. A paused or finished simulation
+/// keeps ticking, so the last position goes on being published.
+SimulationProgress advance(SimulationProgress progress, int elapsedMillis) {
+  final ticked = progress.copyWith(tick: progress.tick + 1);
+  return switch (progress.status) {
+    SimulationStatus.teleport when progress.steering => _walk(/* ... */),
+    SimulationStatus.teleport => _drift(/* ... */),
+    SimulationStatus.running => _move(ticked, elapsedMillis),
+    _ => ticked,
+  };
+}
+```
+
+Duas decisões nesse `switch` pequeno importam para tudo o que vem depois.
+
+**O tempo vem de fora.** O motor nunca lê o relógio; o serviço diz quantos milissegundos passaram. É isso que o torna testável: a suíte de testes avança uma simulação chamando `advance(progress, 1000)` algumas centenas de vezes num laço, sem espera real e sem mocks.
+
+**O estado inteiro é um valor simples.** O `SimulationProgress` guarda a distância percorrida no trecho atual, a volta, o tempo decorrido, o contador de ticks, o tempo de espera dentro de uma cerca virtual e o deslocamento de uma posição parada. Tudo é serializado em JSON, porque esse objeto é o que precisa sobreviver quando o sistema mata o serviço em segundo plano. Volto a isso no fim, porque explica por que campos que parecem detalhe, como o deslocamento da oscilação, estão ali.
+
+A outra metade do contrato é o `fix(progress)`, que transforma um progresso num `SimulatedFix`: ponto, direção, velocidade, precisão e altitude. As imperfeições são aplicadas ali, e não no movimento. O veículo sempre anda exatamente sobre a linha; o que se publica é uma versão distorcida dela.
+
+### Achando o veículo na linha
+
+A rota é uma polilinha, e o progresso só guarda quantos metros foram percorridos no trecho atual. O `locate` transforma essa distância num ponto: percorre os segmentos até achar o que a contém e interpola:
+
+```dart
+for (var i = 1; i < line.length; i++) {
+  final a = line[i - 1];
+  final b = line[i];
+  final length = GeoMath.distanceMeters(a, b);
+  if (length > 0 && (walked + length >= target || i == line.length - 1)) {
+    final t = ((target - walked) / length).clamp(0.0, 1.0);
+    return (
+      point: GeoMath.interpolate(a, b, t),
+      bearing: GeoMath.bearingDegrees(a, b),
+    );
+  }
+  walked += length;
+}
+```
+
+A direção publicada é a do segmento, então muda de uma vez numa esquina. Um GPS de verdade suaviza isso um pouco; deixei como está, porque é o comportamento do dado, e é exatamente o que a lógica de curvas abaixo lê.
+
+## O tick: uma posição e o tempo entre duas delas
+
+A unidade básica é o _tick_: uma posição publicada, com latitude, longitude, velocidade, direção, precisão e horário. O intervalo padrão é de **1 s**, e dá para escolher 0,5 s, 1 s, 2 s ou 5 s nas configurações.
 
 <Screenshots
   images={[
     {
       src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
-      alt: 'Configurações da simulação',
+      alt: 'Configurações: simulação',
       width: 540,
       height: 1200,
     },
@@ -42,15 +88,34 @@ O serviço que roda em segundo plano mede o tempo real entre dois ticks e avanç
   ]}
 />
 
+O intervalo é entregue ao serviço em primeiro plano como um evento repetido (`ForegroundTaskEventAction.repeat(plan.tickMillis)`), e o tratador que roda a cada evento é curto o bastante para citar inteiro:
+
+```dart
+Future<void> _tick(DateTime now) async {
+  if (_busy || _stopRequested || engine == null || progress == null) return;
+  final last = _lastTick ?? now;
+  final step = now.difference(last).inMilliseconds.clamp(0, _maxStepMillis);
+  _lastTick = now;
+  _progress = engine.advance(progress, step);
+  await _publish(now);
+}
+```
+
+Três detalhes merecem atenção.
+
+- **O passo é medido, não presumido.** O motor avança o tempo real entre dois ticks, e não o intervalo configurado. Se o Android atrasa o serviço, a posição se atualiza; se o intervalo é de 5 s, o veículo anda 5 s de estrada por tick.
+- **O passo tem teto de 10 s** (`_maxStepMillis`). Um aparelho que ficou congelado por um minuto não acorda com um salto absurdo; ele anda 10 s de estrada e segue.
+- **Um tick que chega enquanto o anterior ainda está publicando é descartado** (`_busy`), mas o `_lastTick` só é atualizado quando um tick realmente roda, então o tempo descartado não se perde: é somado ao próximo passo. Um comando que chega nesse meio-tempo, como pausar ou mudar a velocidade, liga a marca `_changed`, e uma nova publicação roda assim que a atual termina.
+
 ## Perfis de precisão
 
-Em vez de pedir que a pessoa ajuste três botões toda vez, o app tem três perfis prontos:
+Em vez de pedir que a pessoa ajuste três chaves toda vez, o app tem três perfis prontos:
 
-- **Cidade:** ruído médio, velocidade que oscila e freada nas curvas. É o padrão, porque é o caso mais comum de teste.
-- **Rodovia:** pouco ruído e velocidade que oscila, sem freada nas curvas.
-- **Área coberta:** ruído alto, como quem anda entre prédios ou sob árvores.
+- **Cidade:** ruído médio, velocidade oscilando e freada nas curvas. É o padrão, porque é o caso de teste mais comum.
+- **Rodovia:** ruído baixo e velocidade oscilando, sem freada nas curvas.
+- **Área coberta:** só ruído alto, como andar entre prédios ou sob árvores.
 
-Qualquer outra combinação aparece como "personalizado". Os perfis são só atalhos para os três ajustes abaixo, e o código os guarda como um objeto simples, comparado por valor:
+Qualquer outra combinação aparece como "personalizado". Os perfis são só atalhos para os três ajustes abaixo, e o código os guarda como um objeto de valor simples, comparado por valor, que é como a tela sabe qual perfil está selecionado:
 
 ```dart
 static GpsRealism of(GpsProfile profile) => switch (profile) {
@@ -62,15 +127,17 @@ static GpsRealism of(GpsProfile profile) => switch (profile) {
   GpsProfile.covered => const GpsRealism(noise: GpsNoise.high),
   GpsProfile.custom => const GpsRealism(),
 };
+
+/// The preset these values match, else [GpsProfile.custom].
+GpsProfile get profile => GpsProfile.values.firstWhere(
+  (p) => p != GpsProfile.custom && of(p) == this,
+  orElse: () => GpsProfile.custom,
+);
 ```
 
-Esses ajustes são escolhas **da pessoa**, e não vêm do mapa. Isso é coerente com a regra da série: o que parece real e vem do mapa (altitude, túneis) só usa dados reais, e o que é imperfeição de equipamento é configurado de forma explícita.
+Os testes fixam isso: mudar uma chave do perfil Cidade o torna `custom`, e um `GpsRealism()` simples continua neutro para o motor. As configurações novas começam em Cidade, mas o construtor usado pelo motor tem tudo desligado, então um teste que não pede imperfeições recebe uma linha limpa.
 
-## Ruído na posição
-
-O ruído tem quatro níveis, que definem o raio máximo do erro: **nenhum, baixo (3 m), médio (8 m) e alto (20 m)**. A cada tick, a posição publicada se afasta da linha da rota por uma direção sorteada e uma distância sorteada até esse raio. A precisão informada ao sistema acompanha o ruído, porque um app que lê `accuracy` precisa receber um valor coerente com o erro que a posição tem: 5 m de base mais o raio do ruído.
-
-Um detalhe que me ajudou muito: o sorteio é **repetível**. Ele usa como semente o número do tick, então o mesmo tick sempre gera a mesma posição. Quando um bug aparece numa simulação, dá para repeti-la e ver exatamente os mesmos pontos.
+Esses ajustes são escolhas **feitas pela pessoa**, não lidas do mapa. Isso combina com a regra desta série: o que parece real e vem do mapa (altitude, túneis) só usa dado real, e o que é imperfeição do equipamento é configurado de forma explícita.
 
 <Screenshots
   images={[
@@ -89,13 +156,37 @@ Um detalhe que me ajudou muito: o sorteio é **repetível**. Ele usa como sement
   ]}
 />
 
-## Velocidade que oscila e freada nas curvas
+## Ruído na posição
+
+O ruído tem quatro níveis, que definem o raio máximo do erro: **nenhum, baixo (3 m), médio (8 m) e alto (20 m)**. A cada tick, a posição publicada se afasta da linha da rota numa direção aleatória e numa distância aleatória de até esse raio:
+
+```dart
+final random = math.Random(p.tick * 7919 + 17);
+final point = noise == 0
+    ? located.point
+    : GeoMath.offset(
+        located.point,
+        random.nextDouble() * 360,
+        random.nextDouble() * noise,
+      );
+```
+
+A precisão informada ao sistema acompanha o ruído, porque um app que lê `accuracy` precisa de um valor coerente com o erro que a posição realmente tem: **5 m de base mais o raio do ruído**, ou seja, 13 m no perfil Cidade. A precisão vertical é de 10 m mais o mesmo raio.
+
+Um detalhe que me ajudou muito: o sorteio é **repetível**. A semente vem do número do tick, então o mesmo tick sempre produz a mesma posição. Quando aparece um bug numa simulação, rodo de novo e vejo exatamente os mesmos pontos, e um teste pode afirmar sobre uma posição em vez de sobre uma faixa. O `7919` é um multiplicador primo, para que ticks consecutivos não gerem sementes vizinhas.
+
+Duas observações honestas sobre esse modelo, porque importam quando você testa:
+
+- A distância é sorteada de forma uniforme entre 0 e o raio, então os pontos se concentram um pouco mais perto da linha do que numa dispersão uniforme sobre o disco. É bom o bastante para exercitar filtros; não é um modelo estatístico de um receptor de GPS.
+- O ruído de uma posição em movimento é **independente de um tick para o outro** (ruído branco). O erro de um receptor real é correlacionado, derivando devagar. O modelo correlacionado existe no motor, mas só o uso onde mais importa, para uma posição parada, o que mostro adiante.
+
+## Variação de velocidade e freada nas curvas
 
 A velocidade escolhida é a **velocidade de cruzeiro**. Sobre ela, o motor aplica dois fatores, cada um com seu interruptor.
 
-**Variação de velocidade:** a velocidade balança 12% para mais e para menos, seguindo uma senoide lenta do número do tick. Não é um sorteio, e sim um movimento suave, que lembra mais um motorista segurando o pedal do que um ruído de sensor.
+**Variação de velocidade:** a velocidade oscila 12% para mais e para menos, seguindo um seno lento do número do tick, `1 + 0,12 · sin(tick / 7)`. Não é um sorteio, e sim um movimento suave, mais parecido com um motorista segurando o pedal do que com ruído de sensor. Um detalhe a saber: é função da **contagem de ticks, e não do tempo**, então o período é de uns 44 ticks, o que dá 44 segundos no intervalo padrão e quase quatro minutos com 5 s. Para testes, o que importa é o número de posições publicadas, então ficou assim; se você muda o intervalo, a oscilação fica mais lenta ou mais rápida em tempo real.
 
-**Freada nas curvas:** a cada passo, o motor olha 40 metros à frente na linha da rota, compara a direção de lá com a direção de agora e calcula o quanto a trajetória vira. Uma curva de 90° ou mais reduz a velocidade a 40% da escolhida, e curvas mais suaves reduzem proporcionalmente:
+**Freada nas curvas:** a cada passo, o motor olha 40 metros à frente na linha, compara a direção ali com a direção de agora e calcula quanto o caminho vira. Uma curva de 90° ou mais corta a velocidade para 40% da escolhida, e curvas mais suaves cortam proporcionalmente:
 
 ```dart
 double _curveFactor(SimulationProgress p) {
@@ -109,11 +200,32 @@ double _curveFactor(SimulationProgress p) {
 }
 ```
 
-O resultado final passa por um limite de 0 a 140 km/h. O efeito aparece bem numa rota roteirizada pelas ruas, porque ali as curvas existem de verdade, e quase não aparece numa linha reta entre dois pontos. Para testar cálculo de velocidade média, trecho a trecho ou detecção de frenagem, isso faz toda a diferença.
+A expressão `(… + 540) % 360 - 180` leva a diferença entre duas direções para a faixa de −180 a 180, então uma curva de 350° para 10° conta como 20°, e não 340°. Os dois fatores multiplicam a velocidade escolhida, o resultado é arredondado e limitado a 0–140 km/h, e essa velocidade efetiva é usada tanto para a distância andada no tick quanto para a velocidade publicada, então o app testado vê a freada na `speed` e no espaçamento das posições.
 
-## Velocidades padrão por veículo
+Vale conhecer os limites desse algoritmo:
 
-Cada um dos seis veículos tem uma velocidade padrão: carro e moto 40 km/h, caminhão 35, ônibus 30, bicicleta 15 e a pé 5. A pessoa pode trocar cada uma na tela de velocidades padrão, e um botão restaura os valores originais. Ao escolher o veículo no mapa, a velocidade vem desse valor, e dá para ajustá-la livremente a partir dali, inclusive durante a simulação.
+- A antecipação é de **40 m constantes**, e não uma função da velocidade. A 100 km/h, o veículo anda cerca de 28 m por segundo, então a freada começa uns um segundo e meio antes da esquina e, com tick de 1 s, acontece em um ou dois passos. A 5 km/h, 40 m são meio minuto de caminhada, e o pedestre desacelera muito antes do que um de verdade faria.
+- Só a esquina em si é lida: depois que o veículo a passa, a direção de agora e a de adiante são iguais, e a velocidade volta ao normal de uma vez, sem aceleração gradual.
+- O efeito aparece com clareza numa rota feita pelas ruas, porque as curvas existem de verdade ali, e quase nada numa linha reta entre dois pontos. Para testar velocidade média, velocidade por trecho ou detecção de freada, isso faz toda a diferença.
+
+Um teste do repositório fixa o comportamento com uma esquina de 90°:
+
+```dart
+test('slows before a right-angle turn', () {
+  const corner = [GeoPoint(0, 0), GeoPoint(0, .0005), GeoPoint(.0005, .0005)];
+  final engine = _engine(TravelMode.oneWay, line: corner, speed: 100,
+      realism: const GpsRealism(slowOnCurves: true));
+  final near = engine.initial.copyWith(
+    legMeters: GeoMath.lengthMeters(corner.sublist(0, 2)) - 10,
+  );
+  expect(engine.effectiveSpeedKmh(engine.initial), 100);
+  expect(engine.effectiveSpeedKmh(near), lessThan(100));
+});
+```
+
+### Velocidades padrão por veículo
+
+Cada um dos seis veículos tem uma velocidade padrão: carro e moto 40 km/h, caminhão 35, ônibus 30, bicicleta 15 e a pé 5. Dá para mudar cada uma na tela de velocidades padrão, e um botão restaura os valores originais. Ao escolher o veículo no mapa, a velocidade vem desse valor, limitada a 0–140 km/h, e você pode ajustá-la livremente daí em diante, até durante a simulação. Uma velocidade 0 não encerra a execução: o veículo fica onde está enquanto o relógio continua, e um teste cobre esse caso.
 
 <Screenshots
   images={[
@@ -140,27 +252,121 @@ Cada um dos seis veículos tem uma velocidade padrão: carro e moto 40 km/h, cam
 
 ## O ponto parado que oscila
 
-Um aparelho parado sobre a mesa não informa a mesma coordenada para sempre. Ele "caminha" alguns metros, devagar. Quando a posição é fixa, por exemplo depois de um salto para um lugar favorito, o simulador reproduz isso com um passeio aleatório **correlacionado**: cada passo lembra do anterior, com uma memória de cerca de 20 segundos, e o desvio fica sempre limitado ao raio do ruído escolhido.
+Um aparelho sobre a mesa não informa a mesma coordenada para sempre. Ele "anda" alguns metros, devagar. Quando a posição está fixa, por exemplo depois de um salto para um lugar favorito, o simulador reproduz isso com um **passeio aleatório correlacionado**, em vez do ruído independente de antes.
 
-A velocidade e a direção publicadas nesse caso também são as do último deslocamento. Um app que calcula a velocidade a partir de dois pontos recebe valores pequenos e coerentes, em vez de zero absoluto ou de saltos. Com o ruído desligado, a posição fica cravada.
+A ideia é um processo autorregressivo de primeira ordem: cada novo deslocamento guarda uma fração do anterior e soma um empurrão aleatório pequeno.
+
+```dart
+final a = math.exp(-elapsedMillis / _driftMemoryMillis); // 20 s of memory
+final sigma = radius / 2;
+final keep = math.sqrt(1 - a * a) * sigma;
+var east = a * p.jitterEastMeters + keep * gaussian();
+var north = a * p.jitterNorthMeters + keep * gaussian();
+final length = math.sqrt(east * east + north * north);
+if (length > radius) {
+  east *= radius / length;
+  north *= radius / length;
+}
+```
+
+Lendo: `a` é a parte do deslocamento anterior que sobrevive a um passo. Com tick de 1 s e memória de 20 s, `a` fica perto de 0,95, então a posição se mexe um pouco a cada segundo e esquece onde estava depois de algumas dezenas de segundos. O fator `sqrt(1 - a²) · sigma` é a forma padrão de manter constante a dispersão de longo prazo, com `sigma` igual à metade do raio do ruído, então na maior parte do tempo o ponto fica na metade interna do círculo. A gaussiana vem de uma transformada de Box–Muller de dois sorteios uniformes, com semente pelo número do tick como o resto, e o corte final garante que o deslocamento nunca saia do raio do ruído.
+
+A velocidade e a direção publicadas nesse caso são as do último deslocamento, calculadas pela diferença entre o deslocamento antigo e o novo. Um app que deriva a velocidade de dois pontos consecutivos recebe valores pequenos e coerentes, em vez de um zero absoluto ou de saltos. Com o ruído desligado, a posição fica cravada e a velocidade é 0.
+
+Os testes descrevem o comportamento que eu queria: em 600 ticks com ruído médio, a posição nunca passa de 8 m do centro, a distância mediana entre duas posições consecutivas fica abaixo de 2 m, a velocidade bate com o deslocamento, e duas execuções com o mesmo ruído produzem a mesma sequência de pontos. Mais um teste é o motivo de o deslocamento fazer parte do estado salvo: depois de serializar o progresso e restaurá-lo, a posição seguinte fica a um centímetro da que a execução ininterrupta teria produzido, então um reinício do serviço não faz um celular parado teleportar de volta ao centro.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Lugares favoritos',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/teleport.webp',
+      alt: 'Teletransporte',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
 ## Cenário de cerca virtual
 
-Testar entrada, permanência e saída de uma área é um dos casos mais chatos de fazer na rua. O **cenário de cerca virtual** automatiza isso. Você marca um ponto, que vira o centro, e define:
+Testar a entrada, a permanência e a saída de uma área é das coisas mais trabalhosas de fazer na rua. O **cenário de cerca virtual** automatiza isso. Você marca um ponto, que vira o centro, e define:
 
 - o **raio**, de 50 m a 2.000 m;
 - a **espera no centro**, até 300 segundos.
 
-O app monta uma rota que **começa e termina fora da cerca**, a 1,5 vez o raio de distância. O veículo anda até o centro, para lá pelo tempo definido, com velocidade zero, e depois segue e sai. Durante a espera, a tela mostra o tempo restante e se o veículo está dentro ou fora da cerca. O app testado vê a entrada, a permanência e a saída na ordem certa, sem ninguém precisar sair andando.
+A rota não é desenhada pelo usuário: o planejador a monta. Ele pega o centro, coloca um ponto de entrada **a oeste** e um de saída **a leste**, cada um a 1,5 vez o raio, e os liga numa linha reta, só ida:
+
+```dart
+final reach = event.radiusMeters * GeofenceScenario.approachFactor;
+final entry = GeoMath.offset(center, 270, reach);
+final exit = GeoMath.offset(center, 90, reach);
+final line = [entry, center, exit];
+```
+
+Assim o veículo começa fora da cerca, cruza a borda, chega ao centro, espera e sai pelo outro lado. No motor, isso é uma máquina de estados pequena sobre a distância percorrida no trecho:
+
+```dart
+final middle = _legLength(p.returning) / 2;
+final waiting = p.legMeters >= middle && dwell < dwellTotal;
+if (waiting) {
+  dwell += elapsedMillis;
+  return p.copyWith(dwellMillis: dwell /* ... */);
+}
+if (p.legMeters < middle && p.legMeters + step >= middle && dwellTotal > 0) {
+  step = middle - p.legMeters; // never skip over the centre
+}
+```
+
+- **Aproximando:** movimento normal, com a velocidade e as imperfeições do plano.
+- **Chegando:** como a linha é simétrica, o meio do trecho é o centro. Quando um passo cruzaria esse ponto, o passo é cortado para o veículo parar exatamente no centro, mesmo em alta velocidade com um tick longo.
+- **Esperando:** enquanto a distância do trecho está no meio ou além e a espera acumulada é menor que o tempo escolhido, a posição não avança e a velocidade efetiva é 0. A espera conta em tempo decorrido real, então também funciona quando o serviço atrasa.
+- **Saindo:** terminada a espera, o movimento retoma em direção à saída, onde uma execução só de ida termina.
+
+Durante a espera, a tela mostra o tempo restante e se o veículo está dentro ou fora da cerca, e a velocidade publicada é 0. Um teste do repositório monta uma cerca de 100 m com 5 s de espera e afirma exatamente essa sequência: fora no início, dentro e parado por 5 s no centro, andando de novo depois e fora no final.
+
+Dois limites a conhecer. A linha é sempre uma travessia reta de oeste para leste pelo centro, então exercita a lógica de entrar, ficar e sair, mas não uma aproximação oblíqua. E o indicador de dentro/fora da tela é calculado pela posição **sem ruído**, enquanto o app testado recebe a posição com ruído. Com uma cerca de 50 m e ruído alto, o app pode se ver entrando e saindo algumas vezes perto da borda antes de a tela dizer que entrou, o que, aliás, é o que acontece num celular de verdade.
 
 ## Com a tela desligada, pausando e retomando
 
-Os bugs de localização em segundo plano aparecem justamente quando a tela apaga. Por isso a simulação não roda no isolate da interface: ela vive num **serviço em primeiro plano** com um isolate próprio, que continua com a tela desligada e até com o app fechado. A notificação mostra o progresso e tem os botões de pausar e parar.
+Os bugs de localização em segundo plano aparecem exatamente quando a tela apaga. Por isso a simulação não roda no isolate da interface: ela vive num **serviço em primeiro plano do tipo `location`**, com isolate próprio e um wake lock, que continua com a tela desligada e até com o app fechado. O tratador do serviço carrega o plano e o progresso salvo do armazenamento do plugin quando inicia, então não depende de o app estar vivo. A notificação mostra o progresso e tem botões de pausar e parar.
 
-Ao pausar, o serviço **continua publicando a última posição**, como um celular parado faria, em vez de ficar mudo. Isso evita que o app testado interprete a pausa como perda de sinal. O progresso é salvo a cada cinco ticks, então, se o sistema destruir o serviço, uma nova inicialização retoma de onde parou, e a tela avisa que a retomada foi feita pelo sistema.
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notificação',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
-## O que ficou
+Quando pausado, o motor só incrementa o contador de ticks, e o serviço **continua publicando a última posição**, com velocidade 0, como faria um celular parado, em vez de ficar mudo. Assim o app testado não lê a pausa como perda de sinal. O mesmo vale para uma execução terminada: ela continua publicando a última posição até ser parada. Como o ruído de uma posição em movimento depende do tick, um veículo pausado ainda oscila em volta do seu ponto, como faz um receptor de verdade.
 
-O ganho de simular imperfeições é que cada uma vira uma **variável de teste**: dá para ligar só o ruído, só a freada, ou os dois, e ver qual causa o bug. Um GPS perfeito nunca deixaria isolar isso.
+O progresso é salvo a cada cinco ticks e depois de cada comando. Se o sistema destrói o serviço, o tratador salva mais uma vez no `onDestroy`; quando um novo inicia, ele lê o progresso, continua de onde parou, e a tela avisa que a retomada foi feita pelo sistema. Só uma parada explícita apaga o estado salvo, desativa os provedores de teste e remove a notificação.
+
+## Teste você mesmo
+
+Se você instalar o app, esta é uma sequência curta para ver cada comportamento num app seu (ou em qualquer app que mostre a velocidade e a precisão da localização):
+
+1. Nas configurações, confira o **intervalo entre posições** e o **perfil de precisão**. Comece em Cidade, com uma rota pelas ruas que tenha algumas esquinas.
+2. Observe o app testado: a precisão deve marcar 13 m (5 + 8), a velocidade deve oscilar em torno da de cruzeiro, e deve cair antes de cada curva.
+3. Troque para **Rodovia** e repita: a precisão vira 8 m, a freada some, a variação de velocidade continua. Troque para **Área coberta**: 25 m de precisão e velocidade constante.
+4. **Estacione** a posição saltando para um lugar favorito: a velocidade publicada vira valores pequenos e diferentes de zero, e pontos consecutivos ficam a poucos metros um do outro. Ponha o ruído em nenhum e tudo congela.
+5. Abra a folha da **cerca virtual**, defina 50 m de raio e 30 s de espera, e cadastre essa cerca no app testado. Você deve receber a entrada, uma permanência de meio minuto a velocidade zero e a saída.
+6. Apague a tela e espere. Volte e confira que o progresso continuou avançando.
+
+Se você quiser ler o comportamento em vez de assisti-lo, os testes da simulação rodam com `flutter test test/features/simulator/domain/simulation_engine_test.dart`, e cada cenário acima tem um teste com o mesmo nome.
+
+## O que fica
+
+O ganho de simular imperfeições é que cada uma vira uma **variável de teste**. Um GPS perfeito nunca deixaria você isolar isso.
+
+A escolha de projeto que eu repetiria é manter o motor puro e o estado serializável. Isso deixou o ruído repetível, os testes rápidos e o reinício do serviço seguro quase de graça. Os compromissos estão visíveis no código, e prefiro documentá-los a escondê-los: uma antecipação fixa de 40 m, uma variação de velocidade ligada à contagem de ticks, ruído sem correlação em movimento.
 
 Na [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) trato da outra metade do realismo, a que não é configurada: altitude e túneis que vêm do mapa real.
