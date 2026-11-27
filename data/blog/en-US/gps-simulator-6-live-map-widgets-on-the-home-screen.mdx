@@ -1,0 +1,128 @@
+---
+title: 'Home Screen Widgets and a Live Map That Android Won’t Let Exist'
+date: '2026-11-26T14:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Android', 'Kotlin', 'Widgets', 'Mobile Development']
+draft: false
+summary: 'A home screen widget can’t run a real map; it only shows ready-made images and text. To get the route and the position moving in real time, the simulator draws the map in Kotlin on every step. This part covers the four widgets, the limits of RemoteViews and what I learned from the series.'
+authors: ['default']
+---
+
+> **GPS Simulator series · Part 6 of 6.** The last part: home screen widgets, with a map that moves in real time. [Part 5](/blog/gps-simulator-5-floating-panel-over-any-app) covered the floating panel, which uses the same command channel.
+
+During a test, the floating panel helps when the app under test is on screen. But the simulator also needs to be within reach when **no app is open**: on the home screen, glancing at it to see if the simulation is still running, or pausing it without opening the app. That's what the widgets are for.
+
+## Four widgets
+
+The home screen widget became four, each for a different use:
+
+- **Simulation (4x1):** state, progress and the main buttons in one row.
+- **Quick control (2x1):** one big button to start, pause or resume.
+- **Simulation panel (4x2):** speed, distance, time and lap.
+- **Live map (4x2, resizable):** the route and the position moving on the map, in real time.
+
+All of them use the app's colors and font. The pause, resume and stop buttons work **without opening the app**, through the same internal broadcast that the notification and the floating panel use, which Part 5 explained. A widget is just one more place the same command word comes from. Tapping anywhere else on the widget opens the app.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-picker.webp',
+      alt: 'Widget picker',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widgets.webp',
+      alt: 'Simulation, quick control and panel',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-map.webp',
+      alt: 'Live map',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+The data comes from the app itself: on every simulation step, the Dart side writes the state to shared preferences (through `home_widget`) and asks the widgets to update. That's why the widgets declare `updatePeriodMillis="0"`: there is no periodic system refresh, only the one the app pushes while the simulation runs.
+
+## The limit: a widget can't run a map
+
+The map widget runs into an Android limit. A home screen widget isn't a miniature app: it lives in the launcher's process and can only show what fits in a `RemoteViews`, a set of ready-made images and text. You can't put a `GoogleMap`, a `flutter_map` or a `WebView` in it.
+
+The solution was to **draw the image in Kotlin on every simulation step**. The app fetches the OpenStreetMap tiles for the area, draws the route, the start, the end and the position with an arrow pointing where it's heading, and hands the bitmap to the widget. Roughly, the `MapWidgetRenderer` does this:
+
+1. picks the highest zoom at which the whole route fits in the widget, with a margin;
+2. if the route is too long for that, **follows the position closely** at a fixed zoom instead of showing everything tiny;
+3. draws the map tiles, the route line (the return leg in a different color), the start and end markers and the position arrow.
+
+A short route shows up whole. On a long route, the map follows the position.
+
+## What this approach demanded
+
+Drawing a map by hand sounds simple until you run it every second on someone's phone. Four things needed care:
+
+**Respecting the tile server.** Tiles are downloaded once and **kept for 7 days**, in memory and on disk, with a cap on tiles on disk. At most two downloads run at a time, with a User-Agent that identifies the app, as the OpenStreetMap usage policy asks. The "© OpenStreetMap" credit appears in the corner of the image. A tile that failed is only retried after a minute.
+
+```kotlin
+private const val TILE_DAYS = 7
+private const val RETRY_MILLIS = 60_000L
+private const val MAX_DISK_TILES = 800
+
+private val downloads = Executors.newFixedThreadPool(2)
+```
+
+**Not blocking on downloads.** A tile that hasn't arrived yet shows as a plain surface, and when it arrives the renderer says so and a new picture is drawn. The map fills itself in instead of waiting for the network.
+
+**Fitting through a binder.** A `RemoteViews` bitmap travels through a **binder**, which has a size limit; going over it makes the widget update fail. So the image is drawn in `RGB_565` (two bytes per pixel, no transparency) and with a pixel ceiling that lowers the scale when the widget is large:
+
+```kotlin
+/** A RemoteViews bitmap travels through a binder: keep it small. */
+private const val MAX_PIXELS = 240_000
+private const val MAX_SCALE = 2f
+
+val scale = minOf(density, MAX_SCALE, sqrt(MAX_PIXELS.toFloat() / area))
+val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+```
+
+The price is a little sharpness when the widget is stretched to fill the whole screen. I traded that sharpness for a widget that doesn't fail.
+
+**Not drawing what has already gone stale.** Drawing runs off the main thread, and every simulation step bumps a generation counter. If a drawing is ready but a newer request already exists, it is discarded. Only the latest reaches the widget. And text and image go **together** in the same update, so the map never blinks empty:
+
+```kotlin
+val mine = generation.incrementAndGet()
+painter.execute {
+    if (generation.get() != mine) return@execute
+    // ... draw the picture ...
+    if (generation.get() == mine) {
+        manager.updateAppWidget(id, views(app, state, map, picture))
+    }
+}
+```
+
+## Wrapping up the series
+
+That was the last part. The whole path, in six steps:
+
+1. [How Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations): the test providers and the rule of no invented data.
+2. [Routes along the streets or in a straight line](/blog/gps-simulator-2-routes-streets-or-straight-lines).
+3. [A GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+4. [Altitude and tunnels from real map data](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+5. [A floating panel on top of any app](/blog/gps-simulator-5-floating-panel-over-any-app).
+6. Widgets and the live map (this part).
+
+What stayed out of the series, the five languages with translations enforced by the compiler, the Clean Architecture and BLoC structure and the interface polish, is on the [project page](/projects/gps-simulator).
+
+## What I learned
+
+- **Internal tools are worth the investment.** A good simulator turns a half-hour field test into a few taps, and makes cases that are hard to reproduce on the street testable, like entering a tunnel in the middle of a route.
+- **Fake realism is worse than no realism.** An invented altitude can make a test pass by mistake. Publishing "no altitude" is more honest and more useful.
+- **Geographic data hides details.** Sea level and the ellipsoid look like the same thing until you compare against a real GPS.
+- **The tool has to be where the test happens.** The floating panel and the widgets exist because, during a test, the screen belongs to the app under test, not to the simulator.
+- **Not everything has to be Flutter.** The panel and the map drawing turned out simpler and lighter in Kotlin, talking to Dart through a channel that already existed.
+- **Let the compiler enforce translations.** With the strings in classes that implement the Portuguese one, an incomplete language doesn't even compile.
+- **Public servers have rules.** Limiting requests, caching what was already downloaded, letting users switch servers and showing the credits is part of using a free service well.
+
+**Previous:** [Part 5, a floating panel on top of any app](/blog/gps-simulator-5-floating-panel-over-any-app)
