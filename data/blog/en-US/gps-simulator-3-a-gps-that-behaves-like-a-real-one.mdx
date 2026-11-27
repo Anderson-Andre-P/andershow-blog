@@ -1,0 +1,372 @@
+---
+title: 'GPS Simulator, part 3: a GPS that behaves like a real one, with noise, curves and geofences'
+date: '2026-11-26T11:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocation', 'Testing']
+draft: false
+summary: 'A perfect route, at constant speed and with zero error, hides the bugs that show up on a real GPS. A walk through the simulation engine of GPS Simulator: a pure function of elapsed time, the tick loop in the foreground service, repeatable noise, speed variation, braking before curves, a parked point that drifts, the geofence state machine, and how to try each imperfection yourself.'
+authors: ['default']
+series: 'GPS Simulator'
+---
+
+> **GPS Simulator series · Part 3 of 6.** In [part 2](/blog/gps-simulator-2-routes-streets-or-straight-lines) I built the routes. Here, how the GPS behaves while following them. [Part 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) covers altitude and tunnels.
+
+## A perfect position is a suspicious position
+
+The first test I ran with the simulator was the most naive one: a clean route, at a constant 40 km/h, one position per second, every one exactly on the line. It worked, and that was exactly the problem. A tracking app that passes that test proves nothing, because **no real GPS behaves like that**.
+
+On a real phone, the position wobbles a few meters sideways, the speed goes up and down, the driver brakes before a sharp turn and a device sitting on a desk never reports the exact same coordinate twice. Location bugs tend to live in those details: a minimum-distance filter that discards too many points, a speed calculation that spikes with noise, a geofence that fires twice at the edge.
+
+So each imperfection is applied separately and is configurable. That turns every one of them into a **test variable**: you can switch on only the noise, only the braking, or both, and find out which one causes the bug. This post goes through how that works, down to the code, and ends with a short walkthrough to reproduce each behavior with the app.
+
+## The engine is a pure function of time
+
+Everything in this post lives in one class, `SimulationEngine`, in the domain layer. It doesn't know Flutter, Android or the clock. Its contract is small: given the current `SimulationProgress` and the time that passed, it answers the next progress; given a progress, it answers the fix to publish.
+
+```dart
+/// Advances [progress] by [elapsedMillis]. A paused or finished simulation
+/// keeps ticking, so the last position goes on being published.
+SimulationProgress advance(SimulationProgress progress, int elapsedMillis) {
+  final ticked = progress.copyWith(tick: progress.tick + 1);
+  return switch (progress.status) {
+    SimulationStatus.teleport when progress.steering => _walk(/* ... */),
+    SimulationStatus.teleport => _drift(/* ... */),
+    SimulationStatus.running => _move(ticked, elapsedMillis),
+    _ => ticked,
+  };
+}
+```
+
+Two decisions in that small `switch` matter for everything that follows.
+
+**Time comes from outside.** The engine never reads the clock; the service tells it how many milliseconds passed. That's what makes it testable: the test suite advances a simulation by calling `advance(progress, 1000)` a few hundred times in a loop, with no real waiting and no mocks.
+
+**The whole state is a plain value.** `SimulationProgress` holds the distance covered in the current leg, the lap, the elapsed time, the tick counter, the time spent waiting inside a geofence and the offset of a parked position. All of it is serialized to JSON, because that object is what has to survive when the system kills the background service. I'll come back to that at the end, because it explains why some fields that look like detail, such as the drift offset, live there.
+
+The other half of the contract is `fix(progress)`, which turns a progress into a `SimulatedFix`: point, bearing, speed, accuracy and altitude. The imperfections are applied there, not in the movement. The vehicle always moves exactly along the line; what gets published is a distorted version of it.
+
+### Finding the vehicle on the line
+
+The route is a polyline, and the progress only stores how many meters were covered in the current leg. `locate` turns that distance into a point by walking the segments until it finds the one that contains it, then interpolates:
+
+```dart
+for (var i = 1; i < line.length; i++) {
+  final a = line[i - 1];
+  final b = line[i];
+  final length = GeoMath.distanceMeters(a, b);
+  if (length > 0 && (walked + length >= target || i == line.length - 1)) {
+    final t = ((target - walked) / length).clamp(0.0, 1.0);
+    return (
+      point: GeoMath.interpolate(a, b, t),
+      bearing: GeoMath.bearingDegrees(a, b),
+    );
+  }
+  walked += length;
+}
+```
+
+The published bearing is the bearing of the segment, so it changes instantly at a corner. A real GPS smooths that a little; I left it as it is, because it's the behavior of the data, and it's exactly what the curve logic below reads.
+
+## The tick: one position, and the time between two of them
+
+The basic unit is the _tick_: one published position, carrying latitude, longitude, speed, bearing, accuracy and time. The default interval is **1 s**, and you can choose 0.5 s, 1 s, 2 s or 5 s in the settings.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Simulation settings',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/tick-interval.webp',
+      alt: 'Tick interval',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+The interval is handed to the foreground service as a repeating event (`ForegroundTaskEventAction.repeat(plan.tickMillis)`), and the handler that runs on every event is short enough to quote in full:
+
+```dart
+Future<void> _tick(DateTime now) async {
+  if (_busy || _stopRequested || engine == null || progress == null) return;
+  final last = _lastTick ?? now;
+  final step = now.difference(last).inMilliseconds.clamp(0, _maxStepMillis);
+  _lastTick = now;
+  _progress = engine.advance(progress, step);
+  await _publish(now);
+}
+```
+
+Three details are worth noticing.
+
+- **The step is measured, not assumed.** The engine advances by the real time between two ticks, not by the configured interval. If Android delays the service, the position catches up; if the interval is 5 s, the vehicle moves 5 s worth of road per tick.
+- **The step is capped at 10 s** (`_maxStepMillis`). A device that was frozen for a minute doesn't wake up with an absurd jump; it moves 10 s worth of road and goes on.
+- **A tick that arrives while the previous one is still publishing is dropped** (`_busy`), but `_lastTick` is only updated when a tick actually runs, so the dropped time isn't lost: it's added to the next step. A command that arrives meanwhile, such as pause or a speed change, sets a `_changed` flag, and a new publication runs as soon as the current one ends.
+
+## Accuracy profiles
+
+Instead of asking people to adjust three switches every time, the app has three ready-made profiles:
+
+- **City:** medium noise, swinging speed and slowing down on curves. It's the default, because it's the most common test case.
+- **Highway:** low noise and swinging speed, with no slowing down on curves.
+- **Covered area:** high noise only, like walking between buildings or under trees.
+
+Any other combination shows up as "custom". The profiles are only shortcuts for the three settings below, and the code keeps them as a plain value object, compared by value, which is how the screen knows which profile is currently selected:
+
+```dart
+static GpsRealism of(GpsProfile profile) => switch (profile) {
+  GpsProfile.city => defaults,
+  GpsProfile.highway => const GpsRealism(
+    noise: GpsNoise.low,
+    speedVariation: true,
+  ),
+  GpsProfile.covered => const GpsRealism(noise: GpsNoise.high),
+  GpsProfile.custom => const GpsRealism(),
+};
+
+/// The preset these values match, else [GpsProfile.custom].
+GpsProfile get profile => GpsProfile.values.firstWhere(
+  (p) => p != GpsProfile.custom && of(p) == this,
+  orElse: () => GpsProfile.custom,
+);
+```
+
+The tests pin this down: changing one switch of the City profile makes it `custom`, and a plain `GpsRealism()` stays neutral for the engine. New settings start on City, but the constructor used by the engine has everything off, so a test that doesn't ask for imperfections gets a clean line.
+
+These settings are choices **made by the person**, not read from the map. That fits the rule of this series: what looks real and comes from the map (altitude, tunnels) only uses real data, and what is equipment imperfection is configured explicitly.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/accuracy-profile.webp',
+      alt: 'Accuracy profile',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/position-noise.webp',
+      alt: 'Position noise',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Position noise
+
+Noise has four levels, which set the maximum radius of the error: **none, low (3 m), medium (8 m) and high (20 m)**. On each tick, the published position moves away from the route line by a random bearing and a random distance up to that radius:
+
+```dart
+final random = math.Random(p.tick * 7919 + 17);
+final point = noise == 0
+    ? located.point
+    : GeoMath.offset(
+        located.point,
+        random.nextDouble() * 360,
+        random.nextDouble() * noise,
+      );
+```
+
+The accuracy reported to the system follows the noise, because an app that reads `accuracy` needs a value consistent with the error the position really has: **5 m as a base plus the noise radius**, so 13 m on the City profile. The vertical accuracy is 10 m plus the same radius.
+
+A detail that helped me a lot: the draw is **repeatable**. The seed comes from the tick number, so the same tick always produces the same position. When a bug shows up in a simulation, I run it again and see exactly the same points, and a test can assert on a position instead of on a range. The `7919` is a prime multiplier, so consecutive ticks don't produce neighboring seeds.
+
+Two honest notes about this model, since they matter when you test:
+
+- The distance is drawn uniformly from 0 to the radius, so points cluster a bit closer to the line than a uniform scatter over the disk would. It's good enough to exercise filters; it isn't a statistical model of a GPS receiver.
+- The noise of a moving fix is **independent from tick to tick** (white noise). A real receiver's error is correlated, drifting slowly. The correlated model exists in the engine, but I only use it where it matters most, for a parked position, which I cover below.
+
+## Speed variation and slowing down on curves
+
+The chosen speed is the **cruising speed**. On top of it, the engine applies two factors, each with its own switch.
+
+**Speed variation:** the speed swings 12% above and below, following a slow sine of the tick number, `1 + 0.12 · sin(tick / 7)`. It isn't a random draw but a smooth movement, closer to a driver holding the pedal than to sensor noise. One thing to know: it's a function of the **tick count, not of time**, so the period is about 44 ticks, which is 44 seconds at the default interval and almost four minutes at 5 s. For tests, what matters is the number of published positions, so that's how it was left; if you change the tick interval, the swing gets slower or faster in real time.
+
+**Slowing down on curves:** at each step, the engine looks 40 meters ahead on the line, compares the bearing there with the bearing now and computes how much the path turns. A turn of 90° or more cuts the speed to 40% of the chosen one, and gentler turns cut it proportionally:
+
+```dart
+double _curveFactor(SimulationProgress p) {
+  final ahead = p.copyWith(
+    legMeters: (p.legMeters + _curveLookAhead).clamp(0, _legLength(p.returning)),
+  );
+  final now = locate(p).bearing;
+  final next = locate(ahead).bearing;
+  final turn = ((next - now + 540) % 360 - 180).abs();
+  return 1 - (1 - _curveMinFactor) * (turn / 90).clamp(0, 1);
+}
+```
+
+The `(… + 540) % 360 - 180` expression folds the difference of two bearings into the range −180…180, so a turn from 350° to 10° counts as 20°, not 340°. Both factors multiply the chosen speed, the result is rounded and clamped to 0–140 km/h, and that effective speed is used for both the distance moved in the tick and the speed published, so the app under test sees the braking in `speed` and in the spacing of the positions.
+
+The limits of this algorithm are worth knowing:
+
+- The look-ahead is a **constant 40 m**, not a function of speed. At 100 km/h, a vehicle covers about 28 m per second, so the braking starts roughly a second and a half before the corner, and with a 1 s tick it happens in one or two steps. At 5 km/h, 40 m is half a minute of walking, and the pedestrian slows down much earlier than a real one would.
+- Only the corner itself is read: once the vehicle has passed it, the bearing now and the bearing ahead are the same, and the speed goes back to normal at once, with no gradual acceleration.
+- The effect shows up clearly on a route built along the streets, because the curves really exist there, and barely at all on a straight line between two points. For testing average speed, per-segment speed or braking detection, that makes all the difference.
+
+A test in the repository pins the behavior down with a right-angle corner:
+
+```dart
+test('slows before a right-angle turn', () {
+  const corner = [GeoPoint(0, 0), GeoPoint(0, .0005), GeoPoint(.0005, .0005)];
+  final engine = _engine(TravelMode.oneWay, line: corner, speed: 100,
+      realism: const GpsRealism(slowOnCurves: true));
+  final near = engine.initial.copyWith(
+    legMeters: GeoMath.lengthMeters(corner.sublist(0, 2)) - 10,
+  );
+  expect(engine.effectiveSpeedKmh(engine.initial), 100);
+  expect(engine.effectiveSpeedKmh(near), lessThan(100));
+});
+```
+
+### Default speeds per vehicle
+
+Each of the six vehicles has a default speed: car and motorcycle 40 km/h, truck 35, bus 30, bicycle 15 and on foot 5. You can change each one on the default speeds screen, and a button restores the original values. When you pick the vehicle on the map, the speed comes from that value, clamped to 0–140 km/h, and you can adjust it freely from there, even during the simulation. A speed of 0 doesn't stop the run: the vehicle stays where it is while the clock keeps going, and a test covers that case.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Default speeds',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'Simulating',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Paused',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## The parked point that drifts
+
+A device sitting on a desk doesn't report the same coordinate forever. It "walks" a few meters, slowly. When the position is fixed, for example after a jump to a favorite place, the simulator reproduces that with a **correlated random walk** instead of the independent noise above.
+
+The idea is a first-order autoregressive process: each new offset keeps a fraction of the previous one and adds a small random push.
+
+```dart
+final a = math.exp(-elapsedMillis / _driftMemoryMillis); // 20 s of memory
+final sigma = radius / 2;
+final keep = math.sqrt(1 - a * a) * sigma;
+var east = a * p.jitterEastMeters + keep * gaussian();
+var north = a * p.jitterNorthMeters + keep * gaussian();
+final length = math.sqrt(east * east + north * north);
+if (length > radius) {
+  east *= radius / length;
+  north *= radius / length;
+}
+```
+
+Reading it: `a` is the share of the previous offset that survives one step. With a 1 s tick and a 20 s memory, `a` is about 0.95, so the position moves a little each second and forgets where it was after some tens of seconds. The factor `sqrt(1 - a²) · sigma` is the standard way to keep the long-run spread constant, with `sigma` set to half of the noise radius, so most of the time the point stays within the inner half of the circle. The Gaussian comes from a Box–Muller transform of two uniform draws, seeded by the tick number like the rest, and the final clamp guarantees that the offset never leaves the noise radius.
+
+The speed and bearing published in that case are those of the last displacement, computed from the change between the old and the new offset. An app that derives speed from two consecutive points gets small, coherent values instead of an absolute zero or jumps. With noise turned off, the position stays pinned and the speed is 0.
+
+The tests describe the behavior I wanted: over 600 ticks at medium noise the fix never goes beyond 8 m from the center, the median distance between two consecutive fixes is under 2 m, the speed matches the displacement, and two runs with the same noise produce the same sequence of points. One more test is the reason the offset is part of the saved state: after serializing the progress and restoring it, the next fix is within a centimeter of the one the uninterrupted run would have produced, so a service restart doesn't make a parked phone teleport back to the center.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Favorite places',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/teleport.webp',
+      alt: 'Teleport',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Geofence scenario
+
+Testing entering, staying in and leaving an area is one of the most tedious things to do on the street. The **geofence scenario** automates it. You mark a point, which becomes the center, and set:
+
+- the **radius**, from 50 m to 2,000 m;
+- the **wait at the center**, up to 300 seconds.
+
+The route is not drawn by the user: the planner builds it. It takes the center, puts an entry point **west of it** and an exit point **east of it**, each at 1.5 times the radius, and joins them in a straight line, one way:
+
+```dart
+final reach = event.radiusMeters * GeofenceScenario.approachFactor;
+final entry = GeoMath.offset(center, 270, reach);
+final exit = GeoMath.offset(center, 90, reach);
+final line = [entry, center, exit];
+```
+
+So the vehicle starts outside the fence, crosses the edge, reaches the center, waits and leaves through the other side. In the engine, that's a small state machine over the distance covered in the leg:
+
+```dart
+final middle = _legLength(p.returning) / 2;
+final waiting = p.legMeters >= middle && dwell < dwellTotal;
+if (waiting) {
+  dwell += elapsedMillis;
+  return p.copyWith(dwellMillis: dwell /* ... */);
+}
+if (p.legMeters < middle && p.legMeters + step >= middle && dwellTotal > 0) {
+  step = middle - p.legMeters; // never skip over the centre
+}
+```
+
+- **Approaching:** normal movement, with the speed and imperfections of the plan.
+- **Arriving:** because the line is symmetric, the middle of the leg is the center. When a step would cross it, the step is cut so the vehicle lands exactly on the center, even at high speed with a long tick.
+- **Waiting:** while the leg distance is at or past the middle and the accumulated wait is below the chosen time, the position doesn't advance and the effective speed is 0. The wait counts in real elapsed time, so it also works when the service is delayed.
+- **Leaving:** once the wait is over, movement resumes toward the exit, where a one-way run completes.
+
+During the wait, the screen shows the remaining time and whether the vehicle is inside or outside the fence, and the published speed is 0. A test in the repository builds a 100 m fence with a 5 s wait and asserts exactly this sequence: outside at the start, inside and held for 5 s at the center, moving again afterward and outside at the end.
+
+Two limits to be aware of. The line is always a straight west-to-east crossing through the center, so it exercises the enter/dwell/exit logic but not an oblique approach. And the inside/outside indicator on the screen is computed from the position **without noise**, while the app under test receives the noisy one. With a 50 m fence and high noise, the app may see itself entering and leaving a couple of times near the edge before the screen says it has entered, which is, in fact, what happens on a real phone.
+
+## With the screen off, pausing and resuming
+
+Background location bugs show up exactly when the screen turns off. That's why the simulation doesn't run on the UI isolate: it lives in a **foreground service of type `location`**, with its own isolate and a wake lock, which keeps going with the screen off and even with the app closed. The service handler loads the plan and the saved progress from the plugin's storage when it starts, so it doesn't depend on the app being alive. The notification shows the progress and has pause and stop buttons.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notification',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+When paused, the engine only increments the tick counter, and the service **keeps publishing the last position**, with speed 0, as a stationary phone would, instead of going silent. That keeps the app under test from reading the pause as a loss of signal. The same goes for a finished run: it keeps publishing its last position until it's stopped. Because the noise of a moving fix depends on the tick, a paused vehicle still jitters around its point, the way a real receiver does.
+
+The progress is saved every five ticks and after every command. If the system destroys the service, the handler saves once more in `onDestroy`; when a new one starts, it reads the progress, continues from where it stopped, and the screen says the resume was done by the system. Only an explicit stop clears the saved state, disables the test providers and removes the notification.
+
+## Try it yourself
+
+If you install the app, this is a short sequence to see each behavior in an app of yours (or in any app that shows the speed and accuracy of the location):
+
+1. In the settings, check the **tick interval** and the **accuracy profile**. Start on City, with a route along the streets that has a few corners.
+2. Watch the app under test: the accuracy should read 13 m (5 + 8), the speed should swing around the cruising speed, and it should drop before each turn.
+3. Switch to **Highway** and repeat: the accuracy becomes 8 m, the braking disappears, the speed variation stays. Switch to **Covered area**: 25 m of accuracy and a constant speed.
+4. **Park** the position by jumping to a favorite place: the published speed becomes small non-zero values, and consecutive points stay within a couple of meters of each other. Set the noise to none and everything freezes.
+5. Open the **geofence** sheet, set 50 m of radius and 30 s of wait, and register that fence in the app under test. You should get the entry, a stay of half a minute at zero speed and the exit.
+6. Turn the screen off and wait. Come back and check that the progress kept advancing.
+
+If you want to read the behavior instead of watching it, the simulation tests run with `flutter test test/features/simulator/domain/simulation_engine_test.dart`, and each scenario above has a test with the same name.
+
+## What stayed with me
+
+The gain from simulating imperfections is that each one becomes a **test variable**. A perfect GPS would never let you isolate that.
+
+The design choice I'd repeat is keeping the engine pure and its state serializable. It made the noise repeatable, the tests fast, and the service restart safe almost for free. The compromises are visible in the code, and I'd rather document them than hide them: a fixed 40 m look-ahead, a speed variation tied to the tick count, noise without correlation while moving.
+
+In [part 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) I cover the other half of realism, the one that isn't configured: altitude and tunnels that come from the real map.

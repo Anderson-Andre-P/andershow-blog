@@ -1,0 +1,342 @@
+---
+title: 'GPS Simulator, part 5: a floating panel with a joystick on top of any app'
+date: '2026-11-26T13:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Android', 'Kotlin', 'Flutter', 'Mobile Development']
+draft: false
+summary: 'During a test, the screen belongs to the app under test, not to the simulator. How I built a native floating panel to pause, change the speed, walk with a joystick and jump to favorite places without leaving the app being tested: the overlay window, who owns it, the one-word command channel, the joystick math and the permission flow.'
+authors: ['default']
+series: 'GPS Simulator'
+---
+
+> **GPS Simulator series · Part 5 of 6.** In this part: the floating panel and the joystick. Before it, [a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one) and [altitude and tunnels from the map](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+
+## The problem: the screen belongs to the app under test
+
+When I test a location app, the app is on screen, not the simulator. To pause the simulation, change the speed or move the position somewhere else, I had to leave the app, open the simulator, change it and come back. That breaks the flow of the test, and many location bugs only show up if the app stays open and keeps receiving positions. Go back to the simulator and you have already changed the situation you wanted to observe.
+
+The notification has pause and stop, and the home screen widgets (the subject of [Part 6](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)) repeat them, but neither lets you change the speed or walk the position by hand while the other app stays in front. So the controls had to come to where the test happens: a **floating panel**, a small draggable window shown on top of any app while a simulation runs. It has:
+
+- the state of the simulation, the route name and the progress;
+- pause, resume and stop;
+- faster and slower buttons, in steps of 5 km/h, with the current speed between them;
+- a **joystick** to move the position by hand, in any direction;
+- the favorite places, to **jump** to one of them with a tap;
+- a button to open the simulator and another to collapse the panel into a bubble.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      alt: 'Floating panel over Google Maps',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/joystick.webp',
+      alt: 'Joystick in use',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-bubble.webp',
+      alt: 'Panel collapsed',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-home.webp',
+      alt: 'Panel on the home screen',
+      noDark: true,
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## When it shows up
+
+The panel has to be invisible most of the time. It would be useless over the simulator itself, where the same buttons already exist, and it would be an annoyance when no test is running. The rule lives in one function in `FloatingPanel.kt`, and every condition has to hold at once:
+
+```kotlin
+private fun shouldShow(state: SimulationWidgetState): Boolean =
+    data.getBoolean(KEY_ENABLED, false) &&   // the switch in the settings
+        !state.isIdle &&                     // a run exists
+        appOnScreen == 0 &&                  // the simulator is not in front
+        Settings.canDrawOverlays(app) &&     // Android still allows it
+        serviceRunning()                     // the foreground service is alive
+```
+
+The last two conditions are there because the other three can be stale. The state the service writes is stored on disk, so it outlives the process: if Android kills the app in the middle of a run, the saved state still says "running" and the panel would hang around for a simulation that no longer exists. Asking Android whether the foreground service is actually running closes that hole. The permission can also be revoked at any moment from the system settings, so it is checked on every render and not only when the switch is turned on.
+
+## A native window, not a second Flutter engine
+
+The panel is written in Kotlin, in a `TYPE_APPLICATION_OVERLAY` window, not in Flutter. The reason is practical: a second Flutter engine just for a small window would be heavy on memory and would complicate the communication with the simulation, which already runs in its own isolate inside the foreground service. In Kotlin the window is light and leans on things that already existed: the layout is a plain XML file (`floating_panel.xml`), the colors and the font are the ones the home screen widgets already use, and the text comes from the app.
+
+The window itself is a few lines:
+
+```kotlin
+val layout = WindowManager.LayoutParams(
+    WindowManager.LayoutParams.WRAP_CONTENT,
+    WindowManager.LayoutParams.WRAP_CONTENT,
+    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+    PixelFormat.TRANSLUCENT,
+).apply {
+    gravity = Gravity.TOP or Gravity.START
+    x = own.getInt(KEY_X, dp(DEFAULT_X_DP))
+    y = own.getInt(KEY_Y, dp(DEFAULT_Y_DP))
+}
+```
+
+Two flags do the important work. `FLAG_NOT_FOCUSABLE` keeps the panel from taking keyboard focus, so typing and the back button keep going to the app being tested, which is the whole point. `FLAG_LAYOUT_NO_LIMITS` lets me place the window by absolute coordinates; the price is that nothing stops it from leaving the screen, so I clamp the position myself using the window insets (more on that below). The last position and whether the panel is collapsed are saved in the panel's own preferences, so it comes back where you left it.
+
+## Who owns the window
+
+A window needs an owner that outlives any screen. The simulator's screens are Flutter pages inside one activity, and the activity is often not alive while a simulation runs: you start a route, switch to the app under test and the simulator may be destroyed. The panel can't depend on it. So it belongs to the `Application` object, which starts with the process, in `GpsSimulatorApplication`:
+
+```kotlin
+class GpsSimulatorApplication : Application() {
+    private lateinit var panel: FloatingPanel
+
+    override fun onCreate() {
+        super.onCreate()
+        panel = FloatingPanel(this).also { it.install() }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        panel.onConfigurationChanged(newConfig)
+    }
+}
+```
+
+The panel doesn't ask the activity whether it is visible. It counts: `install()` registers activity lifecycle callbacks, adds one when an activity of the app starts and removes one when it stops. At zero, no screen of the simulator is in front. The count is renewed on every lifecycle event, and each one calls `render()`, which decides whether to add the window, update it or remove it.
+
+## State in through preferences, commands out through a broadcast
+
+The panel has two data flows, and they use two different mechanisms on purpose.
+
+**State comes in through shared preferences.** The home screen widgets already needed the run's state in a place Android code can read, so the app and the service write it (status, route name, progress, speed, all already in the app's language) into the `home_widget` preferences, and the panel reads the same keys through `SimulationWidgetState`. The panel registers a listener on those preferences and redraws, with an 80 ms debounce so a burst of writes becomes one redraw:
+
+```kotlin
+/** Kept here: SharedPreferences holds its listeners weakly. */
+private val onData = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+    main.removeCallbacks(refresh)
+    main.postDelayed(refresh, DEBOUNCE_MILLIS)
+}
+```
+
+The comment is a lesson: `SharedPreferences` keeps its listeners in a weak reference, so a listener that lives only as a lambda can be garbage collected and the panel silently stops updating. Keeping it in a field is what makes it work.
+
+The panel adds only a few things of its own, written by `FloatingPanelStore` on the Dart side: whether the panel is enabled, its texts in the current language and the favorite places, as a small JSON (`name`, `lat`, `lng`), newest first and at most 12. When the favorites change in the app, a callback rewrites that JSON, and the row of chips is rebuilt only if the text changed.
+
+**Commands go out through a broadcast.** The notification buttons already told the foreground service what to do through an internal broadcast, so the panel uses the same door:
+
+```kotlin
+fun send(context: Context, command: String) {
+    context.sendBroadcast(
+        Intent("onNotificationButtonPressed")
+            .setPackage(context.packageName)
+            .putExtra("intentData", command),
+    )
+}
+```
+
+`flutter_foreground_task` receives that broadcast and calls `onNotificationButtonPressed(id)` on the task that runs the simulation, which means the panel needs no Flutter of its own and no new channel. The `setPackage` call addresses the broadcast to the app itself.
+
+## A vocabulary of one word
+
+The catch with reusing the notification channel is that it carries one string. The commands had to become text, with the arguments inside the word:
+
+| Command                       | Meaning                                                                     |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| `pause`, `resume`, `stop`     | the same ones the notification had                                          |
+| `faster`, `slower`            | one speed step, up or down (5 km/h)                                         |
+| `joy:<bearing>:<push %>`      | joystick direction in degrees and force in percent, for example `joy:90:60` |
+| `jump:<latitude>:<longitude>` | go to a place, for example `jump:-23.55:-46.63`                             |
+
+On the Dart side, one function in `simulation_task.dart` splits the text on `:` and switches on the first part. Everything that is unknown, malformed or invalid for the current state is silently ignored:
+
+```dart
+case SimulationChannel.faster || SimulationChannel.slower:
+  final step = parts.first == SimulationChannel.faster
+      ? SimulationChannel.speedStepKmh
+      : -SimulationChannel.speedStepKmh;
+  _progress = progress.copyWith(
+    speedKmh: SpeedLimits.clamp(progress.speedKmh + step),
+  );
+case SimulationChannel.jump when parts.length == 3:
+  final latitude = double.tryParse(parts[1]);
+  final longitude = double.tryParse(parts[2]);
+  if (latitude == null || longitude == null) return;
+  _progress = engine.jumpTo(progress, GeoPoint(latitude, longitude));
+```
+
+The speed is clamped between 0 and 140 km/h, the same limit as everywhere else in the app. The shared vocabulary also paid off beyond the panel: the home screen widgets send `pause`, `resume` and `stop` through this same path.
+
+## The joystick
+
+The joystick is a custom `View` in Kotlin (`JoystickView.kt`): a round pad with a knob. The math is small. The vector from the center of the pad to the finger is limited to the radius that the knob can reach, and then it gives two numbers:
+
+```kotlin
+val push = (min(distance, reach) / reach).toDouble()
+val steered = if (push < DEAD_ZONE) 0.0 else push
+val bearing = (Math.toDegrees(atan2(dx.toDouble(), -dy.toDouble())) + 360) % 360
+onSteer?.invoke(bearing, steered)
+```
+
+`atan2(dx, -dy)` flips the screen's y axis so that **up is north**, 0 degrees, and the angle grows clockwise, which is how a compass bearing works. The push goes from 0 to 1, and anything under 12% counts as zero: a resting thumb is not a step. Two touch details matter in an overlay. A touch that lands outside the circle, on the corner of its square, returns `false` and falls to the panel, which then drags itself; a touch inside asks the parent not to intercept (`requestDisallowInterceptTouchEvent`), so dragging the knob doesn't drag the window. There is also a small haptic tick when the finger lands on the pad.
+
+### One command every 150 ms, except the release
+
+A finger generates many events per second, and the command channel was not built for that. The panel throttles at its end:
+
+```kotlin
+/** Many moves a second: the service hears a few, and every release. */
+private fun steer(bearing: Double, push: Double) {
+    val now = SystemClock.uptimeMillis()
+    val release = push == 0.0
+    if (release && !steering) return
+    if (!release && steering && now - lastSteer < STEER_EVERY_MILLIS) return
+    steering = !release
+    lastSteer = now
+    val percent = (push * 100).roundToInt()
+    SimulationWidgetIntents.send(app, "joy:${bearing.roundToInt()}:$percent")
+}
+```
+
+A move is sent at most every 150 ms. A release is never delayed (and is dropped only if nothing was being steered), because the cost of a late release is the position walking on after the finger is gone. The trade-off is that the last move of a burst can be dropped, so the final direction can be up to 150 ms stale until the next event, which at walking speed is not noticeable.
+
+The service has its own filter on top of that. The simulation advances on a tick, once per second by default, so a `joy` command that only changes direction or force doesn't need to be published at once: the engine stores the new bearing and push, and **the next tick moves the position**. Only the start and the end of a walk are published immediately:
+
+```dart
+final steered = engine.steer(progress, bearing, push / 100);
+if (steered == progress) return;
+_progress = steered;
+// The panel sends these many times a second: the next tick moves
+// the position, only a start or a release is shown at once.
+if (progress.steering == steered.steering) return;
+```
+
+### What the joystick does to the route
+
+The engine is the same one that computes the route, in the domain layer, with no Flutter or Android in it. The first push on the joystick **takes the position off the route line**, at the point where the vehicle is. The run changes its status to `teleport`, which is the engine's state for a position that is free, and from then on each tick moves the anchor in the chosen bearing:
+
+```dart
+/// The joystick moves the position at its share of the chosen speed.
+SimulationProgress _walk(SimulationProgress p, int elapsedMillis) {
+  final meters = steeringSpeedKmh(p) / 3.6 * elapsedMillis / 1000;
+  if (meters <= 0) return p;
+  return p.copyWith(
+    anchor: GeoMath.offset(locate(p).point, p.joystickBearing, meters),
+    jitterEastMeters: 0,
+    jitterNorthMeters: 0,
+  );
+}
+```
+
+The speed is `push × chosen speed`, rounded to km/h. With the speed at 40 km/h, a full push walks at 40 and half a push at 20. That is why the faster and slower buttons sit next to the joystick: they set the top speed of the knob. If you release the joystick, the position stops there and goes back to behaving like a parked phone, drifting inside the noise radius, as described in [Part 3](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+
+There are consequences, and I preferred to make them explicit than to hide them. Once the position is free, it no longer has a route under it: the published position has **no altitude**, because the altitude comes from the route's terrain profile, and the tunnels of the map don't silence the signal. The rule from [Part 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data), no invented data, applies here too. The panel has no "back to the route" control: once you walk away from the line, the run stays free.
+
+## Jumping to a favorite
+
+The row of chips at the bottom of the panel comes from the favorites saved in the app, and each chip sends `jump:<lat>:<lng>`. In the engine the jump is two lines: leave the line and plant the anchor at the place.
+
+```dart
+/// Jumps to [point] and stays there, from a route or another place.
+SimulationProgress jumpTo(SimulationProgress p, GeoPoint point) =>
+    _leaveLine(p).copyWith(anchor: point);
+```
+
+There is no route between the two points: the position is simply somewhere else on the next tick, and from there it drifts like a parked phone. For a test, that is the fastest way to see what an app does when the position changes suddenly, like a person who lands in another city or a GPS that recovers after a long time without signal. When there are no favorites yet, the panel shows a short text pointing to the app instead of an empty row.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Favorite places',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/teleport.webp',
+      alt: 'Teleport',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Dragging, the bubble and staying inside the screen
+
+Any free spot of the panel drags it: the header, the texts and the space around the joystick. Buttons, the joystick and the chips keep their own touches. A small `Dragger` listener tells a drag from a tap with the system's touch slop, the distance a finger has to move before it counts as a drag: under it, the touch is a tap, over it, the window moves with the finger. The position is limited by the screen minus the system bars and the display cutout, taken from the window insets:
+
+```kotlin
+val bars = metrics.windowInsets.getInsetsIgnoringVisibility(
+    WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout(),
+)
+val right = (screen.width() - bars.right - width).coerceAtLeast(left)
+val bottom = (screen.height() - bars.bottom - height).coerceAtLeast(top)
+```
+
+That is the price of `FLAG_LAYOUT_NO_LIMITS`, and it handles two problems. A panel opened from the bubble near an edge would hang off the screen; now, expanding it slides it in until the whole panel is visible. And after a rotation, a saved position could be outside the new screen; the configuration change calls the same fitting function. A switch between light and dark is different: each theme has its own colors, so the panel is removed and built again.
+
+The collapsed panel is a round bubble with the status icon, which you can also drag. A tap on it expands the panel, and the state (collapsed or not) is remembered.
+
+## The permission Android hides
+
+The panel needs the "Display over other apps" permission, which lives on an Android screen outside the app. That screen says what is being asked, but never why. So the flow is:
+
+1. In the settings, you turn on the **Floating panel** switch. The settings logic checks whether the permission is already granted.
+2. If it isn't, the simulator opens a dialog explaining what it's for, in the app's language, before sending the person to Android.
+3. When the person confirms, the app requests the permission. If it is granted, the switch turns on by itself. If not, a second dialog says the panel is off and what to do to turn it on later.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Settings: simulation',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/overlay-dialog.webp',
+      alt: 'Why it asks for the overlay',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+That became a rule for every permission in the app: location, notifications, battery and overlay, each with its own dialog before the system screen opens. If the person says no, the app keeps working, just without the panel. And since the permission can change while the app is closed, the panel checks it again before every render, as seen above, and removes the window inside a `try` in case it goes away between the check and the moment the window is added.
+
+## Trying it with Google Maps
+
+This is the walkthrough I use to see the whole thing working. It needs a device with the simulator set as the mock location app, as in [Part 1](/blog/gps-simulator-1-how-android-accepts-fake-locations).
+
+1. In the simulator, go to **Settings**, turn on **Floating panel** and accept the permission dialogs. Optionally, save a couple of favorite places on the map first.
+2. Mark points, build a route and press **Start simulation**.
+3. Switch to **Google Maps**. The panel appears over it, and the blue dot of Maps follows the simulated route.
+4. Tap the **+** and **−** buttons: the speed changes in steps of 5 km/h and the dot speeds up or slows down.
+5. Drag the **joystick**. The dot leaves the route and walks in the direction of the knob; the farther the knob, the faster. Let it go and the dot stops.
+6. Tap a **favorite chip**: the dot jumps to the place, with no route between the points.
+7. Drag the panel to a corner, then collapse it into a bubble with the collapse button.
+8. Go back to the simulator: the panel disappears on its own. Press **Stop** (in the panel or in the notification) and it disappears too.
+
+## What I couldn't test in isolation
+
+The Dart side of the panel is covered by tests: the commands (the joystick takes the run off the line and walks it, moves of the joystick wait for the next tick, a jump parks the position at the place) and the store that hands the favorites and the texts to Android. The Kotlin side, the overlay window, the drag and the joystick view, has no automated tests in the repository: an overlay window depends on the window manager and on the apps below it, and the only way I have to check it is to run it on a device with another app in front.
+
+Two things stayed as known limits. The check for a running service uses `ActivityManager.getRunningServices`, which is deprecated, though it still reports the app's own services, which is all the panel asks about. And the throttle can drop the last move of a burst, as I said, a small price for not flooding the channel.
+
+## What I learned from this part
+
+- **The tool has to be where the test happens.** The panel exists because, during a test, the screen belongs to the app under test.
+- **Not everything needs to be Flutter.** An overlay window is simpler and lighter in Kotlin, talking to Dart through a channel that already existed.
+- **Reusing the channel beats creating a new one.** The commands became plain text, and the panel, the notification and the widgets now use the same door.
+- **Continuous input needs a limit.** A joystick with no send limit floods the channel; releasing it, however, can never wait.
+- **Stale state is worse than no state.** A panel that trusts only what was saved on disk shows up for runs that no longer exist; asking the system whether the service is alive costs one line.
+- **Show what you take away.** Walking off the route also takes away its altitude and tunnels, and it is better to make that a rule than a surprise.

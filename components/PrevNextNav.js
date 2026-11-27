@@ -20,7 +20,7 @@ const PrevNextNav = ({ prev, next, prevLabel, nextLabel, ariaLabel }) => {
   if (!prev && !next) return null
 
   return (
-    <nav lang="en" aria-label={ariaLabel} className="grid gap-4 sm:grid-cols-2">
+    <nav aria-label={ariaLabel} className="grid gap-4 sm:grid-cols-2">
       {prev && <NavCard item={prev} label={<>&larr; {prevLabel}</>} />}
       {next && <NavCard item={next} label={<>{nextLabel} &rarr;</>} align="right" />}
     </nav>

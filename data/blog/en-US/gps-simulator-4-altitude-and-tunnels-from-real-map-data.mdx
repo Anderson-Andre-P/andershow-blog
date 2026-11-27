@@ -1,0 +1,280 @@
+---
+title: 'GPS Simulator, part 4: real altitude and tunnels from map data, with Valhalla and the geoid'
+date: '2026-11-26T12:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Kotlin', 'Geolocation']
+draft: false
+summary: 'In the GPS Simulator series, this part goes through the whole terrain pipeline: the Valhalla requests that return altitude and tunnels, how bridges and tunnels are levelled, why a GPS chip does not report height above sea level, how the geoid is read from Android, what happens when there is no data, and how to check the numbers yourself.'
+authors: ['default']
+series: 'GPS Simulator'
+---
+
+> **GPS Simulator series · Part 4 of 6.** This is the realism that comes from map data: altitude, tunnels and bridges. Previous: [Part 3, a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+
+The first version of the simulator published a fixed altitude and lost the signal at regular intervals, at any point of the route. They looked realistic, but they were invented numbers. An app under test could pass the test because of data no real phone would ever see.
+
+That's why the project has a rule, which already showed up in [part 1](/blog/gps-simulator-1-how-android-accepts-fake-locations): **everything that looks real has to come from real map data. When there's no data, the app publishes nothing instead of making it up.** Part 3 covered the imperfections you choose, like noise and speed variation. This part covers the ones you don't choose, because they come from the place where the route is. This post follows that rule from the server request to the number that reaches the phone, and ends with a way to check it yourself.
+
+## Where the data comes from
+
+Two questions have to be answered for every point of a route: how high is the ground there, and is the road there a tunnel, a bridge or an indoor stretch? A single server answers both: **Valhalla**, the routing engine used by OpenStreetMap-based services. By default the app talks to the public instance run by the FOSSGIS community (`valhalla1.openstreetmap.de`), and the address can be changed in the settings.
+
+Two endpoints do the work:
+
+- `/height` reads the server's terrain model (a DEM) and returns the height of each point.
+- `/trace_attributes` does _map matching_: it snaps the line to OpenStreetMap roads and reports, for each matched edge, whether it is a tunnel, a bridge or indoor.
+
+Here is the real response of the first endpoint for a point in São Paulo (the same one the "test server" button uses):
+
+```json
+// POST /height   {"shape":[{"lat":-23.5505,"lon":-46.6333}],"range":false}
+{ "shape": [{ "lat": -23.5505, "lon": -46.6333 }], "height": [761] }
+```
+
+And a trimmed response of the second one, for a short line near Zürich where the first matched edge is a tunnel:
+
+```json
+// POST /trace_attributes with "shape_match": "map_snap"
+{
+  "edges": [
+    { "bridge": false, "tunnel": true },
+    { "bridge": false, "tunnel": false }
+  ],
+  "matched_points": [
+    { "type": "matched", "edge_index": 0 },
+    { "type": "matched", "edge_index": 9 }
+  ]
+}
+```
+
+The trick of `trace_attributes` is that the answer is per edge, but the app needs it per point. Each entry in `matched_points` has an `edge_index` pointing into `edges`, so the client looks the edge up and classifies the point. This is the heart of `ValhallaTerrainRepository`:
+
+```dart
+static RoadEnvironment? _environmentOf(
+  Map<String, Object?> point,
+  List<Map<String, Object?>> edges,
+) {
+  final index = point['edge_index'];
+  if (point['type'] == 'unmatched' ||
+      index is! int ||
+      index < 0 ||
+      index >= edges.length) {
+    return null; // the map doesn't know this point: stay unknown
+  }
+  final edge = edges[index];
+  if (edge['tunnel'] == true) return RoadEnvironment.tunnel;
+  if (edge['bridge'] == true) return RoadEnvironment.bridge;
+  if (edge['indoor'] == true) return RoadEnvironment.indoor;
+  return RoadEnvironment.road;
+}
+```
+
+Notice the first branch. A point the server could not match returns `null`, not "road". The difference matters later: "I don't know" and "it is an ordinary road" are different answers, and the app keeps them apart. The request also sends a `costing` that follows the chosen vehicle (`auto`, `motorcycle`, `bus`, `truck`, `bicycle` or `pedestrian`), so the map matching follows roads the chosen vehicle can actually use.
+
+## From a route to samples every 30 meters
+
+A route geometry from OSRM can have a point every few meters on a curve and one every kilometer on a straight road. That is a bad shape for asking about terrain, so the app first **resamples the line**: one point every 30 meters of walked distance, plus the last point. `TerrainMath.resample` walks the polyline and interpolates a point whenever the distance reaches the next multiple of 30. Each sample keeps its distance from the start, and that distance is the only key the rest of the pipeline uses.
+
+The samples then go to the server in chunks, and the sizes are deliberately different:
+
+- **Heights:** 500 points per `/height` request, about 15 km of route.
+- **Environments:** chunks of up to 50 km of route per `/trace_attributes` request. A lone last point is merged into the chunk before it, because map matching needs at least two points.
+
+A long route is therefore a handful of requests, not hundreds. The chunking also gives the use case (`BuildTerrain`) a useful property: **a chunk that fails leaves its samples unknown and keeps the others**. Only a server that answered nothing at all is reported as a failure. This is the reason a long route over a flaky connection can end up with altitude for the first 40 km and a "partial" state, instead of throwing everything away.
+
+## Bridges and tunnels need levelling
+
+The terrain model knows the ground, not what was built on it. Under a bridge, the ground is the bottom of the valley; over a tunnel, it is the top of the hill. If the app published those heights, a car crossing a viaduct would seem to dive 40 meters and come back up. The fix is `TerrainMath.levelSpans`:
+
+```dart
+/// Bridges keep the deck height and tunnels the floor between portals:
+/// the terrain model has the valley or the hill there. Each span is
+/// interpolated between the samples just outside it.
+static List<TerrainSample> levelSpans(List<TerrainSample> samples) {
+  // ...find each run of consecutive bridge (or tunnel) samples...
+  final hBefore = before?.elevationMeters;
+  final hAfter = after?.elevationMeters;
+  for (var k = i; k <= end; k++) {
+    if (hBefore != null && hAfter != null) {
+      final t = (out[k].distanceMeters - before!.distanceMeters) /
+          (after!.distanceMeters - before.distanceMeters);
+      level = hBefore + (hAfter - hBefore) * t; // straight ramp between portals
+    } else {
+      level = hBefore ?? hAfter; // only one side is known: hold it
+    }
+    // ...
+  }
+}
+```
+
+For every run of consecutive bridge or tunnel samples, the app takes the height of the sample just before and just after the run and draws a straight line between them. That is a good model of a real deck or a real tunnel floor, which are built with a constant slope. If only one side is known, it holds that value; if neither is, the samples stay unknown.
+
+One more rule lives in the same pipeline: if you **import a file that already has elevations** (a GPX recorded by a real device, for example), the elevations of the file win. The source is stored as `ElevationSource.file` and the app resamples the file's own altitudes to the same 30 m grid. The tunnels and bridges still come from the map, because a file doesn't carry them.
+
+## What "no signal" really means
+
+The environment affects the simulation in three different ways, and it is worth being precise about each:
+
+- **Tunnel:** the position is **not published at all** while the route is inside a tunnel. The simulation keeps moving, and the phone simply doesn't receive fixes. At the exit, fixes come back. That is what a real phone does, and it is what lets you test the "lost GPS" path of the app under test.
+- **Indoor:** nothing is silenced. The accuracy of each fix just gets **twice as bad** (`_indoorAccuracyFactor = 2.0`), like a phone under a roof.
+- **Bridge:** it only affects altitude, through the levelling above.
+
+Everything else is deliberately left alone: `isSignalLost` is true only for a tunnel the map knows about, and the engine's own comment says "nothing else silences it". If the environment is unknown, the point is treated as an ordinary road, and the route summary says that the tunnels were not identified instead of claiming that there are none.
+
+The altitude itself has a vertical accuracy attached, a nominal 10 meters plus the noise profile you chose in part 3, which is a reasonable figure for a terrain model. And there is one case where no altitude is published even with a perfect profile: when you leave the route with the joystick or a teleport (part 5), the profile says nothing about the ground under the new position, so the fix goes out without altitude.
+
+## When there is no data
+
+All of this can fail: no connection, a server that is down, a region without terrain data. The rule of the project is the same in every case, and here is what each looks like:
+
+- **The DEM has no value for a point:** Valhalla marks it with `-32768`. The client turns that into `null`, never into a height.
+- **The server doesn't answer:** the route is still created and can be simulated. The panel says "Altitude and tunnels unavailable" with a retry button. When only some chunks failed, the state is "partial" and the retry button also appears.
+- **Altitude unknown at a point:** the fix is published **without altitude**. On the live screen, the altitude row reads "Unavailable". For Android, the `Location` simply reports `hasAltitude() == false`.
+
+```kotlin
+// No altitude is better than an invented one: without it the
+// Location simply reports hasAltitude() == false.
+val msl = (fix["altitude"] as Number?)?.toDouble()
+val vertical = (fix["verticalAccuracy"] as Number?)?.toFloat()
+if (msl != null) applyAltitude(location, msl, vertical)
+```
+
+The terrain profile is saved with the route, in compact parallel arrays (`d` distances, `h` heights, `env` environments) plus the source and a flag that says whether the tunnels were read for the whole line. So the server is queried once per route, not on every simulation, and a saved route keeps working offline with the altitude it already had. A round trip with its own return geometry gets its own profile for the way back; without one, the way back reads the outbound profile backwards. On the route screen the summary shows the result: where the altitude came from (terrain or file) and how many tunnels the line crosses.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Route with altitude and tunnels',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-route-open.webp',
+      alt: 'Saved route details',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## The geoid detail
+
+Now the subtle part. The terrain model gives the height **above sea level**. A real GPS chip reports the height **above the WGS84 ellipsoid**, a mathematical surface that doesn't match sea level. The distance between the two is the _geoid height_ (usually written N), and it varies from place to place: in Brazil it is in the tens of meters. Publishing the terrain height directly would be a plausible number, but a wrong one, and an app that compares the altitude with an expected value could behave differently on a phone than in the simulator.
+
+Android 14 (API 34) added `AltitudeConverter`, which knows the geoid. But it converts in a direction I don't need: it takes an ellipsoid altitude and adds the sea-level one. So the plugin uses it as a **probe**. It builds a position with ellipsoid height zero at the place of interest, asks the converter for the matching height above sea level, and flips the sign: at ellipsoid height 0, the sea-level height is `-N`.
+
+```kotlin
+private fun geoidOffset(latitude: Double, longitude: Double): Double? {
+    val cell = (Math.round(latitude * GEOID_CELLS_PER_DEGREE) shl 32) xor
+        (Math.round(longitude * GEOID_CELLS_PER_DEGREE) and 0xffffffffL)
+    geoid[cell]?.let { return it }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+        geoidPending.add(cell)
+    ) {
+        geoidWorker.execute {
+            try {
+                val probe = Location("geoid").apply {
+                    this.latitude = latitude
+                    this.longitude = longitude
+                    altitude = 0.0
+                    verticalAccuracyMeters = 1f
+                }
+                AltitudeConverter().addMslAltitudeToLocation(context, probe)
+                // At ellipsoid height 0 the sea-level height is -N.
+                geoid[cell] = -probe.mslAltitudeMeters
+            } catch (_: Exception) {
+                // No geoid data here: keep publishing the sea-level height.
+            } finally {
+                geoidPending.remove(cell)
+            }
+        }
+    }
+    return null
+}
+```
+
+Three engineering decisions are in this snippet:
+
+- **Cache by cell.** The geoid changes slowly, so the offset is cached per cell of 0.01 degree, about 1 km (`GEOID_CELLS_PER_DEGREE = 100`). A route of 200 km needs a few hundred probes, not one per second.
+- **Off the main thread.** The converter may read data from disk, so the probe runs on a single-thread executor, and a "pending" set keeps two ticks from probing the same cell at once.
+- **Never blocks a fix.** The method returns the cached value or `null` immediately. That has a consequence I want to be honest about: **the first fix in each new cell goes out before its offset is known**, with the height above sea level as is. For a car at 80 km/h, that is one fix at the start of each kilometer. I accepted it because blocking the publication to wait for the disk would break the timing of the simulation, which is worse for tests.
+
+When the offset is known, the published `Location` gets the ellipsoid altitude and, on Android 14+, also the explicit `mslAltitudeMeters` and its accuracy, exactly as a real GNSS fix does. On older Android versions there is no converter, and the plugin publishes the height above sea level as is. In that case the app doesn't show any notice about it. It's a gap in the interface that I haven't closed yet, so for tests where the ellipsoid height matters, use Android 14 or newer.
+
+## Respecting public servers
+
+By default, terrain comes from the public Valhalla server run by the FOSSGIS community. It is a free service with rules: at most one request per second, no guarantee of availability, and apps should not hard-code its address. The client was built around that:
+
+- **One request at a time, one second apart.** All requests go through a serial queue (`_serial`), and each one waits until a second has passed since the previous one.
+- **Rate limited? Wait.** On HTTP 429, the client waits 30 seconds and tries again, up to three times.
+- **Identified and bounded.** The requests carry a `User-Agent` that names the app, and each one has a 20-second timeout.
+- **The address is a setting.** The "Terrain server" screen lets you change the URL, and it has a **test connection** button that asks the height of a point in São Paulo, and the required credit ("Valhalla · data © OpenStreetMap") is shown on the screen. Next to the field, a note says that the public server doesn't guarantee availability and that a large team should use its own.
+- **It can be turned off.** With "Map altitude and tunnels" disabled, routes are created without any terrain query, and the fixes go out without altitude.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/terrain-server.webp',
+      alt: 'Terrain server',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Settings: simulation',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+If your team has many testers, running a Valhalla instance is the sensible path. The app only needs the two endpoints above, and the "test connection" button tells you whether the address answers.
+
+## The map: Google Maps or OpenStreetMap
+
+The same care applies to the map that draws the route. The history is short: OpenStreetMap came first, because it needs no key, and Google Maps arrived the next day as the default, with OpenStreetMap kept as an option in the settings. Google Maps offers standard, satellite, hybrid and terrain maps, plus traffic and place icons. OpenStreetMap offers only standard and relief (OpenTopoMap): the free aerial photos available there have terms that don't fit the app, so satellite is a Google-only choice, and a saved satellite choice falls back to the plain map when you switch to OpenStreetMap.
+
+For Google Maps to work, I had to set up a key in the [Google Cloud Console](https://console.cloud.google.com/): create a project, enable the **Maps SDK for Android** and generate an API key, restricted to the app package and to the SHA-1 of the debug and release signing keys. The key stays out of git, in `android/local.properties` (`MAPS_API_KEY=...`) or in an environment variable of the same name. Without it, the SDK draws only an empty background and logs an authorization error (`Authorization failure`). It's a simple setup, but easy to forget when running the app on a new machine, which is exactly why the key-free OpenStreetMap option is useful.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Settings: map',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Checking it yourself
+
+You shouldn't take my word for any of this. Here is a way to verify the pipeline on your own phone, in about ten minutes:
+
+1. **Check the terrain model.** Ask the server for a place whose altitude you know. The query above returns 761 m for the center of São Paulo, which matches the city's well-known height of about 760 m. Replace the coordinates with your city's.
+2. **Build a route** with two points about 5 km apart, one of them in a hilly area, and open the route screen. The summary under the route should read something like "Ground altitude · N tunnels". Use a route that goes through a known tunnel to see the count change.
+3. **Start the simulation** and open the details sheet. The altitude row shows the value with its source ("terrain" or "file"). Compare it with the height you asked the server.
+4. **Check the geoid.** Open an app that shows raw GNSS data (a GPS status app is enough) while the simulation runs on Android 14 or newer. Its altitude will be the sea-level height plus the geoid offset of your region, and the app's "MSL altitude" field, if it shows one, will match the simulator's.
+5. **Cross a tunnel.** While the route is inside a tunnel, the status chip says "No signal · tunnel" and the app under test stops receiving fixes. At the exit, they come back.
+6. **Break it on purpose.** In the settings, point the terrain server to an address that doesn't exist and build a new route. You should see "Altitude and tunnels unavailable" with a retry button, and the live screen should show the altitude as "Unavailable". That is the rule working: no data, no number.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'Simulating',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## What I learned
+
+- **Fake realism is worse than no realism.** An invented altitude can make a test pass by mistake. Publishing "no altitude" is more honest and more useful.
+- **Geographic data hides details.** Sea level and the ellipsoid look like the same thing until you compare them with a real GPS.
+- **"Unknown" and "none" are different values.** A point the map could not match is not an ordinary road. Keeping `null` all the way from the server to the `Location` is what made the rule enforceable.
+- **Partial results beat all-or-nothing.** Chunking the requests means a failure costs one stretch of the route, not the whole thing.
+- **Say what you don't do.** The gap on Android 13 and older, and the first fix of each geoid cell, are limits that belong in the documentation, not hidden behind a plausible number.
+- **Public servers have rules.** Limiting requests, keeping what was already downloaded, allowing the server to be swapped and showing the credits is part of using a free service well.

@@ -1,0 +1,350 @@
+---
+title: 'Simulador de GPS, parte 1: como o Android aceita posições falsas'
+date: '2026-11-26T09:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Kotlin', 'Geolocalização']
+draft: false
+summary: 'Testar um app de localização exige andar pela rua ou confiar em posições falsas que não se parecem com um GPS de verdade. Na primeira parte da série sobre o Simulador de GPS, mostro por que construí o app e como o Android permite publicar posições simuladas pelos provedores de teste: o plugin em Kotlin passo a passo, o serviço em primeiro plano que o mantém vivo com a tela desligada, a configuração de permissões e do app de local fictício, e a regra que sustenta o projeto inteiro.'
+authors: ['default']
+series: 'GPS Simulator'
+---
+
+> **Série Simulador de GPS · Parte 1 de 6** · Como o Android aceita posições falsas. Próxima: [rotas pelas ruas ou em linha reta](/blog/gps-simulator-2-routes-streets-or-straight-lines).
+
+## Por que construí
+
+Boa parte do meu trabalho é em apps que dependem de localização: rastreamento em segundo plano, chegada a um ponto, entrada e saída de uma cerca virtual, cálculo de velocidade. Testar isso é chato. Ou você sai andando ou dirigindo com o celular, ou usa um app de localização falsa que teleporta o aparelho de um ponto a outro, sem nada parecido com o comportamento de um GPS real.
+
+A segunda opção falha de um jeito específico. Os bugs que eu procuro raramente estão em "o celular está no ponto B". Estão nos detalhes do fluxo: a velocidade que muda um pouco a cada posição, a precisão que piora sob cobertura, o sinal que some por alguns segundos, a tela que apaga e o sistema que começa a limitar o seu app. Uma ferramenta que teleporta pula tudo isso, e um teste que passa com ela prova muito pouco.
+
+Eu queria uma ferramenta que fizesse o celular **acreditar** que está percorrendo uma rota de verdade, na velocidade certa, com as imperfeições de um GPS real, e que continuasse funcionando com a tela desligada, que é justamente quando os bugs de localização em segundo plano aparecem. Como não encontrei uma que fizesse tudo isso, construí o **Simulador de GPS**.
+
+O app tem muita coisa, então, em vez de um post gigante, decidi contar o desenvolvimento em seis partes, cada uma sobre um recurso:
+
+1. **Como o Android aceita posições falsas** (este post).
+2. [Rotas pelas ruas ou em linha reta](/blog/gps-simulator-2-routes-streets-or-straight-lines): pontos no mapa, veículos, modos e rotas salvas.
+3. [Um GPS que se comporta como o de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one): ruído, variação de velocidade e freada nas curvas.
+4. [Altitude e túneis do mapa real](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+5. [Um painel flutuante por cima de qualquer app](/blog/gps-simulator-5-floating-panel-over-any-app), com joystick.
+6. [Widgets na tela inicial, um deles com o mapa ao vivo](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen).
+
+## O que ele faz
+
+É um app Android, para Android 12 ou mais novo (`minSdk` 31), feito em Flutter. Você marca pontos no mapa, gera a rota e inicia a simulação. A partir daí, qualquer outro app do aparelho que pedir a localização recebe as posições simuladas, mesmo com a tela desligada. O resto da série passa por cada peça, e a [página do projeto](/projects/gps-simulator) tem o resumo completo, com todas as telas.
+
+Esta primeira parte trata da base: como uma posição sai do meu código e chega a outro app, o que a mantém rodando em segundo plano e o que a pessoa que usa o app precisa configurar antes da primeira simulação.
+
+## Publicando posições pelo próprio Android
+
+O Android tem um mecanismo oficial para isso: os **provedores de teste**. Com as Opções do desenvolvedor ativadas e o app escolhido como "app de local fictício", ele pode registrar provedores de localização falsos e publicar posições neles. Sem root e sem truques: é a mesma API que as ferramentas de teste do próprio sistema usam. Os apps que pedem a localização ao `LocationManager` (ou ao provedor combinado do Google, que fica por cima dele) recebem essas posições como se viessem do hardware.
+
+O Flutter não expõe essa API, então escrevi um plugin pequeno em Kotlin, o `mock_location`, que mora num pacote próprio dentro do repositório. É uma única classe de cerca de 200 linhas, e um canal de métodos com sete métodos é todo o contrato com o Dart. Os primeiros tratam da configuração (este app é o app de local fictício? as Opções do desenvolvedor estão ativas? abrir essas opções), e os três últimos são os que importam aqui: `enableProviders`, `publish` e `disableProviders`.
+
+### Registrando os provedores
+
+O `enableProviders` registra um provedor de teste para o GPS e outro para a rede, com as mesmas propriedades de um provedor real:
+
+```kotlin
+val properties = ProviderProperties.Builder()
+    .setHasNetworkRequirement(network)
+    .setHasSatelliteRequirement(!network)
+    .setHasAltitudeSupport(true)
+    .setHasSpeedSupport(true)
+    .setHasBearingSupport(true)
+    .setPowerUsage(ProviderProperties.POWER_USAGE_LOW)
+    .setAccuracy(ProviderProperties.ACCURACY_FINE)
+    .build()
+locationManager.addTestProvider(name, properties)
+locationManager.setTestProviderEnabled(name, true)
+```
+
+As duas propriedades que dependem do provedor são as que fazem cada um parecer o que é: o provedor de GPS diz que precisa de satélites, e o de rede diz que precisa da rede. O resto diz que os dois informam altitude, velocidade e direção, como um GPS de verdade.
+
+Os dois provedores podem ser ligados e desligados separadamente nas configurações (o plano carrega uma opção `gps` e outra `network`, e só os ativados são registrados). Isso ajuda a testar um app que confia só no GPS, ou um que recorre à rede quando o GPS some.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Provedores de GPS e de rede nas configurações',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+### Publicando uma posição
+
+A cada passo da simulação, o app envia ao plugin um mapa com latitude, longitude, velocidade, direção, precisão e horário, e o plugin monta um `Location` e o publica com `setTestProviderLocation`:
+
+```kotlin
+val location = Location(name).apply {
+    latitude = fix.double("latitude")
+    longitude = fix.double("longitude")
+    speed = fix.double("speed").toFloat()
+    bearing = fix.double("bearing").toFloat()
+    accuracy = fix.double("accuracy").toFloat()
+    speedAccuracyMetersPerSecond = SPEED_ACCURACY   // 0.5 m/s
+    bearingAccuracyDegrees = BEARING_ACCURACY       // 5 degrees
+    time = (fix["time"] as Number).toLong()
+    elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
+}
+```
+
+Dois detalhes aqui são sobre tempo. Um `Location` carrega dois relógios: o `time`, o horário de parede em milissegundos, e o `elapsedRealtimeNanos`, o tempo desde que o aparelho ligou. Os apps podem usar o segundo para saber a idade de uma posição, então uma posição sem ele (ou com um valor antigo) pode parecer velha. O `time` vem do passo da simulação, então bate com o momento em que a posição foi calculada, e o `elapsedRealtimeNanos` é marcado no instante da publicação. O método também devolve `SystemClock.elapsedRealtime()` ao Dart, que o guarda na posição publicada, junto com o número do passo.
+
+Os dois valores de "precisão da precisão" são números fixos: precisão de velocidade de 0,5 m/s e de direção de 5 graus. Eles não são ajustados pelas configurações de realismo. Estão ali para que o `Location` também carregue a precisão da velocidade e da direção, como as posições de um chip GNSS moderno.
+
+### Quando o Android diz não
+
+Um provedor de teste só funciona enquanto o app é o app de local fictício selecionado. Se a pessoa desmarcar nas Opções do desenvolvedor no meio da simulação, a próxima chamada lança uma `SecurityException`. O plugin transforma as duas exceções que espera em códigos de erro que o lado Dart entende:
+
+```kotlin
+} catch (error: SecurityException) {
+    result.error(NOT_MOCK_APP, error.message, null)
+} catch (error: IllegalArgumentException) {
+    result.error(PROVIDER_ERROR, error.message, null)
+}
+```
+
+No lado Dart, uma `PlatformException` ao ativar ou publicar vira o erro `mockAppNotSelected`: o serviço se encerra, envia o erro ao app e a pessoa vê uma mensagem clara, em vez de uma simulação que não faz nada em silêncio. A mesma verificação roda antes mesmo de o serviço começar, então uma simulação que nunca funcionaria é recusada logo de início.
+
+Para perguntar "este app é o app de local fictício?", o plugin usa o `AppOpsManager`:
+
+```kotlin
+appOps.unsafeCheckOpNoThrow(
+    AppOpsManager.OPSTR_MOCK_LOCATION,
+    Process.myUid(),
+    context.packageName,
+) == AppOpsManager.MODE_ALLOWED
+```
+
+O manifesto também declara `ACCESS_MOCK_LOCATION`. É uma permissão protegida, então o Lint do Android reclama e eu silencio com `tools:ignore`; o que de fato concede o direito é a escolha nas Opções do desenvolvedor, não o manifesto.
+
+### Devolvendo o GPS de verdade
+
+Parar é tão importante quanto começar, porque um provedor de teste esquecido continua alimentando o celular inteiro com posições falsas. O `disableProviders` desliga cada provedor e o remove:
+
+```kotlin
+private fun disableProvider(name: String) {
+    try {
+        locationManager.setTestProviderEnabled(name, false)
+        locationManager.removeTestProvider(name)
+    } catch (_: IllegalArgumentException) {
+        // The provider was already gone: nothing left to restore.
+    }
+}
+```
+
+Com os provedores removidos, o aparelho volta ao GPS real. É também por isso que parar pede confirmação, e o diálogo avisa: os provedores de teste são removidos e os apps voltam a receber a localização real do aparelho.
+
+## A simulação vive num serviço em primeiro plano
+
+Publicar uma posição é fácil. Publicar uma por segundo durante uma hora, com a tela desligada e o app em segundo plano, é onde o Android atrapalha. A simulação roda num **serviço em primeiro plano** (`flutter_foreground_task`), declarado com o tipo `location` e a permissão `FOREGROUND_SERVICE_LOCATION`, com um wake lock e um evento repetido no intervalo do passo, de um segundo por padrão:
+
+```dart
+foregroundTaskOptions: ForegroundTaskOptions(
+  eventAction: ForegroundTaskEventAction.repeat(plan.tickMillis),
+  allowWakeLock: true,
+),
+```
+
+O que mais gosto nesse desenho é que o serviço tem **o seu próprio isolate Dart**. O handler (`SimulationTaskHandler`) roda ali, monta o motor da simulação a partir do plano que o app salvou e publica as posições sozinho. A tela do app não precisa estar viva para a simulação continuar. O plugin em Kotlin funciona nos dois isolates, porque o Flutter o registra em cada engine, e os dois lados conversam pelas mensagens da tarefa em primeiro plano: o app envia comandos (`pause`, `resume`, `speed`, `stop`) e o serviço devolve um JSON por passo.
+
+Cada passo é deliberadamente defensivo:
+
+```dart
+Future<void> _tick(DateTime now) async {
+  if (_busy || _stopRequested || engine == null || progress == null) return;
+  final last = _lastTick ?? now;
+  final step = now.difference(last).inMilliseconds.clamp(0, _maxStepMillis);
+  _lastTick = now;
+  _progress = engine.advance(progress, step);
+  await _publish(now);
+}
+```
+
+- **Um passo não se sobrepõe a outro.** Se uma publicação ainda está em andamento, o passo seguinte é ignorado, e um comando que chega nesse meio-tempo (uma pausa, uma nova velocidade) só marca uma flag para que outra publicação saia quando a atual terminar. A pausa aparece na hora, sem esperar um segundo inteiro.
+- **O avanço é limitado a 10 segundos.** A simulação anda pelo tempo real entre os passos, mas nunca mais do que isso. Se o sistema atrasa o serviço por um tempo, a posição não dá um salto pelo mapa quando ele acorda.
+- **O progresso é salvo a cada cinco passos**, no armazenamento de dados da própria tarefa em primeiro plano (o plano foi salvo quando a simulação começou).
+
+Esse último ponto tem uma utilidade. Se o Android encerra o serviço por qualquer motivo que não seja uma parada, o `onDestroy` mantém o estado salvo, e, quando o sistema reinicia o serviço, ele retoma de onde estava. O app percebe (`TaskStarter.system`) e mostra um aviso, "Serviço reiniciado pelo sistema", com a volta e a porcentagem. Só uma parada explícita limpa o estado e desativa os provedores.
+
+O serviço também desenha a **notificação** que o Android exige. Usei a exigência como recurso: ela mostra o estado, o nome da rota, o tempo decorrido, a distância e a velocidade, com um botão de pausar (ou retomar) e um de parar. Os botões passam pelo mesmo caminho de comandos do app, então funcionam com a tela desligada.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'Simulando',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Pausada',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notificação',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/stop-dialog.webp',
+      alt: 'Confirmar a parada',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+Quando o comando de parar chega, o handler desliga os provedores no `onDestroy`. Como rede de segurança, o `stop()` do lado do app espera algumas vezes o serviço terminar sozinho e, se ele ainda estiver rodando, encerra o serviço e desativa os provedores por conta própria, para que um serviço travado não deixe posições falsas para trás.
+
+## Permissões e o app de local fictício
+
+A primeira abertura guia a configuração em duas etapas. Na primeira, pede **localização**, **notificações** e **desligar a otimização de bateria**. Na segunda, ensina a escolher o simulador como app de local fictício. Cada etapa lê o estado real do aparelho, e lê de novo sempre que o app volta para o primeiro plano, o que importa porque três dessas quatro coisas são mudadas nas telas do próprio Android, fora do app.
+
+Aqui tomei uma decisão que virou regra para todas as permissões: antes de levar a pessoa para a tela do Android, o app abre um diálogo que explica **para que a permissão serve**. A tela do sistema diz o que está sendo pedido, mas nunca o porquê, e um pedido recusado pode ser difícil de recuperar. Nas notas de design do projeto, a regra é esta: só o botão "Continuar" chega ao Android, uma permissão que já foi concedida não pergunta nada, e o outro botão é um neutro "Agora não".
+
+- **Localização** serve só para mostrar onde você está no mapa e partir dali. Ela nunca sai do celular.
+- **Notificações** mantêm na tela os botões de pausar e parar.
+- **Bateria** evita que o sistema corte a simulação em segundo plano.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions.webp',
+      alt: 'Permissões',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/location-dialog.webp',
+      alt: 'Por que pede a localização',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notifications-dialog.webp',
+      alt: 'Por que pede notificações',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/battery-dialog.webp',
+      alt: 'Por que pede a bateria',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions-granted.webp',
+      alt: 'Tudo concedido',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+Quando uma permissão é pedida e não concedida, a tela marca aquele item em vermelho, para a pessoa ver qual está faltando em vez de um erro genérico. A permissão de localização que peço é a "durante o uso", porque o app só precisa da posição real na tela.
+
+### O app de local fictício, passo a passo
+
+A segunda etapa é a que o app não consegue fazer pela pessoa: não existe API para um app se escolher como app de local fictício. O app só explica e confere. Ele mostra três passos, com o caminho a seguir no celular:
+
+1. **Ativar as Opções do desenvolvedor**: Sobre o telefone, tocar sete vezes no número da versão.
+2. **Abrir as Opções do desenvolvedor**: Configurações, Sistema, Opções do desenvolvedor.
+3. **Escolher o Simulador de GPS**: Depuração, Selecionar app de local fictício.
+
+O plugin ajuda nos dois primeiros. O `isDeveloperOptionsEnabled` lê o `Settings.Global.DEVELOPMENT_SETTINGS_ENABLED`. O botão de abrir é um só, com dois comportamentos: enquanto as Opções do desenvolvedor estão desligadas, ele abre a tela "Sobre o telefone", onde fica o número da versão, e, depois de ligadas, abre as Opções do desenvolvedor direto. Se o aparelho não tem essa tela (uma `ActivityNotFoundException`), a chamada devolve `false` e o app mostra uma mensagem em vez de não fazer nada. Um botão de conferir lê o estado real pela verificação do `AppOpsManager` mostrada antes e responde com sucesso, ou com "Ainda não detectamos o Simulador de GPS como app de local fictício. Confira o passo 3."
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/mock-app.webp',
+      alt: 'App de local fictício',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/ready.webp',
+      alt: 'Tudo pronto',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/map.webp',
+      alt: 'Mapa e barra inferior',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+### Teste você mesmo
+
+Se você instalar o app, este é o caminho mais curto para vê-lo funcionando:
+
+1. Abra o app e passe pelas permissões e pelo passo do app de local fictício, até a tela "Tudo pronto".
+2. No mapa, toque em dois pontos e gere a rota (os detalhes estão na [parte 2](/blog/gps-simulator-2-routes-streets-or-straight-lines)), depois inicie a simulação.
+3. Saia do app e abra qualquer outro app que mostre a sua localização, como um app de mapas. O ponto azul acompanha a rota, e a tela do próprio simulador mostra que ele está publicando pelos provedores de GPS e de rede.
+4. Desligue a tela e espere um minuto. A notificação continua contando e, quando você a liga de novo, o ponto continuou andando pela rota.
+5. Pare pela notificação ou pelo app, confirme, e o ponto azul volta para a sua posição real.
+
+## A regra: nada de dados inventados
+
+A primeira versão publicava uma altitude fixa e perdia o sinal em intervalos regulares, em qualquer ponto da rota. Pareciam realistas, mas eram números inventados. Um app sendo testado podia passar no teste por causa de um dado que nenhum celular de verdade veria.
+
+Então defini uma regra para toda a parte de realismo, e ela é a tese desta série: **tudo o que parecer real precisa vir de dados reais do mapa. Quando não houver dado, o app não publica nada, em vez de inventar.** No código, isso aparece em dois lugares. O primeiro é a altitude: sem uma, o `Location` simplesmente informa `hasAltitude() == false`.
+
+```kotlin
+// No altitude is better than an invented one: without it the
+// Location simply reports hasAltitude() == false.
+val msl = (fix["altitude"] as Number?)?.toDouble()
+if (msl != null) applyAltitude(location, msl, vertical)
+```
+
+O segundo é o sinal. Quando o motor diz que a posição está num lugar sem sinal, como dentro de um túnel, o passo não publica nada:
+
+```dart
+if (!engine.isSignalLost(progress)) {
+  final simulated = engine.fix(progress);
+  final sinceBoot = await _mock.publish(MockFix(/* ... */), providers);
+  // ...
+}
+```
+
+A simulação continua e a notificação segue atualizando, mas nenhuma posição é enviada, exatamente como num celular de verdade que perdeu os satélites. De onde vem a altitude, como os túneis viram perda de sinal e por que a altura do terreno precisa de uma correção para bater com a de um GPS real é o assunto da [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+
+## Como ele é construído
+
+O app foi criado a partir do mesmo template que uso nos apps Flutter do trabalho: **Clean Architecture por feature**, **BLoC** em todo o estado, `get_it` para injeção de dependências, `go_router` para navegação e um `Result` nos casos de uso em vez de exceções. Há uma única feature, `simulator`, com as camadas `domain`, `application`, `data` e `presentation`. O `CLAUDE.md` do projeto transforma a arquitetura numa lista curta de regras de ouro, e alguns scripts as conferem:
+
+- O `domain` importa só o SDK do Dart e arquivos Dart puros: nunca o Flutter, nunca um plugin. O motor da simulação, que calcula cada posição, mora ali, o que facilita testar e deixa o isolate do serviço usá-lo sem a interface.
+- Todo detentor de estado é um BLoC. Nada de Cubit, nada de `provider`.
+- Os casos de uso nunca lançam exceção: devolvem um `Result`.
+- Nenhum texto fixo nos widgets: textos, cores e espaçamentos vêm de constantes e tokens do tema, e cada tela é conferida nos dois temas.
+
+Alguns pacotes fazem o trabalho pesado:
+
+- `mock_location`, pacote meu, para os provedores de teste.
+- `flutter_foreground_task` para manter a simulação viva com a tela desligada.
+- `permission_handler` para as permissões que a configuração pede.
+- `google_maps_flutter` e `flutter_map` para os dois tipos de mapa.
+- `home_widget` para levar os dados da simulação aos widgets.
+- `sembast` para guardar rotas, favoritos e configurações.
+
+A parte nativa em Kotlin é o plugin `mock_location`, mais duas peças que aparecem adiante na série: o painel flutuante e o desenho do mapa dos widgets.
+
+## O que eu aprendi
+
+- **Ferramentas internas valem o investimento.** Um bom simulador transforma um teste de campo de meia hora em alguns toques.
+- **Realismo falso é pior que nenhum realismo.** Uma altitude inventada pode fazer um teste passar por engano. Publicar "sem altitude" é mais honesto e mais útil, e publicar nada dentro de um túnel também.
+- **Explique a permissão antes de pedir.** A tela do Android diz o quê, nunca o porquê.
+- **Parar faz parte do recurso.** Um provedor de teste esquecido afeta o celular inteiro, então o caminho de parada tem uma confirmação, uma espera pelo serviço e um plano B que faz a limpeza por conta própria.
+- **Isole o que precisa sobreviver à tela.** Rodar a simulação no isolate do próprio serviço é o que a deixa continuar com o app fechado.
+- **Nem tudo precisa ser Flutter.** A API de provedores de teste não existe no Flutter, e um plugin pequeno em Kotlin resolveu.
+
+Na próxima parte, vou das permissões ao que dá trabalho de verdade: montar a rota. [Rotas pelas ruas ou em linha reta →](/blog/gps-simulator-2-routes-streets-or-straight-lines)

@@ -12,12 +12,12 @@ const projectsData = [
     featured: true,
     previewScreens: [
       '/static/images/projects/gps-simulator/screens/route.webp',
-      '/static/images/projects/gps-simulator/screens/simulating.webp',
-      '/static/images/projects/gps-simulator/screens/saved-routes.webp',
+      '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      '/static/images/projects/gps-simulator/screens/widget-map.webp',
     ],
     description: {
-      'en-US': `An Android app that makes the phone believe it is driving a real route, to test location apps: real routes, GPS noise, tunnels and altitude from map data, running with the screen off.`,
-      'pt-BR': `Um app Android que faz o celular acreditar que está percorrendo uma rota de verdade, para testar apps de localização: rotas reais, ruído de GPS, túneis e altitude a partir do mapa, com a tela desligada.`,
+      'en-US': `An Android app that makes the phone believe it is driving a real route, to test location apps: real routes, GPS noise, tunnels and altitude from map data, a floating panel with a joystick over the app under test and a live map widget.`,
+      'pt-BR': `Um app Android que faz o celular acreditar que está percorrendo uma rota de verdade, para testar apps de localização: rotas reais, ruído de GPS, túneis e altitude a partir do mapa, um painel flutuante com joystick sobre o app testado e um widget com o mapa ao vivo.`,
     },
   },
   {

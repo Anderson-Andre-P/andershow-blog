@@ -10,6 +10,7 @@ stack:
     'flutter_foreground_task',
     'Google Maps',
     'flutter_map',
+    'OpenStreetMap',
     'Valhalla',
     'sembast',
     'home_widget',
@@ -18,22 +19,26 @@ stack:
 
 ## Overview
 
-An Android app that makes the phone **believe** it is driving a real route. It publishes simulated positions through Android's own test providers, so any other app on the device that asks for the location receives those positions. It's for testing location-based apps without walking or driving around with the phone.
+An Android app that makes the phone **believe** it is driving a real route. It publishes simulated positions through Android's own test providers, so any other app on the device that asks for the location receives them. It's for testing location-based apps without walking or driving around with the phone, and it can be controlled on top of the app being tested.
+
+**At a glance**
+
+- **Platform:** Android 12 or newer, built with Flutter and a native Kotlin layer.
+- **Routes:** OSRM, GraphHopper, your own server or a straight line; GPX, KML and GeoJSON import, GPX and KML export.
+- **Realism:** GPS noise profiles, speed variation, slowing down on curves, and altitude and tunnels from real map data.
+- **Outside the app:** a floating panel with a joystick, four home screen widgets and a notification with controls.
+- **Languages and themes:** five languages with regional variants, and light, dark or system theme.
+- **Quality:** 758 automated tests, including every main screen in every language and both themes.
 
 ## The problem
 
 Testing background tracking, arrival at a point, geofences or speed calculation requires one of two things: going outside with the phone, or using a fake-location app that teleports the device from one point to another. The first is slow. The second looks nothing like a real GPS, and location bugs usually show up precisely in the details: noise, speed, signal loss and the screen being off.
 
-## What the app does
+The goal was a tool that behaves like a real GPS in those details, keeps working with the screen off and stays within reach while another app is on screen.
 
-- **Real routes:** the route comes from OSRM, GraphHopper, your own server or a straight line. It also imports GPX, KML and GeoJSON, and exports or shares GPX and KML.
-- **Round trips**, with the way back routed along the direction of the streets.
-- **GPS imperfections:** ready-made profiles (City, Highway and Covered area) or noise, speed variation and curves tuned by hand.
-- **Tunnels and altitude from the map:** inside a tunnel the GPS loses signal, and altitude comes from the real terrain, with bridges and tunnels interpolated.
-- **Geofence scenario**, to simulate entering and leaving an area.
-- **Background:** the simulation keeps running with the screen off, with a progress notification.
-- **Home screen widget** that follows the simulation and starts the last route with one tap.
-- **Address search** and favorite places, on a Google or OpenStreetMap map.
+## How it works
+
+You mark points on the map, pick the vehicle and the mode, build the route and start. From then on the app publishes a position through the GPS and network test providers, in a foreground service that keeps running with the screen off (one per second by default, adjustable). Stopping removes the providers and the device goes back to its real GPS.
 
 <Screenshots
   images={[
@@ -44,26 +49,14 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/ready.webp',
-      alt: 'Ready to simulate',
+      src: '/static/images/projects/gps-simulator/screens/mock-app.webp',
+      alt: 'Mock location app',
       width: 540,
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/address-search.webp',
-      alt: 'Address search',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/route.webp',
-      alt: 'Generated route',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
-      alt: 'Simulating',
+      src: '/static/images/projects/gps-simulator/screens/map.webp',
+      alt: 'Map and bottom bar',
       width: 540,
       height: 1200,
     },
@@ -74,8 +67,60 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       height: 1200,
     },
     {
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Route with altitude and tunnels',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'Simulating',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## What it does
+
+### Routes
+
+- **Streets or straight line:** the route follows the streets through OSRM, GraphHopper or your own server, or joins the points in a straight line, which works offline.
+- **One way, round trip or loop**, with the way back routed along the direction of the streets in a round trip.
+- **Six vehicles**, each with its own default speed: car, motorcycle, bus, truck, bicycle and on foot.
+- **Point-by-point editing:** move a point earlier or later, add one nearby or remove it. The route is flagged as out of date until it's built again.
+- **Saved routes that work offline:** the geometry is stored with the points, the vehicle, the speed and the mode. Each route can be opened, simulated right away, renamed, duplicated, exported as GPX or shared as GPX or KML.
+- **Address search**, favorite places and a teleport to any of them.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/points.webp',
+      alt: 'Points from the search',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mode.webp',
+      alt: 'Travel mode',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/save-route.webp',
+      alt: 'Save route',
+      width: 540,
+      height: 1200,
+    },
+    {
       src: '/static/images/projects/gps-simulator/screens/saved-routes.webp',
       alt: 'Saved routes',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-route-open.webp',
+      alt: 'Saved route details',
       width: 540,
       height: 1200,
     },
@@ -86,20 +131,286 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/settings.webp',
-      alt: 'Settings',
+      src: '/static/images/projects/gps-simulator/screens/point.webp',
+      alt: 'Point options',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Favorite places',
       width: 540,
       height: 1200,
     },
   ]}
 />
 
+In depth: [Part 2: routes along the streets or in a straight line](/blog/gps-simulator-2-routes-streets-or-straight-lines).
+
+### A GPS that feels real
+
+- **Accuracy profiles** (City, Highway and Covered area) or noise, speed variation and curves tuned by hand.
+- **A stationary point drifts** like a real parked phone, instead of sitting on a single coordinate.
+- **Slowing down on curves** before changing direction.
+- **Geofence scenario**, to simulate entering an area, waiting inside it and leaving.
+- **Background:** the simulation keeps running with the screen off, with a progress notification and pause and stop buttons.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/tick-interval.webp',
+      alt: 'Tick interval',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/accuracy-profile.webp',
+      alt: 'Accuracy profile',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/position-noise.webp',
+      alt: 'Position noise',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Default speeds',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Paused',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notification',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+In depth: [Part 3: a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+
+### Altitude and tunnels from the real map
+
+- **Tunnels silence the GPS**, as on a real phone, and the signal comes back at the exit. A covered area only makes the accuracy worse.
+- **Altitude from real terrain**, with bridges and tunnels interpolated between their ends, or from the imported file when it already carries it.
+- **No data, no altitude:** offline or with the server down, the position is published without altitude instead of with an invented number.
+- **A configurable terrain server** with a connection test, a limit of one request per second and the required credits on screen.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Route with altitude and tunnels',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/terrain-server.webp',
+      alt: 'Terrain server',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/routing-service.webp',
+      alt: 'Routing service',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Settings: map',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+In depth: [Part 4: altitude and tunnels from real map data](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+
+### A floating panel over any app
+
+- **Controls on top of the app under test:** state, pause, resume and stop, speed in steps of 5 km/h, a **joystick** to move by hand and **jumps** to favorite places.
+- **It collapses into a bubble** and hides when the simulator itself is on screen.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      alt: 'Floating panel over Google Maps',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/joystick.webp',
+      alt: 'Joystick in use',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-bubble.webp',
+      alt: 'Panel collapsed',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/overlay-dialog.webp',
+      alt: 'Why it asks for the overlay',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-home.webp',
+      alt: 'Panel on the home screen',
+      noDark: true,
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+In depth: [Part 5: a floating panel over any app](/blog/gps-simulator-5-floating-panel-over-any-app).
+
+### Home screen widgets
+
+- **Four widgets:** a one-line status, a quick control, a dashboard with speed, distance and time, and a **live map** with the route and the position moving.
+- **Pause, resume and stop** work without opening the app.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/widgets.webp',
+      alt: 'Home screen widgets',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-map.webp',
+      alt: 'Live map widget',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/widget-picker.webp',
+      alt: 'Widget picker',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+In depth: [Part 6: home screen widgets and the live map](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen).
+
+### Setup, preferences and help
+
+- **Guided setup:** each permission (location, notifications, battery and display over other apps) has a dialog that explains why before taking you to the Android screen, and the app shows how to pick the simulator as the mock location app.
+- **Google Maps** (standard, satellite, hybrid or terrain, with traffic and place icons) or **OpenStreetMap**, with no key.
+- **Five languages** (Portuguese, English, Spanish, French and Italian), with Mexican, Canadian and Québec variants, and kilometers or miles.
+- **Light, dark or system theme.** Every gallery on this page has a Light/Dark switch.
+- **Help in the app:** a searchable FAQ, privacy policy and terms of use.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/location-dialog.webp',
+      alt: 'Why it asks for location',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notifications-dialog.webp',
+      alt: 'Why it asks for notifications',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/battery-dialog.webp',
+      alt: 'Why it asks about the battery',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions-granted.webp',
+      alt: 'All granted',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-about.webp',
+      alt: 'Settings: theme and help',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/language.webp',
+      alt: 'Language',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/faq.webp',
+      alt: 'FAQ',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/faq-search.webp',
+      alt: 'Search the questions',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/privacy.webp',
+      alt: 'Privacy policy',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+In depth: [Part 1: how Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations).
+
 ## Technical highlights
 
-- **A custom Kotlin plugin** to register GPS and network test providers and publish positions to them, since Flutter doesn't expose that API.
+- **A custom Kotlin plugin** (`mock_location`) to register GPS and network test providers and publish positions to them, since Flutter doesn't expose that API.
 - **No invented data:** altitude and tunnels come from a Valhalla server, based on OpenStreetMap. Without data, the position is published without altitude instead of with a fake number.
 - **Altitude like a real GPS:** on Android 14 or newer, the app converts height above sea level to height above the WGS84 ellipsoid, which is what a GPS chip reports.
+- **A simulation that doesn't depend on Flutter:** the engine computes each position as a function of time, in the domain layer, and runs in the foreground service's own isolate, so it survives the screen being off.
+- **A native floating panel:** an overlay window in Kotlin that talks to the simulation through the same broadcast as the notification buttons, with no second Flutter engine. The joystick and the jump to a place are computed by the same simulation engine.
+- **A live map in a widget:** since a widget can't run a map, the app draws the route and the position over OpenStreetMap tiles at each step, keeps the tiles for 7 days and follows the server's usage policy.
 - **Responsible use of public servers:** at most one request per second to the terrain server, a configurable address and the required credits on screen.
-- **Clean Architecture and BLoC**, with the simulation engine in the domain layer, independent of Flutter and Android, and tests for use cases, BLoCs and the background service.
 
-I wrote about how it was built, with code samples, in [I built a GPS simulator to test location apps](/blog/building-a-gps-simulator-for-android).
+## Architecture and quality
+
+- **Clean Architecture per feature,** with `domain`, `data`, `application` and `presentation`. The domain layer imports only the Dart SDK and a few pure `core` files, and no feature imports another.
+- **BLoC is the only state manager,** with `get_it` for dependency injection, `go_router` for navigation and a `Result` in the use cases instead of exceptions.
+- **Rules checked by scripts:** the layer boundaries and the project's golden rules are verified by Python scripts before work is handed back.
+- **758 tests** cover use cases, BLoCs, the simulation engine, the background service and the screens in every language and both themes. A test also fails if any text is cut off.
+- **Translations enforced by the compiler:** each language implements the Portuguese copy class, so a missing translation doesn't compile.
+- **Interface rules written down,** in a project document with the reason for each: one primary button per group, the destructive action in red only inside its confirmation, and speed always with its unit.
+
+## Good to know
+
+- **Android only,** from Android 12. Developer options must be on, with the simulator chosen as the mock location app.
+- **Google Maps needs an API key;** OpenStreetMap, which needs none, is a setting away.
+- **Public servers have limits:** the terrain server and the OpenStreetMap tiles are for moderate use, and the app respects that.
+- **Without the geoid conversion** (Android 13 or older) the app publishes height above sea level, and Part 4 explains the difference.
+
+## The post series
+
+Each of the app's most interesting features became a post, with code and screens:
+
+1. [How Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations)
+2. [Routes along the streets or in a straight line](/blog/gps-simulator-2-routes-streets-or-straight-lines)
+3. [A GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)
+4. [Altitude and tunnels from real map data](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data)
+5. [A floating panel over any app](/blog/gps-simulator-5-floating-panel-over-any-app)
+6. [Home screen widgets and the live map](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)

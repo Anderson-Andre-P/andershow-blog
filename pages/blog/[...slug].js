@@ -21,8 +21,14 @@ export async function getStaticProps({ params, locale }) {
   const dir = localeDir('blog', locale)
   const allPosts = await getAllFilesFrontMatter(dir)
   const postIndex = allPosts.findIndex((post) => formatSlug(post.slug) === params.slug.join('/'))
-  const prev = allPosts[postIndex + 1] || null
-  const next = allPosts[postIndex - 1] || null
+  // Inside a series, previous/next are the neighboring parts. At either end of the series
+  // they fall back to the neighboring posts of the full list, so the first part still
+  // points to what came before it.
+  const current = allPosts[postIndex]
+  const siblings = current?.series ? allPosts.filter((p) => p.series === current.series) : allPosts
+  const siblingIndex = siblings.findIndex((p) => p.slug === current?.slug)
+  const prev = siblings[siblingIndex + 1] || allPosts[postIndex + 1] || null
+  const next = siblings[siblingIndex - 1] || allPosts[postIndex - 1] || null
   const post = await getFileBySlug(dir, params.slug.join('/'))
   const authorList = post.frontMatter.authors || ['default']
   const authorPromise = authorList.map(async (author) => {

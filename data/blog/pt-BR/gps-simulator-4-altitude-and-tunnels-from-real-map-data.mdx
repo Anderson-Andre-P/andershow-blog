@@ -1,0 +1,280 @@
+---
+title: 'Simulador de GPS, parte 4: altitude e túneis reais a partir do mapa, com Valhalla e geoide'
+date: '2026-11-26T12:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Kotlin', 'Geolocalização']
+draft: false
+summary: 'Na série do Simulador de GPS, esta parte percorre todo o caminho do terreno: as requisições ao Valhalla que devolvem altitude e túneis, como pontes e túneis são nivelados, por que um chip de GPS não informa a altura acima do nível do mar, como o geoide é lido do Android, o que acontece quando não há dados e como conferir os números por conta própria.'
+authors: ['default']
+series: 'GPS Simulator'
+---
+
+> **Série Simulador de GPS · Parte 4 de 6.** Aqui entra o realismo que vem de dados do mapa: altitude, túneis e pontes. Antes: [a parte 3, o GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+
+A primeira versão do simulador publicava uma altitude fixa e perdia o sinal em intervalos regulares, em qualquer ponto da rota. Pareciam realistas, mas eram números inventados. Um app sendo testado podia passar no teste por causa de um dado que nenhum celular de verdade veria.
+
+Por isso o projeto tem uma regra, que já apareceu na [parte 1](/blog/gps-simulator-1-how-android-accepts-fake-locations): **tudo o que parecer real precisa vir de dados reais do mapa. Quando não houver dado, o app não publica nada, em vez de inventar.** A parte 3 tratou das imperfeições que você escolhe, como ruído e variação de velocidade. Esta trata das que você não escolhe, porque vêm do lugar onde a rota passa. O post segue essa regra desde a requisição ao servidor até o número que chega ao celular, e termina com um jeito de conferir tudo você mesmo.
+
+## De onde vêm os dados
+
+Duas perguntas precisam de resposta para cada ponto da rota: qual é a altura do chão ali, e a via naquele ponto é um túnel, uma ponte ou um trecho coberto? Um só servidor responde às duas: o **Valhalla**, o motor de rotas usado por serviços baseados no OpenStreetMap. Por padrão o app fala com a instância pública mantida pela comunidade FOSSGIS (`valhalla1.openstreetmap.de`), e o endereço pode ser trocado nas configurações.
+
+Dois endpoints fazem o trabalho:
+
+- `/height` lê o modelo de terreno do servidor (um DEM) e devolve a altura de cada ponto.
+- `/trace_attributes` faz o _map matching_: encaixa a linha nas vias do OpenStreetMap e informa, para cada trecho encaixado, se é túnel, ponte ou área coberta.
+
+Esta é a resposta real do primeiro endpoint para um ponto em São Paulo (o mesmo que o botão de testar o servidor usa):
+
+```json
+// POST /height   {"shape":[{"lat":-23.5505,"lon":-46.6333}],"range":false}
+{ "shape": [{ "lat": -23.5505, "lon": -46.6333 }], "height": [761] }
+```
+
+E uma resposta resumida do segundo, para uma linha curta perto de Zurique em que o primeiro trecho encaixado é um túnel:
+
+```json
+// POST /trace_attributes with "shape_match": "map_snap"
+{
+  "edges": [
+    { "bridge": false, "tunnel": true },
+    { "bridge": false, "tunnel": false }
+  ],
+  "matched_points": [
+    { "type": "matched", "edge_index": 0 },
+    { "type": "matched", "edge_index": 9 }
+  ]
+}
+```
+
+O detalhe do `trace_attributes` é que a resposta vem por trecho (_edge_), mas o app precisa dela por ponto. Cada item de `matched_points` tem um `edge_index` que aponta para `edges`, então o cliente busca o trecho e classifica o ponto. Este é o coração do `ValhallaTerrainRepository`:
+
+```dart
+static RoadEnvironment? _environmentOf(
+  Map<String, Object?> point,
+  List<Map<String, Object?>> edges,
+) {
+  final index = point['edge_index'];
+  if (point['type'] == 'unmatched' ||
+      index is! int ||
+      index < 0 ||
+      index >= edges.length) {
+    return null; // the map doesn't know this point: stay unknown
+  }
+  final edge = edges[index];
+  if (edge['tunnel'] == true) return RoadEnvironment.tunnel;
+  if (edge['bridge'] == true) return RoadEnvironment.bridge;
+  if (edge['indoor'] == true) return RoadEnvironment.indoor;
+  return RoadEnvironment.road;
+}
+```
+
+Repare no primeiro ramo. Um ponto que o servidor não conseguiu encaixar devolve `null`, e não "via comum". A diferença importa mais adiante: "não sei" e "é uma via comum" são respostas diferentes, e o app as mantém separadas. A requisição também envia um `costing` que acompanha o veículo escolhido (`auto`, `motorcycle`, `bus`, `truck`, `bicycle` ou `pedestrian`), para que o encaixe siga vias que o veículo escolhido realmente pode usar.
+
+## De uma rota a amostras a cada 30 metros
+
+A geometria de uma rota do OSRM pode ter um ponto a cada poucos metros numa curva e um a cada quilômetro numa reta. Esse formato é ruim para perguntar sobre o terreno, então o app primeiro **reamostra a linha**: um ponto a cada 30 metros percorridos, mais o último ponto. O `TerrainMath.resample` caminha pela polilinha e interpola um ponto sempre que a distância chega ao próximo múltiplo de 30. Cada amostra guarda sua distância desde o início, e essa distância é a única chave que o resto do caminho usa.
+
+As amostras vão ao servidor em blocos, e os tamanhos são diferentes de propósito:
+
+- **Alturas:** 500 pontos por requisição ao `/height`, cerca de 15 km de rota.
+- **Ambientes:** blocos de até 50 km de rota por requisição ao `/trace_attributes`. Um último ponto sozinho é anexado ao bloco anterior, porque o encaixe no mapa precisa de pelo menos dois pontos.
+
+Uma rota longa vira, portanto, um punhado de requisições, e não centenas. Os blocos também dão ao caso de uso (`BuildTerrain`) uma propriedade útil: **um bloco que falha deixa suas amostras desconhecidas e mantém as outras**. Só um servidor que não respondeu nada é tratado como falha. É por isso que uma rota longa numa conexão ruim pode acabar com altitude para os primeiros 40 km e um estado "parcial", em vez de jogar tudo fora.
+
+## Pontes e túneis precisam ser nivelados
+
+O modelo de terreno conhece o chão, não o que foi construído em cima dele. Sob uma ponte, o chão é o fundo do vale; sobre um túnel, é o topo do morro. Se o app publicasse essas alturas, um carro cruzando um viaduto pareceria mergulhar 40 metros e voltar a subir. A correção é o `TerrainMath.levelSpans`:
+
+```dart
+/// Bridges keep the deck height and tunnels the floor between portals:
+/// the terrain model has the valley or the hill there. Each span is
+/// interpolated between the samples just outside it.
+static List<TerrainSample> levelSpans(List<TerrainSample> samples) {
+  // ...find each run of consecutive bridge (or tunnel) samples...
+  final hBefore = before?.elevationMeters;
+  final hAfter = after?.elevationMeters;
+  for (var k = i; k <= end; k++) {
+    if (hBefore != null && hAfter != null) {
+      final t = (out[k].distanceMeters - before!.distanceMeters) /
+          (after!.distanceMeters - before.distanceMeters);
+      level = hBefore + (hAfter - hBefore) * t; // straight ramp between portals
+    } else {
+      level = hBefore ?? hAfter; // only one side is known: hold it
+    }
+    // ...
+  }
+}
+```
+
+Para cada sequência de amostras consecutivas de ponte ou túnel, o app pega a altura da amostra logo antes e da amostra logo depois e traça uma reta entre elas. É um bom modelo de um tabuleiro ou de um piso de túnel de verdade, que são construídos com inclinação constante. Se só um lado é conhecido, mantém esse valor; se nenhum é, as amostras ficam desconhecidas.
+
+Mais uma regra vive no mesmo caminho: se você **importa um arquivo que já traz elevação** (um GPX gravado por um aparelho real, por exemplo), a elevação do arquivo vence. A origem fica registrada como `ElevationSource.file`, e o app reamostra as altitudes do próprio arquivo na mesma grade de 30 m. Os túneis e as pontes continuam vindo do mapa, porque um arquivo não os carrega.
+
+## O que "sem sinal" quer dizer de verdade
+
+O ambiente afeta a simulação de três formas diferentes, e vale ser preciso em cada uma:
+
+- **Túnel:** a posição **não é publicada** enquanto a rota está dentro de um túnel. A simulação continua andando, e o celular simplesmente não recebe posições. Na saída, elas voltam. É o que um celular de verdade faz, e é o que permite testar o caminho de "GPS perdido" do app em teste.
+- **Área coberta (_indoor_):** nada é silenciado. A precisão de cada posição só fica **duas vezes pior** (`_indoorAccuracyFactor = 2.0`), como num celular debaixo de um telhado.
+- **Ponte:** afeta só a altitude, pelo nivelamento acima.
+
+O resto é deixado em paz de propósito: `isSignalLost` só é verdadeiro para um túnel que o mapa conhece, e o próprio comentário do motor diz que "nada mais o silencia". Se o ambiente é desconhecido, o ponto é tratado como via comum, e o resumo da rota avisa que os túneis não foram identificados, em vez de afirmar que não há nenhum.
+
+A altitude em si leva uma precisão vertical, nominal de 10 metros mais o ruído do perfil que você escolheu na parte 3, um valor razoável para um modelo de terreno. E há um caso em que nenhuma altitude é publicada mesmo com um perfil perfeito: quando você sai da rota com o joystick ou com um teletransporte (parte 5), o perfil não diz nada sobre o chão sob a nova posição, então a posição sai sem altitude.
+
+## Quando não há dados
+
+Tudo isso pode falhar: sem conexão, servidor fora do ar, uma região sem dados de terreno. A regra do projeto é a mesma em todos os casos, e este é o resultado de cada um:
+
+- **O DEM não tem valor para um ponto:** o Valhalla marca com `-32768`. O cliente transforma isso em `null`, nunca em altura.
+- **O servidor não responde:** a rota é criada e pode ser simulada do mesmo jeito. O painel mostra "Altitude e túneis indisponíveis" com um botão para tentar de novo. Quando só alguns blocos falharam, o estado é "parcial" e o botão também aparece.
+- **Altitude desconhecida num ponto:** a posição é publicada **sem altitude**. Na tela ao vivo, a linha de altitude mostra "Indisponível". Para o Android, o `Location` simplesmente informa `hasAltitude() == false`.
+
+```kotlin
+// No altitude is better than an invented one: without it the
+// Location simply reports hasAltitude() == false.
+val msl = (fix["altitude"] as Number?)?.toDouble()
+val vertical = (fix["verticalAccuracy"] as Number?)?.toFloat()
+if (msl != null) applyAltitude(location, msl, vertical)
+```
+
+O perfil de terreno é salvo junto com a rota, em vetores paralelos compactos (`d` com as distâncias, `h` com as alturas, `env` com os ambientes), mais a origem e um indicador de se os túneis foram lidos para a linha inteira. Assim o servidor é consultado uma vez por rota, e não a cada simulação, e uma rota salva continua funcionando offline com a altitude que já tinha. Uma ida e volta com geometria de volta própria ganha um perfil próprio para a volta; sem ela, a volta lê o perfil da ida de trás para a frente. Na tela da rota, o resumo mostra o resultado: de onde veio a altitude (terreno ou arquivo) e quantos túneis a linha atravessa.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Rota com altitude e túneis',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-route-open.webp',
+      alt: 'Detalhes da rota salva',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## O detalhe do geoide
+
+Agora a parte sutil. O modelo de terreno dá a altura **acima do nível do mar**. Um chip de GPS de verdade informa a altura **acima do elipsoide WGS84**, uma superfície matemática que não coincide com o nível do mar. A distância entre as duas é a _altura geoidal_ (geralmente escrita N), e ela varia de lugar para lugar: no Brasil, fica na casa de dezenas de metros. Publicar a altura do terreno direto seria um número plausível, mas errado, e um app que compara a altitude com um valor esperado poderia se comportar de um jeito no celular e de outro no simulador.
+
+O Android 14 (API 34) trouxe o `AltitudeConverter`, que conhece o geoide. Mas ele converte num sentido que eu não preciso: recebe uma altitude no elipsoide e acrescenta a acima do nível do mar. Então o plugin o usa como **sonda**. Ele monta uma posição com altura zero no elipsoide no lugar de interesse, pede ao conversor a altura correspondente acima do nível do mar e inverte o sinal: com altura 0 no elipsoide, a altura acima do nível do mar é `-N`.
+
+```kotlin
+private fun geoidOffset(latitude: Double, longitude: Double): Double? {
+    val cell = (Math.round(latitude * GEOID_CELLS_PER_DEGREE) shl 32) xor
+        (Math.round(longitude * GEOID_CELLS_PER_DEGREE) and 0xffffffffL)
+    geoid[cell]?.let { return it }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+        geoidPending.add(cell)
+    ) {
+        geoidWorker.execute {
+            try {
+                val probe = Location("geoid").apply {
+                    this.latitude = latitude
+                    this.longitude = longitude
+                    altitude = 0.0
+                    verticalAccuracyMeters = 1f
+                }
+                AltitudeConverter().addMslAltitudeToLocation(context, probe)
+                // At ellipsoid height 0 the sea-level height is -N.
+                geoid[cell] = -probe.mslAltitudeMeters
+            } catch (_: Exception) {
+                // No geoid data here: keep publishing the sea-level height.
+            } finally {
+                geoidPending.remove(cell)
+            }
+        }
+    }
+    return null
+}
+```
+
+Há três decisões de engenharia nesse trecho:
+
+- **Cache por célula.** O geoide muda devagar, então o deslocamento é guardado por célula de 0,01 grau, cerca de 1 km (`GEOID_CELLS_PER_DEGREE = 100`). Uma rota de 200 km precisa de algumas centenas de sondas, e não de uma por segundo.
+- **Fora da thread principal.** O conversor pode ler dados do disco, então a sonda roda num executor de uma thread só, e um conjunto de "pendentes" impede que dois passos sondem a mesma célula ao mesmo tempo.
+- **Nunca trava uma posição.** O método devolve o valor em cache ou `null` na hora. Isso tem uma consequência sobre a qual quero ser honesto: **a primeira posição de cada célula nova sai antes de o deslocamento ser conhecido**, com a altura acima do nível do mar como está. Para um carro a 80 km/h, é uma posição no começo de cada quilômetro. Aceitei isso porque travar a publicação para esperar o disco quebraria o ritmo da simulação, o que é pior para os testes.
+
+Quando o deslocamento é conhecido, o `Location` publicado leva a altitude no elipsoide e, no Android 14 ou mais novo, também a `mslAltitudeMeters` explícita e a sua precisão, exatamente como uma posição de GNSS de verdade. Em versões mais antigas do Android não há conversor, e o plugin publica a altura acima do nível do mar como está. Nesse caso o app não mostra nenhum aviso. É uma lacuna na interface que ainda não fechei, então, para testes em que a altura no elipsoide importa, use o Android 14 ou mais novo.
+
+## Respeitando os servidores públicos
+
+Por padrão, o terreno vem do servidor público do Valhalla mantido pela comunidade FOSSGIS. É um serviço gratuito, com regras: no máximo uma requisição por segundo, sem garantia de disponibilidade e sem endereço fixo no código dos apps. O cliente foi construído em torno disso:
+
+- **Uma requisição por vez, com um segundo de intervalo.** Todas passam por uma fila serial (`_serial`), e cada uma espera até que tenha passado um segundo desde a anterior.
+- **Limite excedido? Espere.** Num HTTP 429, o cliente espera 30 segundos e tenta de novo, até três vezes.
+- **Identificado e limitado.** As requisições levam um `User-Agent` que nomeia o app, e cada uma tem um tempo limite de 20 segundos.
+- **O endereço é uma configuração.** A tela "Servidor de terreno" permite trocar a URL e tem um botão de **testar a conexão**, que pede a altura de um ponto em São Paulo, e o crédito exigido ("Valhalla · dados © OpenStreetMap") aparece na tela. Ao lado do campo, uma nota diz que o servidor público não garante disponibilidade e que um time grande deve usar o seu próprio.
+- **Dá para desligar.** Com "Altitude e túneis do mapa" desativado, as rotas são criadas sem nenhuma consulta de terreno, e as posições saem sem altitude.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/terrain-server.webp',
+      alt: 'Servidor de terreno',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Configurações: simulação',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+Se o seu time tem muitos testadores, rodar uma instância própria do Valhalla é o caminho sensato. O app só precisa dos dois endpoints acima, e o botão de testar a conexão diz se o endereço responde.
+
+## O mapa: Google Maps ou OpenStreetMap
+
+O mesmo cuidado vale para o mapa que desenha a rota. A história é curta: o OpenStreetMap veio primeiro, porque não precisa de chave, e o Google Maps chegou no dia seguinte como padrão, com o OpenStreetMap mantido como opção nas configurações. O Google Maps oferece mapa comum, satélite, híbrido e relevo, além de trânsito e ícones de lugares. O OpenStreetMap oferece só comum e relevo (OpenTopoMap): as fotos aéreas gratuitas disponíveis nele têm termos que não combinam com o app, então o satélite é uma escolha exclusiva do Google, e uma escolha de satélite já salva volta ao mapa comum quando você troca para o OpenStreetMap.
+
+Para o Google Maps funcionar, precisei configurar uma chave no [Google Cloud Console](https://console.cloud.google.com/): criar um projeto, ativar o **Maps SDK for Android** e gerar uma chave de API, restrita ao pacote do app e ao SHA-1 das chaves de assinatura de debug e de release. A chave fica fora do git, em `android/local.properties` (`MAPS_API_KEY=...`) ou numa variável de ambiente com o mesmo nome. Sem ela, o SDK desenha só um fundo vazio e registra no log um erro de autorização (`Authorization failure`). É uma configuração simples, mas fácil de esquecer ao rodar o app numa máquina nova, e é justamente por isso que a opção do OpenStreetMap, sem chave, é útil.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Configurações: mapa',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Conferindo você mesmo
+
+Você não precisa acreditar na minha palavra. Este é um jeito de verificar o caminho todo no seu próprio celular, em uns dez minutos:
+
+1. **Confira o modelo de terreno.** Pergunte ao servidor por um lugar cuja altitude você conhece. A consulta acima devolve 761 m para o centro de São Paulo, o que bate com a altitude conhecida da cidade, de cerca de 760 m. Troque as coordenadas pelas da sua cidade.
+2. **Monte uma rota** com dois pontos a uns 5 km de distância, um deles numa área de morros, e abra a tela da rota. O resumo sob a rota deve dizer algo como "Altitude do terreno · N túneis". Use uma rota que passe por um túnel conhecido para ver a contagem mudar.
+3. **Inicie a simulação** e abra a folha de detalhes. A linha de altitude mostra o valor com a sua origem ("terreno" ou "arquivo"). Compare com a altura que você pediu ao servidor.
+4. **Confira o geoide.** Abra um app que mostre dados brutos de GNSS (um app de status de GPS basta) enquanto a simulação roda no Android 14 ou mais novo. A altitude dele será a altura acima do nível do mar mais o deslocamento do geoide da sua região, e o campo de "altitude MSL" do app, se ele mostrar um, vai bater com o do simulador.
+5. **Atravesse um túnel.** Enquanto a rota está dentro de um túnel, o indicador de estado diz "Sem sinal · túnel" e o app em teste deixa de receber posições. Na saída, elas voltam.
+6. **Quebre de propósito.** Nas configurações, aponte o servidor de terreno para um endereço que não existe e monte uma rota nova. Você deve ver "Altitude e túneis indisponíveis" com um botão para tentar de novo, e a tela ao vivo deve mostrar a altitude como "Indisponível". É a regra funcionando: sem dado, sem número.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'Simulando',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## O que eu aprendi
+
+- **Realismo falso é pior que nenhum realismo.** Uma altitude inventada pode fazer um teste passar por engano. Publicar "sem altitude" é mais honesto e mais útil.
+- **Dados geográficos escondem detalhes.** Nível do mar e elipsoide parecem a mesma coisa até você comparar com um GPS real.
+- **"Desconhecido" e "nenhum" são valores diferentes.** Um ponto que o mapa não conseguiu encaixar não é uma via comum. Manter o `null` desde o servidor até o `Location` foi o que tornou a regra aplicável.
+- **Resultado parcial vale mais que tudo ou nada.** Dividir as requisições em blocos faz uma falha custar um trecho da rota, e não a rota toda.
+- **Diga o que você não faz.** A lacuna no Android 13 ou mais antigo e a primeira posição de cada célula do geoide são limites que merecem estar na documentação, e não escondidos atrás de um número plausível.
+- **Servidores públicos têm regras.** Limitar as requisições, guardar o que já foi baixado, permitir trocar o servidor e mostrar os créditos faz parte de usar bem um serviço gratuito.
