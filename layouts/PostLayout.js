@@ -98,8 +98,8 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                 <PrevNextNav
                   prev={prev && { href: `/blog/${prev.slug}`, title: prev.title }}
                   next={next && { href: `/blog/${next.slug}`, title: next.title }}
-                  prevLabel={t.blog.older}
-                  nextLabel={t.blog.newer}
+                  prevLabel={frontMatter.series ? t.blog.previousPart : t.blog.older}
+                  nextLabel={frontMatter.series ? t.blog.nextPart : t.blog.newer}
                   ariaLabel={t.blog.more}
                 />
               </div>
