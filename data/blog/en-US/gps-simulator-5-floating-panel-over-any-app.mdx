@@ -1,0 +1,119 @@
+---
+title: 'A Floating Panel with a Joystick to Control the Simulated GPS on Top of Any App'
+date: '2026-11-26T13:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Android', 'Kotlin', 'Flutter', 'Mobile Development']
+draft: false
+summary: 'During a test, the screen belongs to the app under test, not to the simulator. I built a floating panel in Kotlin, in an overlay window, to pause, change the speed, walk with a joystick and jump to favorite places without leaving the app being tested.'
+authors: ['default']
+---
+
+> **GPS Simulator series · Part 5 of 6.** In this part: the floating panel and the joystick. Before it, [a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one) and [altitude and tunnels from the map](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+
+## The problem: the screen belongs to the app under test
+
+When I test a location app, the app is on screen, not the simulator. To pause the simulation, change the speed or move the position somewhere else, I had to leave the app, open the simulator, change it and come back. That breaks the flow of the test, and many location bugs only show up if the app stays open and keeps receiving positions.
+
+The fix was to bring the controls to where the test happens: a **floating panel**, a small draggable window shown on top of any app while a simulation runs. It has:
+
+- the state of the simulation, the route and the progress;
+- pause, resume and stop;
+- faster and slower buttons, in steps of 5 km/h;
+- a **joystick** to move the position by hand, in any direction;
+- the favorite places, to **jump** to one of them with a tap.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      alt: 'Floating panel over Google Maps',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/joystick.webp',
+      alt: 'Joystick in use',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-bubble.webp',
+      alt: 'Panel collapsed',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-home.webp',
+      alt: 'Panel on the home screen',
+      noDark: true,
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+The panel collapses into a bubble that you can drag to a corner of the screen. It **only shows up when it makes sense**: the "Floating panel" switch in the settings is on, a simulation is running, the service is alive, the permission was granted and the simulator itself is **not** on screen. The moment the simulator comes back to the foreground, the panel disappears so it doesn't cover the same buttons.
+
+## A native window, not a second Flutter engine
+
+The panel is written in Kotlin, in a `TYPE_APPLICATION_OVERLAY` window, not in Flutter. The reason is practical: a second Flutter engine just for a small window would be heavy on memory and would complicate the communication with the simulation, which already runs in its own isolate inside the foreground service. In Kotlin, the window is light and leans on things that already existed.
+
+The main one is the command channel. The notification buttons already told the service what to do through an **internal broadcast** of the app, so the panel uses exactly the same path:
+
+```kotlin
+fun send(context: Context, command: String) {
+    context.sendBroadcast(
+        Intent("onNotificationButtonPressed")
+            .setPackage(context.packageName)
+            .putExtra("intentData", command),
+    )
+}
+```
+
+Since this channel only carries one word, the new commands became text: `faster`, `slower`, `joy:90:60` (bearing in degrees and power in percent) and `jump:-23.55:-46.63`. The pause, resume and stop buttons reuse the commands the notification already had. That also got the home screen widgets (the subject of [Part 6](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)) speaking the same language.
+
+## The joystick
+
+On the Dart side, what computes the movement is the same simulation engine, which still doesn't depend on Flutter or Android. The first touch on the joystick takes the position off the route line, at the point where the vehicle is, and from then on each step moves in the chosen direction and at the chosen fraction of the speed:
+
+```dart
+SimulationProgress steer(SimulationProgress p, double bearing, double power) {
+  final push = power.clamp(0.0, 1.0);
+  if (p.status != SimulationStatus.teleport && push == 0) return p;
+  final free = p.status == SimulationStatus.teleport ? p : _leaveLine(p);
+  return free.copyWith(
+    joystickBearing: (bearing % 360 + 360) % 360,
+    joystickPower: push,
+  );
+}
+```
+
+One detail is that the joystick generates several movements per second, and the command channel wasn't built for that. So the panel sends **at most one command every 150 ms**, and the service only moves the position on the next step of the simulation. Releasing the joystick is the exception: it's always sent right away, so the position doesn't keep moving after the finger is gone.
+
+The jump to a favorite follows the same idea and goes through the same engine. The `jump` command carries the latitude and longitude, and the position becomes that of the chosen place, with no route between the two points. For a test, it's a quick way to prove what the app does when the position changes suddenly.
+
+## The permission Android hides
+
+The panel needs the "Display over other apps" permission, which lives on an Android screen outside the app. The Android permission screen says what is being asked, but never why. So before sending the person there, the simulator opens a dialog explaining what it's for.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/overlay-dialog.webp',
+      alt: 'Why it asks for the overlay',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+That became a rule for every permission in the app: location, notifications, battery and overlay, each with its own dialog before the system screen opens. If the person says no, the app keeps working, just without the panel.
+
+## What I learned from this part
+
+- **The tool has to be where the test happens.** The panel exists because, during a test, the screen belongs to the app under test.
+- **Not everything needs to be Flutter.** An overlay window is simpler and lighter in Kotlin, talking to Dart through a channel that already existed.
+- **Reusing the channel beats creating a new one.** The commands became plain text, and the panel, the notification and the widgets now use the same door.
+- **Continuous input needs a limit.** A joystick with no send limit floods the channel; releasing it, however, can never wait.
+
+**Previous:** [Altitude and tunnels from real map data](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) · **Next:** [Home screen widgets with a live map](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)

@@ -1,0 +1,119 @@
+---
+title: 'Um painel flutuante com joystick para controlar o GPS simulado por cima de qualquer app'
+date: '2026-11-26T13:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Android', 'Kotlin', 'Flutter', 'Desenvolvimento Mobile']
+draft: false
+summary: 'Durante um teste, a tela é do app testado, e não do simulador. Construí em Kotlin um painel flutuante, numa janela de sobreposição, para pausar, mudar a velocidade, andar com um joystick e saltar para lugares favoritos sem sair do app que está sendo testado.'
+authors: ['default']
+---
+
+> **Série GPS Simulator · Parte 5 de 6.** Nesta parte: o painel flutuante e o joystick. Antes, [um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one) e [altitude e túneis do mapa](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+
+## O problema: a tela é do app testado
+
+Quando testo um app de localização, quem está na tela é ele, não o simulador. Para pausar a simulação, mudar a velocidade ou levar a posição para outro lugar, eu precisava sair do app, abrir o simulador, mexer e voltar. Isso quebra o fluxo do teste, e muitos bugs de localização só aparecem se o app continuar aberto e recebendo posições.
+
+A solução foi levar o controle para onde o teste acontece: um **painel flutuante**, uma janela pequena e arrastável que aparece por cima de qualquer app enquanto a simulação roda. Ele tem:
+
+- o estado da simulação, a rota e o progresso;
+- pausar, retomar e parar;
+- botões de mais e menos velocidade, de 5 em 5 km/h;
+- um **joystick** para andar com a posição à mão, em qualquer direção;
+- os lugares favoritos, para **saltar** até um deles com um toque.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/floating-panel.webp',
+      alt: 'Painel flutuante sobre o Google Maps',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/joystick.webp',
+      alt: 'Joystick em uso',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-bubble.webp',
+      alt: 'Painel recolhido',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/panel-home.webp',
+      alt: 'Painel na tela inicial',
+      noDark: true,
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+O painel recolhe numa bolha, que dá para arrastar para um canto da tela. Ele **só aparece quando faz sentido**: o interruptor "Painel flutuante" nas configurações está ligado, existe uma simulação em andamento, o serviço está rodando, a permissão foi concedida e o próprio simulador **não** está na tela. No momento em que o simulador volta ao primeiro plano, o painel some, para não cobrir os mesmos botões.
+
+## Uma janela nativa, e não um segundo Flutter
+
+O painel é escrito em Kotlin, numa janela do tipo `TYPE_APPLICATION_OVERLAY`, e não em Flutter. A razão é prática: um segundo motor Flutter só para uma janela pequena seria pesado em memória e complicaria a comunicação com a simulação, que já roda num isolate próprio dentro do serviço em primeiro plano. Em Kotlin, a janela é leve e se apoia em coisas que já existiam.
+
+A principal delas é o canal de comandos. Os botões da notificação já avisavam o serviço por um **broadcast interno** do app, então o painel usa exatamente o mesmo caminho:
+
+```kotlin
+fun send(context: Context, command: String) {
+    context.sendBroadcast(
+        Intent("onNotificationButtonPressed")
+            .setPackage(context.packageName)
+            .putExtra("intentData", command),
+    )
+}
+```
+
+Como esse canal só leva uma palavra, os comandos novos viraram texto: `faster`, `slower`, `joy:90:60` (direção em graus e força em porcentagem) e `jump:-23.55:-46.63`. Os botões de pausar, retomar e parar reaproveitam os comandos que a notificação já tinha. Isso também deixou os widgets da tela inicial (assunto da [Parte 6](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)) falando a mesma língua.
+
+## O joystick
+
+Do lado do Dart, quem calcula o movimento é o mesmo motor da simulação, que continua sem depender do Flutter nem do Android. O primeiro toque no joystick tira a posição da linha da rota, no ponto onde o veículo está, e a partir daí cada passo anda na direção e na fração da velocidade escolhidas:
+
+```dart
+SimulationProgress steer(SimulationProgress p, double bearing, double power) {
+  final push = power.clamp(0.0, 1.0);
+  if (p.status != SimulationStatus.teleport && push == 0) return p;
+  final free = p.status == SimulationStatus.teleport ? p : _leaveLine(p);
+  return free.copyWith(
+    joystickBearing: (bearing % 360 + 360) % 360,
+    joystickPower: push,
+  );
+}
+```
+
+Um detalhe é que o joystick gera vários movimentos por segundo, e o canal de comandos não foi feito para isso. Por isso o painel envia **no máximo um comando a cada 150 ms**, e o serviço só move a posição no próximo passo da simulação. Soltar o joystick é a exceção: é sempre enviado na hora, para a posição não continuar andando depois que o dedo saiu.
+
+O salto para um favorito segue a mesma ideia, e passa pelo mesmo motor. O comando `jump` leva a latitude e a longitude, e a posição passa a ser a do lugar escolhido, sem uma rota entre os dois pontos. Para um teste, é uma forma rápida de provar o que o app faz quando a posição muda de repente.
+
+## A permissão que o Android esconde
+
+O painel precisa da permissão "Sobrepor a outros apps", que fica numa tela do próprio Android, fora do app. A tela de permissão do Android diz o que está sendo pedido, mas nunca o porquê. Por isso, antes de mandar a pessoa para lá, o simulador abre um diálogo explicando para que ela serve.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/overlay-dialog.webp',
+      alt: 'Por que pede a sobreposição',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+Isso virou regra para todas as permissões do app: localização, notificações, bateria e sobreposição, cada uma com seu diálogo antes de abrir a tela do sistema. Se a pessoa nega, o app continua funcionando, só sem o painel.
+
+## O que eu aprendi com essa parte
+
+- **A ferramenta precisa estar onde o teste acontece.** O painel existe porque, durante um teste, a tela é do app testado.
+- **Nem tudo precisa ser Flutter.** Uma janela de sobreposição fica mais simples e mais leve em Kotlin, falando com o Dart por um canal que já existia.
+- **Reaproveitar o canal vale mais que criar um novo.** Os comandos viraram texto simples, e o painel, a notificação e os widgets passaram a usar a mesma porta.
+- **Entradas contínuas precisam de limite.** Um joystick sem limite de envio satura o canal; soltar, porém, nunca pode esperar.
+
+**Anterior:** [Altitude e túneis do mapa real](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) · **Próximo:** [Widgets na tela inicial, com um mapa ao vivo](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)
