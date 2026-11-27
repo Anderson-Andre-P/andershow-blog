@@ -1,0 +1,159 @@
+---
+title: 'Simulador de GPS, parte 1: como o Android aceita posições falsas'
+date: '2026-11-26T09:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Kotlin', 'Geolocalização']
+draft: false
+summary: 'Testar um app de localização exige andar pela rua ou confiar em posições falsas que não se parecem com um GPS de verdade. Na primeira parte da série sobre o Simulador de GPS, mostro por que construí o app e como o Android permite publicar posições simuladas pelos provedores de teste, com um plugin em Kotlin, as permissões e a escolha do app de local fictício.'
+authors: ['default']
+---
+
+> **Série Simulador de GPS · Parte 1 de 6** · Como o Android aceita posições falsas. Próxima: [rotas pelas ruas ou em linha reta](/blog/gps-simulator-2-routes-streets-or-straight-lines).
+
+## Por que construí
+
+Boa parte do meu trabalho é em apps que dependem de localização: rastreamento em segundo plano, chegada a um ponto, entrada e saída de uma cerca virtual, cálculo de velocidade. Testar isso é chato. Ou você sai andando ou dirigindo com o celular, ou usa um app de localização falsa que teleporta o aparelho de um ponto a outro, sem nada parecido com o comportamento de um GPS real.
+
+Eu queria uma ferramenta que fizesse o celular **acreditar** que está percorrendo uma rota de verdade, na velocidade certa, com as imperfeições de um GPS real, e que continuasse funcionando com a tela desligada, que é justamente quando os bugs de localização em segundo plano aparecem. Como não encontrei uma que fizesse tudo isso, construí o **Simulador de GPS**.
+
+O app tem muita coisa, então em vez de um post gigante, resolvi contar o desenvolvimento em seis partes, cada uma sobre um recurso:
+
+1. **Como o Android aceita posições falsas** (este post).
+2. [Rotas pelas ruas ou em linha reta](/blog/gps-simulator-2-routes-streets-or-straight-lines): pontos no mapa, veículos, modos, rotas salvas.
+3. [Um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one): ruído, variação de velocidade e freada nas curvas.
+4. [Altitude e túneis a partir de dados reais do mapa](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+5. [Um painel flutuante por cima de qualquer app](/blog/gps-simulator-5-floating-panel-over-any-app), com joystick.
+6. [Widgets na tela inicial, um deles com o mapa ao vivo](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen).
+
+## O que ele faz
+
+É um app Android, para Android 12 ou mais novo, feito em Flutter. Você marca pontos no mapa, gera a rota e inicia a simulação. A partir daí, qualquer outro app do aparelho que pedir a localização recebe as posições simuladas, inclusive com a tela desligada. O resto da série detalha cada peça, e a [página do projeto](/projects/gps-simulator) tem o resumo completo, com todas as telas.
+
+## Publicando posições pelo próprio Android
+
+O Android tem um mecanismo oficial para isso: os **provedores de teste**. Com as Opções do desenvolvedor ativadas e o app escolhido como "app de local fictício", ele pode registrar provedores de localização falsos e publicar posições neles. Nenhum root, nenhum truque: é a mesma API que as ferramentas de teste do sistema usam.
+
+O Flutter não expõe essa API, então escrevi um plugin pequeno em Kotlin. Ele registra um provedor de teste para o GPS e outro para a rede, com as mesmas propriedades de um provedor real:
+
+```kotlin
+val properties = ProviderProperties.Builder()
+    .setHasNetworkRequirement(network)
+    .setHasSatelliteRequirement(!network)
+    .setHasAltitudeSupport(true)
+    .setHasSpeedSupport(true)
+    .setHasBearingSupport(true)
+    .setPowerUsage(ProviderProperties.POWER_USAGE_LOW)
+    .setAccuracy(ProviderProperties.ACCURACY_FINE)
+    .build()
+locationManager.addTestProvider(name, properties)
+locationManager.setTestProviderEnabled(name, true)
+```
+
+A cada passo da simulação, o app monta um `Location` com latitude, longitude, velocidade, direção, precisão e horário, e o publica com `setTestProviderLocation`. Os dois provedores podem ser ligados e desligados separadamente nas configurações, o que ajuda a testar um app que só confia no GPS ou só na rede. Ao parar a simulação, o plugin remove os provedores com `removeTestProvider`, e o aparelho volta a usar o GPS de verdade.
+
+## Permissões e o app de local fictício
+
+A primeira abertura do app guia a configuração em duas etapas. Na primeira, ele pede **localização**, **notificações** e **desativar a otimização de bateria**. Na segunda, ensina a escolher o simulador como app de local fictício.
+
+Aqui tomei uma decisão que virou regra para todas as permissões: antes de levar a pessoa para a tela do Android, o app abre um diálogo que explica **para que a permissão serve**. A tela do sistema diz o que está sendo pedido, mas nunca o porquê. A localização é usada só para mostrar onde você está no mapa e nunca sai do celular. As notificações mantêm os botões de pausar e parar. A bateria evita que o sistema corte a simulação em segundo plano.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions.webp',
+      alt: 'Permissões',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/location-dialog.webp',
+      alt: 'Por que pede a localização',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/notifications-dialog.webp',
+      alt: 'Por que pede notificações',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/battery-dialog.webp',
+      alt: 'Por que pede a bateria',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/permissions-granted.webp',
+      alt: 'Tudo concedido',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mock-app.webp',
+      alt: 'App de local fictício',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+A segunda etapa tem três passos: ativar as Opções do desenvolvedor (tocando sete vezes no número da versão), abri-las e escolher o simulador em "Selecionar app de local fictício". O plugin detecta se as Opções do desenvolvedor estão ativas, e o app oferece um atalho direto para elas e um botão para conferir se deu certo.
+
+## Em segundo plano e com parada explícita
+
+A simulação roda num serviço em primeiro plano, com uma notificação que mostra o progresso e tem botões de pausar e parar. É isso que mantém tudo vivo com a tela desligada, que é justamente onde os bugs de localização em segundo plano aparecem. Parar pede confirmação: o diálogo avisa que os provedores de teste serão removidos e que os apps voltam ao GPS real do aparelho.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/notification.webp',
+      alt: 'Notificação',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/stop-dialog.webp',
+      alt: 'Confirmar a parada',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## A regra: nada de dados inventados
+
+A primeira versão publicava uma altitude fixa e perdia o sinal em intervalos regulares, em qualquer ponto da rota. Pareciam realistas, mas eram números inventados. Um app sendo testado podia passar no teste por causa de um dado que nenhum celular de verdade veria.
+
+Então defini uma regra para toda a parte de realismo: **tudo o que parecer real precisa vir de dados reais do mapa. Quando não houver dado, o app não publica nada, em vez de inventar.** No código, isso aparece num detalhe pequeno: sem altitude, a `Location` simplesmente informa `hasAltitude() == false`.
+
+```kotlin
+// No altitude is better than an invented one: without it the
+// Location simply reports hasAltitude() == false.
+val msl = (fix["altitude"] as Number?)?.toDouble()
+if (msl != null) applyAltitude(location, msl, vertical)
+```
+
+De onde vem a altitude, como os túneis viram perda de sinal e por que a altura do terreno precisa de uma correção para ficar igual à de um GPS real é o assunto da [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+
+## Como ele é construído
+
+O app foi criado a partir do mesmo template que uso nos apps Flutter do trabalho: **Clean Architecture por feature**, **BLoC** em todo o estado, `get_it` para injeção de dependências, `go_router` para navegação e um `Result` nos casos de uso em vez de exceções. O motor da simulação, que calcula cada posição, fica na camada de domínio, sem depender do Flutter nem do Android, o que facilita testar.
+
+Alguns pacotes que fazem o trabalho pesado:
+
+- `flutter_foreground_task` para manter a simulação viva com a tela desligada.
+- `google_maps_flutter` e `flutter_map` para os dois tipos de mapa.
+- `home_widget` para levar os dados da simulação aos widgets.
+- `sembast` para guardar rotas, favoritos e configurações.
+
+A parte nativa em Kotlin fica num plugin próprio, o dos provedores de teste, e em duas peças que aparecem mais adiante na série: o painel flutuante e o desenho do mapa dos widgets.
+
+## O que eu aprendi
+
+- **Ferramentas internas valem o investimento.** Um bom simulador transforma um teste de campo de meia hora em alguns toques.
+- **Realismo falso é pior que nenhum realismo.** Uma altitude inventada pode fazer um teste passar por engano. Publicar "sem altitude" é mais honesto e mais útil.
+- **Explique a permissão antes de pedir.** A tela do Android diz o que, nunca o porquê.
+- **Nem tudo precisa ser Flutter.** A API de provedores de teste não existe no Flutter, e um plugin pequeno em Kotlin resolveu.
+
+Na próxima parte, vou das permissões ao que dá trabalho de verdade: montar a rota. [Rotas pelas ruas ou em linha reta →](/blog/gps-simulator-2-routes-streets-or-straight-lines)
