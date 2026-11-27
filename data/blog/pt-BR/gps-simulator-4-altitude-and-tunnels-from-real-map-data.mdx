@@ -1,0 +1,90 @@
+---
+title: 'Altitude e túneis de verdade num GPS simulado: Valhalla, geoide e servidores públicos'
+date: '2026-11-26T12:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Kotlin', 'Geolocalização']
+draft: false
+summary: 'Na série do Simulador de GPS, esta parte mostra como o app usa um servidor Valhalla para obter altitude e túneis do mapa real, por que a altura do terreno não é a altura que um chip de GPS informa e como respeitar os limites dos servidores públicos.'
+authors: ['default']
+---
+
+> **Série Simulador de GPS · Parte 4 de 6.** Aqui entra o realismo que vem de dados do mapa: altitude, túneis e pontes. Antes: [a parte 3, o GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+
+A primeira versão do simulador publicava uma altitude fixa e perdia o sinal em intervalos regulares, em qualquer ponto da rota. Pareciam realistas, mas eram números inventados. Um app sendo testado podia passar no teste por causa de um dado que nenhum celular de verdade veria.
+
+Por isso a regra do projeto, que já apareceu na parte 1: **tudo o que parecer real precisa vir de dados reais do mapa. Quando não houver dado, o app não publica nada, em vez de inventar.** Este post mostra como essa regra funciona na altitude e nos túneis.
+
+## Altitude e túneis a partir do mapa
+
+Quando uma rota é criada, venha ela de onde vier (serviço de rotas, arquivo importado ou linha reta), o app envia a geometria para um servidor **Valhalla**:
+
+- O endpoint `/height` devolve a **altura do terreno** ao longo da rota, amostrada a cada 30 metros.
+- O endpoint `/trace_attributes` faz o _map matching_ da rota e diz quais trechos são **túneis, pontes ou áreas cobertas**, a partir do OpenStreetMap.
+
+Com isso, o comportamento fica assim:
+
+- **Dentro de um túnel, o GPS fica sem sinal**, como num celular de verdade, e volta na saída.
+- **Em pontes, a altitude segue o tabuleiro**, e não o fundo do vale que o modelo de terreno tem embaixo dela. O mesmo vale para túneis, em relação ao topo do morro. Nesses trechos, a altura é interpolada entre as duas pontas.
+- Se o arquivo importado já traz a altitude de todos os pontos, o app usa a do arquivo.
+- **Sem dados**, por exemplo offline ou com o servidor fora do ar, a posição é publicada **sem altitude**, e o app avisa isso na tela.
+
+```kotlin
+// No altitude is better than an invented one: without it the
+// Location simply reports hasAltitude() == false.
+val msl = (fix["altitude"] as Number?)?.toDouble()
+if (msl != null) applyAltitude(location, msl, vertical)
+```
+
+O perfil de terreno é salvo junto com a rota, então o servidor é consultado uma vez por rota, e não a cada simulação. Na tela de rota, o resumo já mostra o resultado, com a altitude do terreno e a contagem de túneis do trajeto.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Rota com altitude e túneis',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/terrain-server.webp',
+      alt: 'Servidor de terreno',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## O detalhe do geoide
+
+Aqui apareceu um problema sutil. O modelo de terreno dá a altura **acima do nível do mar**. Um chip de GPS de verdade informa a altura **acima do elipsoide WGS84**, uma superfície matemática que não coincide com o nível do mar. No Brasil, a diferença fica na casa de dezenas de metros. Publicar a altura do terreno direto seria um número plausível, mas errado.
+
+No Android 14 ou mais novo, o sistema tem o `AltitudeConverter`, que conhece essa diferença. O plugin faz uma "sonda": cria uma posição com altitude zero no elipsoide e pede ao conversor a altura correspondente acima do nível do mar. O valor que volta, com o sinal invertido, é a diferença naquele ponto. Ela é calculada fora da thread principal e guardada em cache por região, e a altitude publicada fica igual à de um GPS real.
+
+Em versões mais antigas, que não têm o conversor, o app publica a altura acima do nível do mar e avisa isso na tela. É a mesma regra de antes: se não dá para fazer a conta certa, o app diz que não fez, em vez de fingir.
+
+## Respeitando os servidores públicos
+
+O terreno usa por padrão o servidor público do Valhalla mantido pela comunidade FOSSGIS, que pede no máximo uma requisição por segundo e que os apps não deixem o endereço fixo no código. O cliente respeita esse limite, o endereço pode ser trocado nas configurações, com um botão para testar o servidor, e o crédito exigido aparece na tela. Quem tiver um time grande de testes pode apontar para um servidor próprio.
+
+O mesmo vale para o mapa. O padrão é o Google Maps, com mapa comum, satélite, híbrido ou relevo, além de trânsito e ícones de lugares. Dá para trocar pelo OpenStreetMap, que não usa chave e cuja política de uso também é respeitada.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-map.webp',
+      alt: 'Configurações: mapa',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+Para o Google Maps funcionar, precisei configurar a chave no [Google Cloud Console](https://console.cloud.google.com/): criar um projeto, ativar o **Maps SDK for Android** e gerar uma chave de API para o app. Sem isso, o SDK desenha só um fundo vazio e registra no log um erro de autorização (`Authorization failure`). É uma configuração simples, mas fácil de esquecer ao rodar o app numa máquina nova, e é justamente por isso que a opção do OpenStreetMap, sem chave, é útil.
+
+## O que eu aprendi
+
+- **Realismo falso é pior que nenhum realismo.** Uma altitude inventada pode fazer um teste passar por engano. Publicar "sem altitude" é mais honesto e mais útil.
+- **Dados geográficos escondem detalhes.** Nível do mar e elipsoide parecem a mesma coisa até você comparar com um GPS real.
+- **Servidores públicos têm regras.** Limitar as requisições, guardar o que já foi baixado, permitir trocar o servidor e mostrar os créditos faz parte de usar bem um serviço gratuito.
+
+Anterior: [Parte 3, um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one) · Próximo: [Parte 5, o painel flutuante por cima de qualquer app](/blog/gps-simulator-5-floating-panel-over-any-app)
