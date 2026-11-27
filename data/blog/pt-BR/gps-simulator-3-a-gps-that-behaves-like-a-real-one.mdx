@@ -1,0 +1,167 @@
+---
+title: 'Um GPS que se comporta como o de verdade: ruído, curvas e cerca virtual no Simulador de GPS'
+date: '2026-11-26T11:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocalização', 'Testes']
+draft: false
+summary: 'Uma rota perfeita, a velocidade constante e sem erro nenhum, esconde os bugs que aparecem num GPS real. Neste post conto como o Simulador de GPS publica ruído, variação de velocidade, freada nas curvas, um ponto parado que oscila e um cenário de cerca virtual, e como a simulação continua com a tela desligada.'
+authors: ['default']
+---
+
+> **Série Simulador de GPS · Parte 3 de 6.** Na [parte 2](/blog/gps-simulator-2-routes-streets-or-straight-lines) montei as rotas. Aqui, o comportamento do GPS ao percorrê-las. A [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) trata de altitude e túneis.
+
+## Uma posição perfeita é uma posição suspeita
+
+O primeiro teste que fiz com o simulador foi o mais ingênuo: uma rota limpa, a 40 km/h constantes, uma posição por segundo, todas exatamente em cima da linha. Funcionou, e foi justamente esse o problema. Um app de rastreamento que passa nesse teste não prova nada, porque **nenhum GPS real se comporta assim**.
+
+Num celular de verdade, a posição oscila alguns metros para os lados, a velocidade sobe e desce, o motorista freia antes de uma curva fechada e um aparelho parado na mesa nunca informa exatamente a mesma coordenada. Os bugs de localização costumam morar nesses detalhes: um filtro de distância mínima que descarta pontos demais, um cálculo de velocidade que dispara com o ruído, uma cerca virtual que dispara duas vezes na borda.
+
+Então o motor da simulação, que fica na camada de domínio e não depende do Flutter nem do Android, aplica cada imperfeição de forma separada e configurável.
+
+## O intervalo entre posições
+
+A unidade básica é o _tick_: uma posição publicada. O intervalo padrão é de **1 s**, e dá para escolher 0,5 s, 1 s, 2 s ou 5 s. Cada tick carrega latitude, longitude, velocidade, direção, precisão e horário.
+
+O serviço que roda em segundo plano mede o tempo real entre dois ticks e avança o motor por esse tempo, com um teto de 10 segundos por passo. Se o sistema atrasar o serviço, a posição recupera o atraso, mas um aparelho que ficou parado por um minuto não dá um salto absurdo quando acorda.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/settings-simulation.webp',
+      alt: 'Configurações da simulação',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/tick-interval.webp',
+      alt: 'Intervalo entre posições',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Perfis de precisão
+
+Em vez de pedir que a pessoa ajuste três botões toda vez, o app tem três perfis prontos:
+
+- **Cidade:** ruído médio, velocidade que oscila e freada nas curvas. É o padrão, porque é o caso mais comum de teste.
+- **Rodovia:** pouco ruído e velocidade que oscila, sem freada nas curvas.
+- **Área coberta:** ruído alto, como quem anda entre prédios ou sob árvores.
+
+Qualquer outra combinação aparece como "personalizado". Os perfis são só atalhos para os três ajustes abaixo, e o código os guarda como um objeto simples, comparado por valor:
+
+```dart
+static GpsRealism of(GpsProfile profile) => switch (profile) {
+  GpsProfile.city => defaults,
+  GpsProfile.highway => const GpsRealism(
+    noise: GpsNoise.low,
+    speedVariation: true,
+  ),
+  GpsProfile.covered => const GpsRealism(noise: GpsNoise.high),
+  GpsProfile.custom => const GpsRealism(),
+};
+```
+
+Esses ajustes são escolhas **da pessoa**, e não vêm do mapa. Isso é coerente com a regra da série: o que parece real e vem do mapa (altitude, túneis) só usa dados reais, e o que é imperfeição de equipamento é configurado de forma explícita.
+
+## Ruído na posição
+
+O ruído tem quatro níveis, que definem o raio máximo do erro: **nenhum, baixo (3 m), médio (8 m) e alto (20 m)**. A cada tick, a posição publicada se afasta da linha da rota por uma direção sorteada e uma distância sorteada até esse raio. A precisão informada ao sistema acompanha o ruído, porque um app que lê `accuracy` precisa receber um valor coerente com o erro que a posição tem: 5 m de base mais o raio do ruído.
+
+Um detalhe que me ajudou muito: o sorteio é **repetível**. Ele usa como semente o número do tick, então o mesmo tick sempre gera a mesma posição. Quando um bug aparece numa simulação, dá para repeti-la e ver exatamente os mesmos pontos.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/accuracy-profile.webp',
+      alt: 'Perfil de precisão',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/position-noise.webp',
+      alt: 'Ruído na posição',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Velocidade que oscila e freada nas curvas
+
+A velocidade escolhida é a **velocidade de cruzeiro**. Sobre ela, o motor aplica dois fatores, cada um com seu interruptor.
+
+**Variação de velocidade:** a velocidade balança 12% para mais e para menos, seguindo uma senoide lenta do número do tick. Não é um sorteio, e sim um movimento suave, que lembra mais um motorista segurando o pedal do que um ruído de sensor.
+
+**Freada nas curvas:** a cada passo, o motor olha 40 metros à frente na linha da rota, compara a direção de lá com a direção de agora e calcula o quanto a trajetória vira. Uma curva de 90° ou mais reduz a velocidade a 40% da escolhida, e curvas mais suaves reduzem proporcionalmente:
+
+```dart
+double _curveFactor(SimulationProgress p) {
+  final ahead = p.copyWith(
+    legMeters: (p.legMeters + _curveLookAhead).clamp(0, _legLength(p.returning)),
+  );
+  final now = locate(p).bearing;
+  final next = locate(ahead).bearing;
+  final turn = ((next - now + 540) % 360 - 180).abs();
+  return 1 - (1 - _curveMinFactor) * (turn / 90).clamp(0, 1);
+}
+```
+
+O resultado final passa por um limite de 0 a 140 km/h. O efeito aparece bem numa rota roteirizada pelas ruas, porque ali as curvas existem de verdade, e quase não aparece numa linha reta entre dois pontos. Para testar cálculo de velocidade média, trecho a trecho ou detecção de frenagem, isso faz toda a diferença.
+
+## Velocidades padrão por veículo
+
+Cada um dos seis veículos tem uma velocidade padrão: carro e moto 40 km/h, caminhão 35, ônibus 30, bicicleta 15 e a pé 5. A pessoa pode trocar cada uma na tela de velocidades padrão, e um botão restaura os valores originais. Ao escolher o veículo no mapa, a velocidade vem desse valor, e dá para ajustá-la livremente a partir dali, inclusive durante a simulação.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Velocidades padrão',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/simulating.webp',
+      alt: 'Simulando',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/paused.webp',
+      alt: 'Pausada',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## O ponto parado que oscila
+
+Um aparelho parado sobre a mesa não informa a mesma coordenada para sempre. Ele "caminha" alguns metros, devagar. Quando a posição é fixa, por exemplo depois de um salto para um lugar favorito, o simulador reproduz isso com um passeio aleatório **correlacionado**: cada passo lembra do anterior, com uma memória de cerca de 20 segundos, e o desvio fica sempre limitado ao raio do ruído escolhido.
+
+A velocidade e a direção publicadas nesse caso também são as do último deslocamento. Um app que calcula a velocidade a partir de dois pontos recebe valores pequenos e coerentes, em vez de zero absoluto ou de saltos. Com o ruído desligado, a posição fica cravada.
+
+## Cenário de cerca virtual
+
+Testar entrada, permanência e saída de uma área é um dos casos mais chatos de fazer na rua. O **cenário de cerca virtual** automatiza isso. Você marca um ponto, que vira o centro, e define:
+
+- o **raio**, de 50 m a 2.000 m;
+- a **espera no centro**, até 300 segundos.
+
+O app monta uma rota que **começa e termina fora da cerca**, a 1,5 vez o raio de distância. O veículo anda até o centro, para lá pelo tempo definido, com velocidade zero, e depois segue e sai. Durante a espera, a tela mostra o tempo restante e se o veículo está dentro ou fora da cerca. O app testado vê a entrada, a permanência e a saída na ordem certa, sem ninguém precisar sair andando.
+
+## Com a tela desligada, pausando e retomando
+
+Os bugs de localização em segundo plano aparecem justamente quando a tela apaga. Por isso a simulação não roda no isolate da interface: ela vive num **serviço em primeiro plano** com um isolate próprio, que continua com a tela desligada e até com o app fechado. A notificação mostra o progresso e tem os botões de pausar e parar.
+
+Ao pausar, o serviço **continua publicando a última posição**, como um celular parado faria, em vez de ficar mudo. Isso evita que o app testado interprete a pausa como perda de sinal. O progresso é salvo a cada cinco ticks, então, se o sistema destruir o serviço, uma nova inicialização retoma de onde parou, e a tela avisa que a retomada foi feita pelo sistema.
+
+## O que ficou
+
+O ganho de simular imperfeições é que cada uma vira uma **variável de teste**: dá para ligar só o ruído, só a freada, ou os dois, e ver qual causa o bug. Um GPS perfeito nunca deixaria isolar isso.
+
+Na [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data) trato da outra metade do realismo, a que não é configurada: altitude e túneis que vêm do mapa real.
+
+**Anterior:** [Parte 2, rotas pelas ruas ou em linha reta](/blog/gps-simulator-2-routes-streets-or-straight-lines) · **Próximo:** [Parte 4, altitude e túneis a partir do mapa real](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data)
