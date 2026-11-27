@@ -1,0 +1,215 @@
+---
+title: 'Simulador de GPS, parte 2: rotas pelas ruas ou em linha reta, com pontos que você edita no mapa'
+date: '2026-11-26T10:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocalização', 'Rotas']
+draft: false
+summary: 'Como o Simulador de GPS monta uma rota: pontos marcados ou buscados no mapa, seis veículos, ida, ida e volta ou loop, trajeto pelas ruas (OSRM, GraphHopper ou servidor próprio) ou em linha reta, importação e exportação de arquivos e rotas salvas que funcionam offline.'
+authors: ['default']
+---
+
+> **Série Simulador de GPS · Parte 2 de 6.** Antes: [como o Android aceita posições falsas](/blog/gps-simulator-1-how-android-accepts-fake-locations). Depois: [um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+
+Uma simulação começa numa rota. Nesta parte conto como o app monta essa rota: de onde vêm os pontos, como o trajeto é calculado, o que muda entre ir pelas ruas e ir em linha reta, e como a rota fica guardada para ser simulada de novo, até sem internet.
+
+## Marcando os pontos
+
+A tela principal é o mapa, com uma barra inferior que mostra o próximo passo. Um toque marca o ponto A, o seguinte marca o B, e assim por diante: a rota pode ter quantos pontos você quiser. A partir de dois pontos aparece o botão de gerar a rota.
+
+Também dá para **buscar um endereço** e usá-lo como ponto. A busca usa o Nominatim, do OpenStreetMap, que é gratuito e não pede chave. A política de uso dele pede um `User-Agent` que identifique o app e que não haja busca automática enquanto a pessoa digita, então a busca só roda quando você confirma. Os nomes dos lugares vêm no idioma do app.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/map.webp',
+      alt: 'Mapa e barra inferior',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/points.webp',
+      alt: 'Pontos vindos da busca',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Veículo, velocidade e modo
+
+O app tem **seis veículos**, cada um com uma velocidade padrão: carro (40 km/h), moto (40), ônibus (30), caminhão (35), bicicleta (15) e a pé (5). Depois de escolher o veículo, a velocidade ainda pode ser ajustada, de 0 a 140 km/h. Zero é válido de propósito: o veículo para onde está, com a simulação rodando, o que é útil para testar um ponto parado. As velocidades padrão de cada veículo podem ser trocadas nas configurações. Os valores mostrados seguem a unidade do idioma, milhas ou quilômetros, mas a velocidade publicada para o Android é sempre em metros por segundo.
+
+O **modo de viagem** define como o veículo percorre a rota:
+
+- **Só ida:** vai de A até o último ponto e termina.
+- **Ida e volta:** vai até o destino e volta para A, e a simulação conta duas voltas.
+- **Loop:** repete a rota até você parar. Se o último ponto está perto do primeiro, a rota é tratada como fechada e recomeça de A. Se não está, o veículo vai e volta, e uma volta é o par ida mais volta.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/vehicle.webp',
+      alt: 'Veículo e velocidade',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mode.webp',
+      alt: 'Modo de viagem',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Rota com altitude e túneis',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Pelas ruas ou em linha reta
+
+O trajeto pode ser de dois tipos. Em **linha reta**, o app junta os pontos sem seguir rua nenhuma, o que funciona offline e serve para testar um deslocamento simples, como um avião ou um barco. Pelas **ruas**, a rota vem de um serviço de roteamento, e você escolhe qual:
+
+- **OSRM**, o padrão, com perfis de carro, bicicleta e a pé;
+- **GraphHopper**, que também tem perfis de caminhão, ônibus e moto, mas precisa de uma chave;
+- **um servidor próprio**, com qualquer serviço compatível com o OSRM.
+
+O perfil de cada serviço é escolhido pelo veículo. O servidor público do OSRM mantém uma instância por perfil, cada uma num caminho próprio, e o app já sabe disso: moto, ônibus e caminhão usam o perfil de carro nele, e quem quiser os perfis específicos usa o GraphHopper ou um servidor próprio.
+
+```dart
+static String _graphHopperProfile(VehicleType vehicle) => switch (vehicle) {
+  VehicleType.car => 'car',
+  VehicleType.motorcycle => 'scooter',
+  VehicleType.bus => 'bus',
+  VehicleType.truck => 'truck',
+  VehicleType.bicycle => 'bike',
+  VehicleType.walking => 'foot',
+};
+```
+
+As duas respostas, do OSRM e do GraphHopper, trazem a geometria como uma _polyline_ codificada, o formato do Google com cinco casas decimais. Um decodificador de poucas linhas vira a lista de pontos que a simulação percorre.
+
+Na **ida e volta pelas ruas**, a volta não repete a ida ao contrário. O app pede ao serviço uma segunda rota com os pontos na ordem inversa, e por isso a volta respeita o sentido das ruas e pode passar por outro caminho. Se essa segunda consulta falhar, a rota inteira falha, em vez de entregar uma volta inventada:
+
+```dart
+final route = await _routing.route(points: points, vehicle: vehicle, settings: settings);
+if (mode != TravelMode.roundTrip) return route;
+final back = await _routing.route(
+  points: points.reversed.toList(growable: false),
+  vehicle: vehicle,
+  settings: settings,
+);
+return route.withReturn(back.geometry);
+```
+
+Nas configurações, o serviço e o endereço dele podem ser trocados, e há um botão para testar a conexão. Se o serviço estiver fora do ar, a linha reta continua disponível, porque ela não depende dele.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/routing-service.webp',
+      alt: 'Serviço de rotas',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Velocidades padrão',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Importar e exportar arquivos
+
+Quem já tem uma rota pode **importar GPX, KML ou GeoJSON**. O app lê a linha do arquivo e a usa como geometria, sem pedir nada ao serviço de roteamento. Se o arquivo traz pontos de passagem, eles viram os pontos da rota, e senão ficam só o primeiro e o último. Se o arquivo traz a altitude de cada ponto, o app usa a do arquivo, o que é um detalhe importante para a [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data). A rota importada começa como carro, só ida, na velocidade padrão do carro, e isso pode ser mudado depois.
+
+Na saída, o app **exporta em GPX ou KML** e também compartilha o arquivo pelo menu de compartilhamento do Android. Isso permite abrir a rota em outra ferramenta ou mandá-la para a equipe de QA.
+
+## Rotas salvas que funcionam offline
+
+Ao salvar uma rota, o app guarda os pontos, a geometria, o veículo, a velocidade e o modo, num banco local. Como a **geometria vem junto**, simular uma rota salva não exige consultar o serviço de roteamento de novo, e por isso funciona sem internet. A lista de rotas salvas tem busca, e cada rota mostra pontos, distância, tempo estimado e veículo.
+
+Abrir uma rota salva mostra a distância e o tempo de cada sentido (só ida, só volta ou os dois), se há trecho com altitude e túneis, e as escolhas feitas. O menu da rota tem abrir no mapa, **simular agora** a partir do ponto A, renomear, duplicar, exportar em GPX, compartilhar em GPX ou KML e excluir. Excluir sempre pergunta antes.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/save-route.webp',
+      alt: 'Salvar a rota',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-routes.webp',
+      alt: 'Rotas salvas',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-route-open.webp',
+      alt: 'Detalhes da rota salva',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/route-menu.webp',
+      alt: 'Opções da rota',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Editando os pontos
+
+Uma rota raramente sai certa de primeira. Tocar num marcador abre uma folha com a latitude, a longitude e a distância desde o ponto A. Dali dá para **mover o ponto para antes ou depois** na ordem, **adicionar um ponto perto dele** ou removê-lo. Para mudar o lugar do ponto, basta arrastar o marcador no mapa.
+
+Quando os pontos mudam, a rota que já estava gerada deixa de valer: o mapa a marca como desatualizada até você tocar em gerar de novo. Limpar todos os pontos pede confirmação e não apaga as rotas salvas.
+
+## Lugares favoritos e teletransporte
+
+Nem todo teste precisa de uma rota. Os **lugares favoritos** guardam um ponto com um nome, e um toque leva o aparelho até ele. Isso é um teletransporte: a simulação tem um único ponto, e a posição fica parada ali. É o jeito mais rápido de colocar o celular em outra cidade para ver como o app reage, e é o mesmo recurso que o painel flutuante usa na [parte 5](/blog/gps-simulator-5-floating-panel-over-any-app).
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/point.webp',
+      alt: 'Ajustes de um ponto',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
+      alt: 'Limpar os pontos',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Lugares favoritos',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/teleport.webp',
+      alt: 'Teletransporte',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Para levar
+
+- **Separe a rota da simulação.** Com a geometria guardada na rota, o roteamento é consultado uma vez, e o resto roda offline e de forma repetível.
+- **Deixe o serviço de rotas trocável.** O servidor público é bom para começar, mas quem testa com frequência precisa poder apontar para o próprio.
+- **A volta também é uma rota.** Calcular a volta pelas ruas em vez de inverter a ida pega as mãos únicas e deixa o teste mais próximo da realidade.
+
+Na próxima parte, a rota ganha as imperfeições de um GPS de verdade: ruído, variação de velocidade e freada nas curvas.
+
+**Anterior:** [Parte 1, como o Android aceita posições falsas](/blog/gps-simulator-1-how-android-accepts-fake-locations)  
+**Próximo:** [Parte 3, um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)

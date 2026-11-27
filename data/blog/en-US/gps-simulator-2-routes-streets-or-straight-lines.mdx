@@ -1,0 +1,215 @@
+---
+title: 'GPS Simulator, part 2: routes along the streets or in a straight line, with points you edit on the map'
+date: '2026-11-26T10:00:00'
+lastmod: '2026-11-26'
+tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocation', 'Routing']
+draft: false
+summary: 'How the GPS Simulator builds a route: points marked or searched on the map, six vehicles, one way, round trip or loop, a path along the streets (OSRM, GraphHopper or your own server) or in a straight line, file import and export, and saved routes that work offline.'
+authors: ['default']
+---
+
+> **GPS Simulator series · Part 2 of 6.** Before: [how Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations). Next: [a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
+
+A simulation starts with a route. In this part I cover how the app builds it: where the points come from, how the path is computed, what changes between going along the streets and going in a straight line, and how the route is stored so it can be simulated again, even without internet.
+
+## Marking the points
+
+The main screen is the map, with a bottom bar that shows the next step. One tap marks point A, the next one marks B, and so on: a route can have as many points as you like. From two points on, the button to build the route appears.
+
+You can also **search for an address** and use it as a point. The search uses OpenStreetMap's Nominatim, which is free and needs no key. Its usage policy asks for a `User-Agent` that identifies the app and for no automatic searches while the person types, so the search only runs when you confirm. Place names come in the app's language.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/map.webp',
+      alt: 'Map and bottom bar',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/points.webp',
+      alt: 'Points from the search',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Vehicle, speed and mode
+
+The app has **six vehicles**, each with a default speed: car (40 km/h), motorcycle (40), bus (30), truck (35), bicycle (15) and on foot (5). After picking the vehicle, the speed can still be adjusted, from 0 to 140 km/h. Zero is valid on purpose: the vehicle stays where it is with the simulation running, which is useful for testing a stationary point. The default speed of each vehicle can be changed in the settings. The values shown follow the language's unit, miles or kilometers, but the speed published to Android is always in meters per second.
+
+The **travel mode** defines how the vehicle goes through the route:
+
+- **One way:** goes from A to the last point and ends.
+- **Round trip:** goes to the destination and comes back to A, and the simulation counts two laps.
+- **Loop:** repeats the route until you stop it. If the last point is near the first, the route is treated as closed and restarts from A. If it isn't, the vehicle goes out and back, and one lap is the out-and-back pair.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/vehicle.webp',
+      alt: 'Vehicle and speed',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/mode.webp',
+      alt: 'Travel mode',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Route with altitude and tunnels',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Along the streets or in a straight line
+
+The path can be of two kinds. In a **straight line**, the app joins the points without following any street, which works offline and suits testing a simple movement, like a plane or a boat. Along the **streets**, the route comes from a routing service, and you choose which one:
+
+- **OSRM**, the default, with car, bicycle and on-foot profiles;
+- **GraphHopper**, which also has truck, bus and motorcycle profiles, but needs a key;
+- **your own server**, running any OSRM-compatible service.
+
+Each service's profile is chosen from the vehicle. The public OSRM server keeps one instance per profile, each under its own path, and the app already knows that: motorcycle, bus and truck use its car profile, and anyone who wants the specific profiles uses GraphHopper or their own server.
+
+```dart
+static String _graphHopperProfile(VehicleType vehicle) => switch (vehicle) {
+  VehicleType.car => 'car',
+  VehicleType.motorcycle => 'scooter',
+  VehicleType.bus => 'bus',
+  VehicleType.truck => 'truck',
+  VehicleType.bicycle => 'bike',
+  VehicleType.walking => 'foot',
+};
+```
+
+Both responses, OSRM's and GraphHopper's, bring the geometry as an encoded _polyline_, Google's format with five decimal places. A decoder of a few lines turns it into the list of points the simulation walks.
+
+On a **round trip along the streets**, the way back isn't the outbound leg reversed. The app asks the service for a second route with the points in reverse order, so the way back respects one-way streets and may take a different path. If that second request fails, the whole route fails, instead of delivering an invented way back:
+
+```dart
+final route = await _routing.route(points: points, vehicle: vehicle, settings: settings);
+if (mode != TravelMode.roundTrip) return route;
+final back = await _routing.route(
+  points: points.reversed.toList(growable: false),
+  vehicle: vehicle,
+  settings: settings,
+);
+return route.withReturn(back.geometry);
+```
+
+In the settings, the service and its address can be changed, and there's a button to test the connection. If the service is down, the straight line is still available, because it doesn't depend on it.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/routing-service.webp',
+      alt: 'Routing service',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Default speeds',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Importing and exporting files
+
+If you already have a route, you can **import GPX, KML or GeoJSON**. The app reads the line from the file and uses it as the geometry, without asking the routing service for anything. If the file has waypoints, they become the route's points, and otherwise only the first and last are kept. If the file carries the altitude of each point, the app uses the file's, which matters for [part 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data). An imported route starts as a car, one way, at the car's default speed, and that can be changed afterwards.
+
+On the way out, the app **exports as GPX or KML** and also shares the file through Android's share menu. That lets you open the route in another tool or send it to the QA team.
+
+## Saved routes that work offline
+
+When you save a route, the app stores the points, the geometry, the vehicle, the speed and the mode in a local database. Because the **geometry comes with it**, simulating a saved route doesn't need to ask the routing service again, so it works without internet. The saved routes list is searchable, and each route shows points, distance, estimated time and vehicle.
+
+Opening a saved route shows the distance and time of each direction (out only, back only or both), whether there's a stretch with altitude and tunnels, and the choices made. A route's menu has open on the map, **simulate now** from point A, rename, duplicate, export as GPX, share as GPX or KML and delete. Deleting always asks first.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/save-route.webp',
+      alt: 'Save route',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-routes.webp',
+      alt: 'Saved routes',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/saved-route-open.webp',
+      alt: 'Saved route details',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/route-menu.webp',
+      alt: 'Route options',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Editing the points
+
+A route rarely comes out right on the first try. Tapping a marker opens a sheet with its latitude, longitude and distance from point A. From there you can **move the point earlier or later** in the order, **add a point near it** or remove it. To change where the point is, just drag the marker on the map.
+
+When the points change, the route that was already built no longer applies: the map flags it as out of date until you tap build again. Clearing all the points asks for confirmation and leaves the saved routes untouched.
+
+## Favorite places and teleport
+
+Not every test needs a route. **Favorite places** store a point with a name, and one tap takes the device there. That's a teleport: the simulation has a single point, and the position stays still there. It's the fastest way to put the phone in another city to see how the app reacts, and it's the same feature the floating panel uses in [part 5](/blog/gps-simulator-5-floating-panel-over-any-app).
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/point.webp',
+      alt: 'Point options',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
+      alt: 'Clear points',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/favorites.webp',
+      alt: 'Favorite places',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/teleport.webp',
+      alt: 'Teleport',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
+
+## Takeaways
+
+- **Keep the route separate from the simulation.** With the geometry stored in the route, routing is queried once, and the rest runs offline and repeatably.
+- **Make the routing service swappable.** The public server is fine to start, but anyone who tests often needs to point at their own.
+- **The way back is a route too.** Computing the return along the streets instead of reversing the outbound leg catches one-way streets and brings the test closer to reality.
+
+In the next part, the route gets the imperfections of a real GPS: noise, speed variation and slowing down on curves.
+
+**Previous:** [Part 1, how Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations)  
+**Next:** [Part 3, a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)
