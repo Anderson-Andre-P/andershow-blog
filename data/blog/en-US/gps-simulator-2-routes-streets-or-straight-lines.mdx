@@ -4,20 +4,22 @@ date: '2026-11-26T10:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocation', 'Routing']
 draft: false
-summary: 'How the GPS Simulator builds a route: points marked or searched on the map, six vehicles, one way, round trip or loop, a path along the streets (OSRM, GraphHopper or your own server) or in a straight line, file import and export, and saved routes that work offline.'
+summary: 'How the GPS Simulator turns a few taps into a route: the points, the six vehicles, one way, round trip and loop, the path along the streets (OSRM, GraphHopper or your own server) or in a straight line, how the way back is routed, the offline fallback, point editing, saved routes that work without internet, GPX, KML and GeoJSON files, favorites and teleport.'
 authors: ['default']
 series: 'GPS Simulator'
 ---
 
 > **GPS Simulator series · Part 2 of 6.** Before: [how Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations). Next: [a GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
 
-A simulation starts with a route. In this part I cover how the app builds it: where the points come from, how the path is computed, what changes between going along the streets and going in a straight line, and how the route is stored so it can be simulated again, even without internet.
+A simulation starts with a route, and in the app the route is the part with the most small decisions. Where do the points come from? Who computes the path, and what happens when there is no internet? What does going back mean? What exactly gets saved? This part goes through each one, with the code, and ends with a walkthrough you can reproduce on your device.
 
 ## Marking the points
 
-The main screen is the map, with a bottom bar that shows the next step. One tap marks point A, the next one marks B, and so on: a route can have as many points as you like. From two points on, the button to build the route appears.
+The main screen is the map, with a bottom bar that always shows the next step. One tap marks point A, the next one marks B, and so on, with no limit on the number of points. From two points on, the button to build the route appears. Every point is just a latitude and a longitude.
 
-You can also **search for an address** and use it as a point. The search uses OpenStreetMap's Nominatim, which is free and needs no key. Its usage policy asks for a `User-Agent` that identifies the app and for no automatic searches while the person types, so the search only runs when you confirm. Place names come in the app's language.
+There are shortcuts around the map. A button centers the map on the device's real position (it asks Android for the real location, which is not the simulated one), another one undoes the last point, and while a simulation is running the points are **locked**: tapping the map only shows "Stop the simulation to edit the points". It avoids changing the line under a vehicle that is walking it.
+
+You can also **search for an address**. The search uses OpenStreetMap's Nominatim, which is free and needs no key, and its usage policy shapes how the feature behaves: it asks for an identifying `User-Agent`, and for no automatic searches while the person types. So the app only searches when you confirm on the keyboard, sends `GpsSimulator/1.0 (Android)` as the user agent and asks for at most six results. Place names come back in the app's language, because the request carries `accept-language` built from the current language and country (`en-US`, `es-MX`...). Each result has three actions: tapping the row just moves the map there, the star saves it as a favorite, and the pin with a plus adds it as a point.
 
 <Screenshots
   images={[
@@ -36,15 +38,68 @@ You can also **search for an address** and use it as a point. The search uses Op
   ]}
 />
 
+## Points are not the route
+
+One decision shapes the rest of the screen: what you mark and what the vehicle walks are two different things. The points are your intent, "go from here to there through this place". The geometry is the line that comes out of turning that intent into streets, with hundreds of coordinates. The route entity keeps both sides separate:
+
+```dart
+final class PlannedRoute extends Equatable {
+  final List<GeoPoint> geometry;
+  final double distanceMeters;
+  final RouteStyle style; // streets or straightLine
+
+  /// The way back from the last point to the first, routed on its own so it
+  /// respects one-way streets. Empty when the route has none.
+  final List<GeoPoint> returnGeometry;
+
+  /// Elevation and tunnels along [geometry], from map data.
+  final TerrainProfile? terrain;
+  final TerrainProfile? returnTerrain;
+}
+```
+
+The saved route (`SavedRoute`) carries the marked points _and_ this `PlannedRoute`, plus the vehicle, the speed and the mode. That split pays off three times: editing a point only invalidates the geometry, a saved route can be simulated without asking anyone for a path, and an imported file, which has a line but no marked points, fits in the same model. The terrain fields are the subject of [part 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+
 ## Vehicle, speed and mode
 
-The app has **six vehicles**, each with a default speed: car (40 km/h), motorcycle (40), bus (30), truck (35), bicycle (15) and on foot (5). After picking the vehicle, the speed can still be adjusted, from 0 to 140 km/h. Zero is valid on purpose: the vehicle stays where it is with the simulation running, which is useful for testing a stationary point. The default speed of each vehicle can be changed in the settings. The values shown follow the language's unit, miles or kilometers, but the speed published to Android is always in meters per second.
+There are **six vehicles**, each with a suggested urban speed: car (40 km/h), motorcycle (40), bus (30), truck (35), bicycle (15) and on foot (5). They are an enum that already carries its default:
 
-The **travel mode** defines how the vehicle goes through the route:
+```dart
+enum VehicleType {
+  car(40), motorcycle(40), bus(30), truck(35), bicycle(15), walking(5);
+  const VehicleType(this.defaultSpeedKmh);
+  final int defaultSpeedKmh;
+}
+
+abstract final class SpeedLimits {
+  static const int min = 0;
+  static const int max = 140;
+  static int clamp(int kmh) => kmh.clamp(min, max);
+}
+```
+
+The speed can be adjusted from 0 to 140 km/h. Zero is valid on purpose: it stops the vehicle where it is with the simulation still running, which is how you test a stationary phone, and for that case the route's time estimate is simply "none". Each vehicle's default can be changed in the settings, and the settings only store the speeds you actually changed, so a later default of the app still reaches whoever never touched them. The screen shows miles or kilometers according to the language, but the speed published to Android is always in meters per second.
+
+The time shown on the route is the distance divided by the chosen speed, not the duration the routing service returns, because that is what the simulated vehicle will actually do.
+
+The **travel mode** defines how the vehicle goes through the route, and the app opens on round trip:
 
 - **One way:** goes from A to the last point and ends.
-- **Round trip:** goes to the destination and comes back to A, and the simulation counts two laps.
-- **Loop:** repeats the route until you stop it. If the last point is near the first, the route is treated as closed and restarts from A. If it isn't, the vehicle goes out and back, and one lap is the out-and-back pair.
+- **Round trip:** goes to the destination and comes back, and the simulation counts two laps.
+- **Loop:** repeats until you stop it. If the route is closed, it restarts from A, and each pass is a lap. If it is not, the vehicle goes out and back, and a lap is the pair.
+
+The engine decides "closed" with a very small rule, and it is worth seeing because it explains why a loop sometimes does not behave as you expect:
+
+```dart
+/// How near the last point must be to the first for a closed route.
+static const closedRouteMeters = 50.0;
+
+static bool isClosedLine(List<GeoPoint> line) =>
+    line.length > 2 &&
+    GeoMath.distanceMeters(line.first, line.last) <= closedRouteMeters;
+```
+
+So a loop only restarts from A when the route has more than two points and ends within 50 meters of where it began. Mark A, B, C and tap again near A, and you have a ring. Mark only A and B, and the vehicle goes back and forth between them.
 
 <Screenshots
   images={[
@@ -61,8 +116,8 @@ The **travel mode** defines how the vehicle goes through the route:
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/route.webp',
-      alt: 'Route with altitude and tunnels',
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Default speeds',
       width: 540,
       height: 1200,
     },
@@ -71,13 +126,58 @@ The **travel mode** defines how the vehicle goes through the route:
 
 ## Along the streets or in a straight line
 
-The path can be of two kinds. In a **straight line**, the app joins the points without following any street, which works offline and suits testing a simple movement, like a plane or a boat. Along the **streets**, the route comes from a routing service, and you choose which one:
+The path can be of two kinds. In a **straight line**, the app joins the points in order without following any street, which works offline and suits testing a simple movement, like a plane, a boat or a drone. Along the **streets**, the route comes from a routing service. Both go through the same use case, and its heart is short:
+
+```dart
+if (style == RouteStyle.straightLine) {
+  return Success(straightLine(points));
+}
+return _guard(() async {
+  final route = await _routing.route(points: points, vehicle: vehicle, settings: settings);
+  if (mode != TravelMode.roundTrip) return route;
+  final back = await _routing.route(
+    points: points.reversed.toList(growable: false),
+    vehicle: vehicle,
+    settings: settings,
+  );
+  return route.withReturn(back.geometry);
+});
+```
+
+There is a third path that nobody chooses: the **offline fallback**. If the device has no internet when you ask for a route along the streets, the planner builds it as a straight line instead of failing, and the route panel says so ("No internet: the route was drawn as straight lines between the points."). Connectivity is watched all the time, so the decision uses the state at the moment of the request. The fallback is flagged in the state and cleared as soon as the points or the path type change, so it never gets confused with a path you picked on purpose.
+
+### The routing services
+
+The service can be chosen in the settings:
 
 - **OSRM**, the default, with car, bicycle and on-foot profiles;
-- **GraphHopper**, which also has truck, bus and motorcycle profiles, but needs a key;
+- **GraphHopper**, which also has motorcycle, bus and truck, but needs an API key;
 - **your own server**, running any OSRM-compatible service.
 
-Each service's profile is chosen from the vehicle. The public OSRM server keeps one instance per profile, each under its own path, and the app already knows that: motorcycle, bus and truck use its car profile, and anyone who wants the specific profiles uses GraphHopper or their own server.
+The default OSRM address is not the project's public demo. The demo server answers every profile with a car route, even when you ask for walking, so a walking simulation would follow car roads. The app uses the FOSSGIS community server, which keeps **one instance per profile**, each under its own path. The code knows that, and also migrates anyone who still has the old address saved:
+
+```dart
+static String _openStreetMapDeProfile(VehicleType vehicle) => switch (vehicle) {
+  VehicleType.bicycle => 'routed-bike',
+  VehicleType.walking => 'routed-foot',
+  _ => 'routed-car',
+};
+
+Uri _osrmUri(String base, VehicleType vehicle, List<GeoPoint> points) {
+  var root = base.trim().replaceAll(RegExp(r'/+$'), '');
+  if (root == SimulatorSettings.legacyOsrmUrl) {
+    root = SimulatorSettings.defaultOsrmUrl;
+  }
+  final coords = points.map((p) => '${p.longitude},${p.latitude}').join(';');
+  // This server keeps one instance per profile, each under its own path.
+  final path = root == SimulatorSettings.defaultOsrmUrl
+      ? '${_openStreetMapDeProfile(vehicle)}/route/v1/driving'
+      : 'route/v1/${_osrmProfile(vehicle)}';
+  return Uri.parse('$root/$path/$coords?overview=full&geometries=polyline');
+}
+```
+
+On that server, motorcycle, bus and truck use the car instance, so whoever needs the specific profiles uses GraphHopper or their own server. On a custom server, the path is the standard OSRM one, `route/v1/<profile>`, where the profile is `driving`, `cycling` or `foot`. GraphHopper has a profile per vehicle, and the app maps one to one:
 
 ```dart
 static String _graphHopperProfile(VehicleType vehicle) => switch (vehicle) {
@@ -90,22 +190,31 @@ static String _graphHopperProfile(VehicleType vehicle) => switch (vehicle) {
 };
 ```
 
-Both responses, OSRM's and GraphHopper's, bring the geometry as an encoded _polyline_, Google's format with five decimal places. A decoder of a few lines turns it into the list of points the simulation walks.
-
-On a **round trip along the streets**, the way back isn't the outbound leg reversed. The app asks the service for a second route with the points in reverse order, so the way back respects one-way streets and may take a different path. If that second request fails, the whole route fails, instead of delivering an invented way back:
+The GraphHopper address field starts with `https://graphhopper.com/api/1/route?key=`, and the request builder keeps whatever query the address already has, which is how your key survives. Both services answer with the geometry as an encoded _polyline_, Google's format with five decimal places, and a decoder of a few lines turns it into the list of points the simulation walks:
 
 ```dart
-final route = await _routing.route(points: points, vehicle: vehicle, settings: settings);
-if (mode != TravelMode.roundTrip) return route;
-final back = await _routing.route(
-  points: points.reversed.toList(growable: false),
-  vehicle: vehicle,
-  settings: settings,
-);
-return route.withReturn(back.geometry);
+List<GeoPoint> decodePolyline(String encoded) {
+  final points = <GeoPoint>[];
+  var index = 0, lat = 0, lng = 0;
+  int next() {
+    var shift = 0, result = 0, byte;
+    do {
+      byte = encoded.codeUnitAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    return result.isOdd ? ~(result >> 1) : result >> 1;
+  }
+  while (index < encoded.length) {
+    lat += next();
+    lng += next();
+    points.add(GeoPoint(lat / 1e5, lng / 1e5));
+  }
+  return points;
+}
 ```
 
-In the settings, the service and its address can be changed, and there's a button to test the connection. If the service is down, the straight line is still available, because it doesn't depend on it.
+Failures are typed: a socket error or a timeout (15 seconds) becomes a `NetworkException`, and a bad status, an unreadable body or a response without a route becomes a `ServerException`. In the settings, a button to **test the connection** just asks for a route between two nearby points in São Paulo and shows whether it worked.
 
 <Screenshots
   images={[
@@ -116,25 +225,105 @@ In the settings, the service and its address can be changed, and there's a butto
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
-      alt: 'Default speeds',
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Route with altitude and tunnels',
       width: 540,
       height: 1200,
     },
   ]}
 />
 
-## Importing and exporting files
+### The way back is a route too
 
-If you already have a route, you can **import GPX, KML or GeoJSON**. The app reads the line from the file and uses it as the geometry, without asking the routing service for anything. If the file has waypoints, they become the route's points, and otherwise only the first and last are kept. If the file carries the altitude of each point, the app uses the file's, which matters for [part 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data). An imported route starts as a car, one way, at the car's default speed, and that can be changed afterwards.
+On a **round trip along the streets**, the way back is not the outbound leg reversed. The use case above asks the service for a second route with the points in reverse order, so the return respects one-way streets and may take a different path, which is exactly what a real car does. If that second request fails, the whole route fails, because the alternative would be delivering an invented way back.
 
-On the way out, the app **exports as GPX or KML** and also shares the file through Android's share menu. That lets you open the route in another tool or send it to the QA team.
+The engine uses that second line when it exists. What it does in the other cases is worth knowing:
+
+```dart
+/// The way back, always in the direction of travel.
+late final List<GeoPoint> _backLine =
+    plan.mode == TravelMode.roundTrip && plan.returnGeometry.length >= 2
+    ? plan.returnGeometry
+    : plan.geometry.reversed.toList(growable: false);
+```
+
+- In a **round trip in a straight line**, there is no routed return, so the way back is the same line walked backwards.
+- In a **loop that is not closed**, the return is also the reversed line, even along the streets. The separate return is only computed for the round trip, so a loop of two points along one-way streets goes back on the same geometry. If that matters to your test, use a round trip.
+
+There is a compatibility detail here too. Routes saved before the return existed have no second geometry, and the app notices: if the mode is round trip, the path is along the streets and the return has fewer than two points, the route is marked as out of date with the note "Build the route again so the way back follows one-way streets." The same check runs when you switch the mode from one way to round trip on a route that is already built.
+
+## The route preview
+
+After building, the panel shows a "Route ready" summary before anything moves: distance, estimated time and the number of points. On a round trip with a routed return, a switch lets you look at **out only, back only or both**, and each option takes the color and length of its line, so the switch doubles as the legend. If you opened a saved route, the panel shows its name, the date and an **offline** badge.
+
+The route stays valid only while its inputs do. The planner invalidates it, without throwing it away, in three situations: any edit of the points, a change of vehicle on a route along the streets (the profile is part of the request), and a change of path type or of the mode when the new mode needs a return that was not routed. Every point edit goes through one method:
+
+```dart
+/// Any edit of the points: an existing route no longer matches them.
+PlannerState _edited(List<GeoPoint> points, {int? moved}) => _copy(
+  points: points,
+  route: points.length < 2 ? () => null : null,
+  routeStale: points.length >= 2 && state.route != null,
+  movedPoint: () => moved,
+  routing: PlannerRouting.idle,
+  offlineFallback: false,
+  savedRoute: () => null,
+  geofence: () => null,
+  terrain: PlannerTerrain.idle,
+  discarded: () => null,
+);
+```
+
+The old line stays on the map, faded, so you can see what you were changing, and the "Build route" button comes back. Discarding a freshly built route (_Cancel_ on the preview) is not destructive: the points stay and a toast with "Undo" brings the route back until the points change.
+
+## Editing the points
+
+A route rarely comes out right on the first try. Tapping a marker opens a sheet with its latitude, longitude and the **distance from point A** along the marked points. From there:
+
+- **Move earlier** and **Move later** reorder the points.
+- **Insert point after** (not shown on the last point) creates a new point halfway between this point and the next, which is handy to force a route through a street you want.
+- **Add a point near here** does something less obvious: it zooms the map in on that point. On a phone, a tap right next to a marker hits the marker itself, so you cannot mark a point beside another one. The button zooms in so the next tap lands beside it.
+- **Remove point** asks for confirmation and, once removed, offers an undo.
+
+To change _where_ a point is, you drag the marker on the map, and the planner records which one you moved to say it in the warning: "You moved B. Build the route again to update it." Clearing all the points also asks for confirmation, and it never touches the saved routes.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/point.webp',
+      alt: 'Point options',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
+      alt: 'Clear points',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
 ## Saved routes that work offline
 
-When you save a route, the app stores the points, the geometry, the vehicle, the speed and the mode in a local database. Because the **geometry comes with it**, simulating a saved route doesn't need to ask the routing service again, so it works without internet. The saved routes list is searchable, and each route shows points, distance, estimated time and vehicle.
+When you save a route, the app stores everything needed to run it again: the marked points, the entire `PlannedRoute` (geometry, return, distance, style and terrain), the vehicle, the speed and the mode. The save screen shows a summary, and says it plainly: the geometry is stored on the device, so the route can be simulated offline. Persistence is **sembast**, a document database in Dart, in a store of its own. The model is serialized to JSON by hand, in a deliberately flat format:
 
-Opening a saved route shows the distance and time of each direction (out only, back only or both), whether there's a stretch with altitude and tunnels, and the choices made. A route's menu has open on the map, **simulate now** from point A, rename, duplicate, export as GPX, share as GPX or KML and delete. Deleting always asks first.
+```dart
+static Map<String, Object?> savedRouteToJson(SavedRoute r) => {
+  'id': r.id,
+  'name': r.name,
+  'points': r.points.map(pointToJson).toList(),
+  'route': routeToJson(r.route), // geometry, returnGeometry, distance, style, terrain
+  'vehicle': r.vehicle.name,
+  'speed': r.speedKmh,
+  'mode': r.mode.name,
+  'savedAt': r.savedAt.millisecondsSinceEpoch,
+};
+```
+
+Enums are saved by name and read with a default, and the terrain goes in parallel arrays instead of an object per sample, which keeps long routes small.
+
+The list is sorted by save date, newest first, and the search filters by name. Opening a route shows the distance and time of each direction, whether it has a stretch with altitude and tunnels, and the choices made. A route's menu has eight actions: **open on the map**, **simulate now** from point A, rename, duplicate, **export GPX**, share GPX, share KML and delete. Delete asks first and, once confirmed, shows a toast with "Undo" that puts the route back.
 
 <Screenshots
   images={[
@@ -165,30 +354,38 @@ Opening a saved route shows the distance and time of each direction (out only, b
   ]}
 />
 
-## Editing the points
+## GPX, KML and GeoJSON
 
-A route rarely comes out right on the first try. Tapping a marker opens a sheet with its latitude, longitude and distance from point A. From there you can **move the point earlier or later** in the order, **add a point near it** or remove it. To change where the point is, just drag the marker on the map.
+If you already have a route, the app imports it, and what it does with each format is more careful than "reads the line":
 
-When the points change, the route that was already built no longer applies: the map flags it as out of date until you tap build again. Clearing all the points asks for confirmation and leaves the saved routes untouched.
+- **GPX:** the line comes from the track points (`trkpt`); if there are none, from the route points (`rtept`); and if neither exists, from the waypoints (`wpt`).
+- **KML:** the line comes from the `LineString` elements, and the `Point` placemarks become waypoints.
+- **GeoJSON:** accepts a `FeatureCollection`, a `Feature` or a bare geometry. `LineString` and `MultiLineString` make the line, `Point` and `MultiPoint` the waypoints, and coordinates follow the standard order, `[lon, lat, ele]`.
+
+The import button says "Import GPX or KML", but the file picker does not filter by type, and the GeoJSON parser is the same one that runs when the file starts with `{`. If the file has two or more waypoints, they become the route's points; otherwise only the first and the last point of the line are kept. The imported route goes straight into the saved list, as a car, one way, at the car's default speed, and all of that can be changed afterwards.
+
+The altitude has a rule I like. If the file carries a height for **every** point of the line, the app uses it, and otherwise it ignores all of them and leaves the terrain to the map data:
+
+```dart
+/// The file's own elevations, only when every point of the line has one:
+/// mixing them with the terrain model would make steps that are not there.
+if (elevations.length != line.length || elevations.contains(null)) {
+  return null;
+}
+```
+
+Mixing heights from the file with the ones from the terrain model creates steps, jumps at the boundary between the two sources, and a jump like that would be exactly the kind of invented number the series avoids. How the map data fills this gap is the subject of part 4.
+
+On the way out, there are two different things. **Export GPX** opens Android's file picker so you choose where to save the file, and that is GPX only. **Share GPX** and **Share KML** write the file to a temporary folder and hand it to the Android share menu through a method channel. The GPX has a `wpt` per marked point and a track with the line and, when known, the `ele` of each point; the KML has one `Placemark` per point plus a `LineString` with `lon,lat,ele`.
 
 ## Favorite places and teleport
 
-Not every test needs a route. **Favorite places** store a point with a name, and one tap takes the device there. That's a teleport: the simulation has a single point, and the position stays still there. It's the fastest way to put the phone in another city to see how the app reacts, and it's the same feature the floating panel uses in [part 5](/blog/gps-simulator-5-floating-panel-over-any-app).
+Not every test needs a route. A **favorite place** is a point with a name, saved in its own sembast store, and one tap on it takes the device there. That is a **teleport**: the simulation is a plan with a single point, the vehicle stays still there, and the position is published as if the phone were parked at that spot. It is the fastest way to put a test device in another city to see how an app reacts to a new location.
+
+The teleport does two extra things that I did not expect to need. If the point has no height yet, the app reads the real terrain height there, so the published position has altitude like the rest. And it asks Nominatim for the **address of the point** (the reverse search) and shows it on the panel, so you know where you put the phone. Favorites also go to the Android side whenever they change, because the floating panel from [part 5](/blog/gps-simulator-5-floating-panel-over-any-app) lists them and jumps to one with a tap.
 
 <Screenshots
   images={[
-    {
-      src: '/static/images/projects/gps-simulator/screens/point.webp',
-      alt: 'Point options',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
-      alt: 'Clear points',
-      width: 540,
-      height: 1200,
-    },
     {
       src: '/static/images/projects/gps-simulator/screens/favorites.webp',
       alt: 'Favorite places',
@@ -204,10 +401,22 @@ Not every test needs a route. **Favorite places** store a point with a name, and
   ]}
 />
 
-## Takeaways
+## Try it yourself
 
-- **Keep the route separate from the simulation.** With the geometry stored in the route, routing is queried once, and the rest runs offline and repeatably.
-- **Make the routing service swappable.** The public server is fine to start, but anyone who tests often needs to point at their own.
-- **The way back is a route too.** Computing the return along the streets instead of reversing the outbound leg catches one-way streets and brings the test closer to reality.
+If you have installed the app and finished the setup from [part 1](/blog/gps-simulator-1-how-android-accepts-fake-locations), this sequence goes through almost everything above in a few minutes:
+
+1. Tap three points on a street map to form a short trip and leave the mode on **round trip**. Tap **Build route** and use the switch on the panel to look at the out and back lines. If the streets have one-way sections, you will see the two lines differ.
+2. Change the vehicle to **bicycle**. The route gets flagged as out of date, because the profile changed. Build it again and compare the distance.
+3. Switch the path to **straight line** and build again. The line is now the points joined in order, and the way back is the same line reversed.
+4. Turn on airplane mode and build a route along the streets. The app does not fail: it draws straight lines and warns that it had no internet.
+5. With internet back, build the route again and **save** it. Turn airplane mode on, open the saved route and start the simulation. It runs without asking for anything.
+6. In the route menu, choose **Share GPX** and open the file in another tool, or **Export GPX** and import it back. Compare the points and the name.
+7. Tap a marker and try **Insert point after** and **Add a point near here**. Then drag a marker and read the warning.
+
+## What stayed with me
+
+- **Keep the route separate from the simulation.** With the geometry stored in the route, routing is asked once, and the rest is repeatable and works offline. That one split made saved routes, imports and the offline fallback almost free.
+- **A public demo is not a default.** The project's public OSRM answers every profile with a car, and a pedestrian routed along car roads is a bug you only notice by looking at the map. Check what your default server really does for each profile.
+- **The way back is a route too.** Computing the return along the streets instead of reversing the outbound leg catches one-way streets, and when there is no routed return the app says so instead of pretending.
 
 In the next part, the route gets the imperfections of a real GPS: noise, speed variation and slowing down on curves.

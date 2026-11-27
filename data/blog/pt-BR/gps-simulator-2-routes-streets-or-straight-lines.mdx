@@ -4,20 +4,22 @@ date: '2026-11-26T10:00:00'
 lastmod: '2026-11-26'
 tags: ['GPS Simulator', 'Flutter', 'Android', 'Geolocalização', 'Rotas']
 draft: false
-summary: 'Como o Simulador de GPS monta uma rota: pontos marcados ou buscados no mapa, seis veículos, ida, ida e volta ou loop, trajeto pelas ruas (OSRM, GraphHopper ou servidor próprio) ou em linha reta, importação e exportação de arquivos e rotas salvas que funcionam offline.'
+summary: 'Como o Simulador de GPS transforma alguns toques numa rota: os pontos, os seis veículos, ida, ida e volta e loop, o trajeto pelas ruas (OSRM, GraphHopper ou servidor próprio) ou em linha reta, como a volta é roteirizada, o plano B sem internet, a edição de pontos, rotas salvas que funcionam offline, arquivos GPX, KML e GeoJSON, favoritos e teletransporte.'
 authors: ['default']
 series: 'GPS Simulator'
 ---
 
 > **Série Simulador de GPS · Parte 2 de 6.** Antes: [como o Android aceita posições falsas](/blog/gps-simulator-1-how-android-accepts-fake-locations). Depois: [um GPS que se comporta como um de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one).
 
-Uma simulação começa numa rota. Nesta parte conto como o app monta essa rota: de onde vêm os pontos, como o trajeto é calculado, o que muda entre ir pelas ruas e ir em linha reta, e como a rota fica guardada para ser simulada de novo, até sem internet.
+Uma simulação começa numa rota, e no app a rota é a parte com mais pequenas decisões. De onde vêm os pontos? Quem calcula o trajeto, e o que acontece quando não há internet? O que significa voltar? O que exatamente fica salvo? Esta parte passa por cada uma, com o código, e termina com um passo a passo que você pode reproduzir no seu aparelho.
 
 ## Marcando os pontos
 
-A tela principal é o mapa, com uma barra inferior que mostra o próximo passo. Um toque marca o ponto A, o seguinte marca o B, e assim por diante: a rota pode ter quantos pontos você quiser. A partir de dois pontos aparece o botão de gerar a rota.
+A tela principal é o mapa, com uma barra inferior que sempre mostra o próximo passo. Um toque marca o ponto A, o seguinte marca o B, e assim por diante, sem limite de pontos. A partir de dois pontos, aparece o botão de gerar a rota (**Roteirizar**, no app em português; **Build route** nas capturas). Cada ponto é só uma latitude e uma longitude.
 
-Também dá para **buscar um endereço** e usá-lo como ponto. A busca usa o Nominatim, do OpenStreetMap, que é gratuito e não pede chave. A política de uso dele pede um `User-Agent` que identifique o app e que não haja busca automática enquanto a pessoa digita, então a busca só roda quando você confirma. Os nomes dos lugares vêm no idioma do app.
+Há atalhos em volta do mapa. Um botão centraliza o mapa na posição real do aparelho (ele pede ao Android a localização real, que não é a simulada), outro desfaz o último ponto, e enquanto uma simulação roda os pontos ficam **travados**: tocar no mapa só mostra "Pare a simulação para editar os pontos". Isso evita mudar a linha sob um veículo que está andando nela.
+
+Também dá para **buscar um endereço**. A busca usa o Nominatim, do OpenStreetMap, que é gratuito e não precisa de chave, e a política de uso dele molda o comportamento do recurso: ela pede um `User-Agent` que identifique o app e que não haja buscas automáticas enquanto a pessoa digita. Por isso o app só busca quando você confirma no teclado, envia `GpsSimulator/1.0 (Android)` como user agent e pede no máximo seis resultados. Os nomes dos lugares voltam no idioma do app, porque a requisição leva um `accept-language` montado com o idioma e o país atuais (`en-US`, `es-MX`...). Cada resultado tem três ações: tocar na linha só leva o mapa até lá, a estrela salva como favorito e o pino com um mais adiciona como ponto.
 
 <Screenshots
   images={[
@@ -36,15 +38,68 @@ Também dá para **buscar um endereço** e usá-lo como ponto. A busca usa o Nom
   ]}
 />
 
+## Pontos não são a rota
+
+Uma decisão molda o resto da tela: o que você marca e o que o veículo percorre são duas coisas diferentes. Os pontos são a sua intenção, "vá daqui até lá passando por este lugar". A geometria é a linha que sai de transformar essa intenção em ruas, com centenas de coordenadas. A entidade da rota mantém os dois lados separados:
+
+```dart
+final class PlannedRoute extends Equatable {
+  final List<GeoPoint> geometry;
+  final double distanceMeters;
+  final RouteStyle style; // streets or straightLine
+
+  /// The way back from the last point to the first, routed on its own so it
+  /// respects one-way streets. Empty when the route has none.
+  final List<GeoPoint> returnGeometry;
+
+  /// Elevation and tunnels along [geometry], from map data.
+  final TerrainProfile? terrain;
+  final TerrainProfile? returnTerrain;
+}
+```
+
+A rota salva (`SavedRoute`) leva os pontos marcados _e_ essa `PlannedRoute`, além do veículo, da velocidade e do modo. Essa separação compensa três vezes: editar um ponto só invalida a geometria, uma rota salva pode ser simulada sem pedir trajeto a ninguém, e um arquivo importado, que tem uma linha mas não tem pontos marcados, cabe no mesmo modelo. Os campos de terreno são assunto da [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data).
+
 ## Veículo, velocidade e modo
 
-O app tem **seis veículos**, cada um com uma velocidade padrão: carro (40 km/h), moto (40), ônibus (30), caminhão (35), bicicleta (15) e a pé (5). Depois de escolher o veículo, a velocidade ainda pode ser ajustada, de 0 a 140 km/h. Zero é válido de propósito: o veículo para onde está, com a simulação rodando, o que é útil para testar um ponto parado. As velocidades padrão de cada veículo podem ser trocadas nas configurações. Os valores mostrados seguem a unidade do idioma, milhas ou quilômetros, mas a velocidade publicada para o Android é sempre em metros por segundo.
+São **seis veículos**, cada um com uma velocidade urbana sugerida: carro (40 km/h), moto (40), ônibus (30), caminhão (35), bicicleta (15) e a pé (5). Eles são um enum que já carrega o próprio padrão:
 
-O **modo de viagem** define como o veículo percorre a rota:
+```dart
+enum VehicleType {
+  car(40), motorcycle(40), bus(30), truck(35), bicycle(15), walking(5);
+  const VehicleType(this.defaultSpeedKmh);
+  final int defaultSpeedKmh;
+}
+
+abstract final class SpeedLimits {
+  static const int min = 0;
+  static const int max = 140;
+  static int clamp(int kmh) => kmh.clamp(min, max);
+}
+```
+
+A velocidade pode ser ajustada de 0 a 140 km/h. Zero é válido de propósito: o veículo fica parado no lugar com a simulação rodando, que é como se testa um celular parado, e nesse caso a estimativa de tempo da rota simplesmente não existe. O padrão de cada veículo pode ser trocado nas configurações, e as configurações só guardam as velocidades que você realmente mudou, então um padrão novo do app ainda chega a quem nunca mexeu nelas. A tela mostra milhas ou quilômetros conforme o idioma, mas a velocidade publicada para o Android é sempre em metros por segundo.
+
+O tempo mostrado na rota é a distância dividida pela velocidade escolhida, e não a duração que o serviço de rotas devolve, porque é isso que o veículo simulado de fato vai fazer.
+
+O **modo de viagem** define como o veículo percorre a rota, e o app abre em ida e volta:
 
 - **Só ida:** vai de A até o último ponto e termina.
-- **Ida e volta:** vai até o destino e volta para A, e a simulação conta duas voltas.
-- **Loop:** repete a rota até você parar. Se o último ponto está perto do primeiro, a rota é tratada como fechada e recomeça de A. Se não está, o veículo vai e volta, e uma volta é o par ida mais volta.
+- **Ida e volta:** vai até o destino e volta, e a simulação conta duas voltas.
+- **Loop:** repete até você parar. Se a rota é fechada, recomeça de A, e cada passagem é uma volta. Se não é, o veículo vai e volta, e uma volta é o par.
+
+O motor decide o que é "fechada" com uma regra bem pequena, e vale vê-la porque ela explica por que um loop às vezes não se comporta como você espera:
+
+```dart
+/// How near the last point must be to the first for a closed route.
+static const closedRouteMeters = 50.0;
+
+static bool isClosedLine(List<GeoPoint> line) =>
+    line.length > 2 &&
+    GeoMath.distanceMeters(line.first, line.last) <= closedRouteMeters;
+```
+
+Ou seja, um loop só recomeça de A quando a rota tem mais de dois pontos e termina a até 50 metros de onde começou. Marque A, B, C e toque de novo perto de A, e você tem um anel. Marque só A e B, e o veículo vai e volta entre eles.
 
 <Screenshots
   images={[
@@ -61,8 +116,8 @@ O **modo de viagem** define como o veículo percorre a rota:
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/route.webp',
-      alt: 'Rota com altitude e túneis',
+      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
+      alt: 'Velocidades padrão',
       width: 540,
       height: 1200,
     },
@@ -71,13 +126,58 @@ O **modo de viagem** define como o veículo percorre a rota:
 
 ## Pelas ruas ou em linha reta
 
-O trajeto pode ser de dois tipos. Em **linha reta**, o app junta os pontos sem seguir rua nenhuma, o que funciona offline e serve para testar um deslocamento simples, como um avião ou um barco. Pelas **ruas**, a rota vem de um serviço de roteamento, e você escolhe qual:
+O trajeto pode ser de dois tipos. Em **linha reta**, o app liga os pontos na ordem sem seguir nenhuma rua, o que funciona offline e serve para testar um movimento simples, como o de um avião, um barco ou um drone. **Pelas ruas**, a rota vem de um serviço de rotas. Os dois passam pelo mesmo caso de uso, e o coração dele é curto:
+
+```dart
+if (style == RouteStyle.straightLine) {
+  return Success(straightLine(points));
+}
+return _guard(() async {
+  final route = await _routing.route(points: points, vehicle: vehicle, settings: settings);
+  if (mode != TravelMode.roundTrip) return route;
+  final back = await _routing.route(
+    points: points.reversed.toList(growable: false),
+    vehicle: vehicle,
+    settings: settings,
+  );
+  return route.withReturn(back.geometry);
+});
+```
+
+Existe um terceiro caminho que ninguém escolhe: o **plano B sem internet**. Se o aparelho está sem internet quando você pede uma rota pelas ruas, o planejador monta uma linha reta em vez de falhar, e o painel da rota avisa ("Sem internet: a rota foi roteirizada em linha reta entre os pontos."). A conectividade é observada o tempo todo, então a decisão usa o estado do momento do pedido. O plano B fica marcado no estado e é limpo assim que os pontos ou o tipo de trajeto mudam, para nunca ser confundido com um trajeto que você escolheu de propósito.
+
+### Os serviços de rotas
+
+O serviço pode ser escolhido nas configurações:
 
 - **OSRM**, o padrão, com perfis de carro, bicicleta e a pé;
-- **GraphHopper**, que também tem perfis de caminhão, ônibus e moto, mas precisa de uma chave;
-- **um servidor próprio**, com qualquer serviço compatível com o OSRM.
+- **GraphHopper**, que tem também moto, ônibus e caminhão, mas exige uma chave de API;
+- **servidor próprio**, rodando qualquer serviço compatível com o OSRM.
 
-O perfil de cada serviço é escolhido pelo veículo. O servidor público do OSRM mantém uma instância por perfil, cada uma num caminho próprio, e o app já sabe disso: moto, ônibus e caminhão usam o perfil de carro nele, e quem quiser os perfis específicos usa o GraphHopper ou um servidor próprio.
+O endereço padrão do OSRM não é o servidor de demonstração do projeto. O servidor de demonstração responde todo perfil com uma rota de carro, mesmo quando você pede a pé, então uma simulação a pé seguiria vias de carro. O app usa o servidor da comunidade FOSSGIS, que mantém **uma instância por perfil**, cada uma num caminho próprio. O código sabe disso e ainda migra quem tem o endereço antigo salvo:
+
+```dart
+static String _openStreetMapDeProfile(VehicleType vehicle) => switch (vehicle) {
+  VehicleType.bicycle => 'routed-bike',
+  VehicleType.walking => 'routed-foot',
+  _ => 'routed-car',
+};
+
+Uri _osrmUri(String base, VehicleType vehicle, List<GeoPoint> points) {
+  var root = base.trim().replaceAll(RegExp(r'/+$'), '');
+  if (root == SimulatorSettings.legacyOsrmUrl) {
+    root = SimulatorSettings.defaultOsrmUrl;
+  }
+  final coords = points.map((p) => '${p.longitude},${p.latitude}').join(';');
+  // This server keeps one instance per profile, each under its own path.
+  final path = root == SimulatorSettings.defaultOsrmUrl
+      ? '${_openStreetMapDeProfile(vehicle)}/route/v1/driving'
+      : 'route/v1/${_osrmProfile(vehicle)}';
+  return Uri.parse('$root/$path/$coords?overview=full&geometries=polyline');
+}
+```
+
+Nesse servidor, moto, ônibus e caminhão usam a instância de carro, então quem precisa dos perfis específicos usa o GraphHopper ou um servidor próprio. Num servidor próprio, o caminho é o padrão do OSRM, `route/v1/<perfil>`, em que o perfil é `driving`, `cycling` ou `foot`. O GraphHopper tem um perfil por veículo, e o app mapeia um a um:
 
 ```dart
 static String _graphHopperProfile(VehicleType vehicle) => switch (vehicle) {
@@ -90,22 +190,31 @@ static String _graphHopperProfile(VehicleType vehicle) => switch (vehicle) {
 };
 ```
 
-As duas respostas, do OSRM e do GraphHopper, trazem a geometria como uma _polyline_ codificada, o formato do Google com cinco casas decimais. Um decodificador de poucas linhas vira a lista de pontos que a simulação percorre.
-
-Na **ida e volta pelas ruas**, a volta não repete a ida ao contrário. O app pede ao serviço uma segunda rota com os pontos na ordem inversa, e por isso a volta respeita o sentido das ruas e pode passar por outro caminho. Se essa segunda consulta falhar, a rota inteira falha, em vez de entregar uma volta inventada:
+O campo de endereço do GraphHopper começa com `https://graphhopper.com/api/1/route?key=`, e o montador da requisição mantém qualquer query que o endereço já tenha, que é como a sua chave sobrevive. Os dois serviços respondem com a geometria como um _polyline_ codificado, o formato do Google com cinco casas decimais, e um decodificador de poucas linhas o transforma na lista de pontos que a simulação percorre:
 
 ```dart
-final route = await _routing.route(points: points, vehicle: vehicle, settings: settings);
-if (mode != TravelMode.roundTrip) return route;
-final back = await _routing.route(
-  points: points.reversed.toList(growable: false),
-  vehicle: vehicle,
-  settings: settings,
-);
-return route.withReturn(back.geometry);
+List<GeoPoint> decodePolyline(String encoded) {
+  final points = <GeoPoint>[];
+  var index = 0, lat = 0, lng = 0;
+  int next() {
+    var shift = 0, result = 0, byte;
+    do {
+      byte = encoded.codeUnitAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    return result.isOdd ? ~(result >> 1) : result >> 1;
+  }
+  while (index < encoded.length) {
+    lat += next();
+    lng += next();
+    points.add(GeoPoint(lat / 1e5, lng / 1e5));
+  }
+  return points;
+}
 ```
 
-Nas configurações, o serviço e o endereço dele podem ser trocados, e há um botão para testar a conexão. Se o serviço estiver fora do ar, a linha reta continua disponível, porque ela não depende dele.
+As falhas são tipadas: um erro de socket ou um timeout (15 segundos) vira uma `NetworkException`, e um status ruim, um corpo ilegível ou uma resposta sem rota vira uma `ServerException`. Nas configurações, um botão para **testar a conexão** só pede uma rota entre dois pontos próximos em São Paulo e mostra se funcionou.
 
 <Screenshots
   images={[
@@ -116,25 +225,105 @@ Nas configurações, o serviço e o endereço dele podem ser trocados, e há um 
       height: 1200,
     },
     {
-      src: '/static/images/projects/gps-simulator/screens/default-speeds.webp',
-      alt: 'Velocidades padrão',
+      src: '/static/images/projects/gps-simulator/screens/route.webp',
+      alt: 'Rota com altitude e túneis',
       width: 540,
       height: 1200,
     },
   ]}
 />
 
-## Importar e exportar arquivos
+### A volta também é uma rota
 
-Quem já tem uma rota pode **importar GPX, KML ou GeoJSON**. O app lê a linha do arquivo e a usa como geometria, sem pedir nada ao serviço de roteamento. Se o arquivo traz pontos de passagem, eles viram os pontos da rota, e senão ficam só o primeiro e o último. Se o arquivo traz a altitude de cada ponto, o app usa a do arquivo, o que é um detalhe importante para a [parte 4](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data). A rota importada começa como carro, só ida, na velocidade padrão do carro, e isso pode ser mudado depois.
+Numa **ida e volta pelas ruas**, a volta não é a ida invertida. O caso de uso acima pede ao serviço uma segunda rota com os pontos na ordem inversa, então a volta respeita as ruas de mão única e pode seguir um caminho diferente, que é exatamente o que um carro de verdade faz. Se essa segunda requisição falha, a rota inteira falha, porque a alternativa seria entregar uma volta inventada.
 
-Na saída, o app **exporta em GPX ou KML** e também compartilha o arquivo pelo menu de compartilhamento do Android. Isso permite abrir a rota em outra ferramenta ou mandá-la para a equipe de QA.
+O motor usa essa segunda linha quando ela existe. O que ele faz nos outros casos vale saber:
+
+```dart
+/// The way back, always in the direction of travel.
+late final List<GeoPoint> _backLine =
+    plan.mode == TravelMode.roundTrip && plan.returnGeometry.length >= 2
+    ? plan.returnGeometry
+    : plan.geometry.reversed.toList(growable: false);
+```
+
+- Numa **ida e volta em linha reta**, não existe volta roteirizada, então a volta é a mesma linha percorrida de trás para a frente.
+- Num **loop que não é fechado**, a volta também é a linha invertida, mesmo pelas ruas. A volta separada só é calculada para a ida e volta, então um loop de dois pontos por ruas de mão única volta pela mesma geometria. Se isso importa para o seu teste, use a ida e volta.
+
+Há também um detalhe de compatibilidade. Rotas salvas antes de a volta existir não têm a segunda geometria, e o app percebe: se o modo é ida e volta, o trajeto é pelas ruas e a volta tem menos de dois pontos, a rota é marcada como desatualizada com o aviso "Roteirize de novo para a volta respeitar o sentido das ruas." A mesma checagem roda quando você troca o modo de só ida para ida e volta numa rota que já está pronta.
+
+## A prévia da rota
+
+Depois de roteirizar, o painel mostra um resumo "Rota pronta" antes de qualquer movimento: distância, tempo estimado e número de pontos. Numa ida e volta com a volta roteirizada, um seletor deixa ver **só ida, só volta ou as duas**, e cada opção leva a cor e o comprimento da sua linha, então o seletor é também a legenda. Se você abriu uma rota salva, o painel mostra o nome, a data e uma etiqueta **offline**.
+
+A rota só continua válida enquanto os dados que a geraram continuam. O planejador a invalida, sem jogá-la fora, em três situações: qualquer edição dos pontos, a troca de veículo numa rota pelas ruas (o perfil faz parte da requisição) e a troca do tipo de trajeto ou do modo quando o novo modo precisa de uma volta que não foi roteirizada. Toda edição de ponto passa por um método:
+
+```dart
+/// Any edit of the points: an existing route no longer matches them.
+PlannerState _edited(List<GeoPoint> points, {int? moved}) => _copy(
+  points: points,
+  route: points.length < 2 ? () => null : null,
+  routeStale: points.length >= 2 && state.route != null,
+  movedPoint: () => moved,
+  routing: PlannerRouting.idle,
+  offlineFallback: false,
+  savedRoute: () => null,
+  geofence: () => null,
+  terrain: PlannerTerrain.idle,
+  discarded: () => null,
+);
+```
+
+A linha antiga continua no mapa, esmaecida, para você ver o que estava mudando, e o botão de roteirizar volta. Descartar uma rota recém-gerada (_Cancelar_ na prévia) não é destrutivo: os pontos ficam e um aviso com "Desfazer" traz a rota de volta até os pontos mudarem.
+
+## Editando os pontos
+
+Uma rota raramente sai certa na primeira tentativa. Tocar num marcador abre uma folha com a latitude, a longitude e a **distância desde o ponto A** ao longo dos pontos marcados. Dali dá para:
+
+- **Mover para antes** e **Mover para depois**, que reordenam os pontos.
+- **Inserir ponto depois** (não aparece no último ponto), que cria um ponto novo na metade do caminho entre este ponto e o próximo, útil para forçar a rota por uma rua que você quer.
+- **Adicionar ponto perto daqui**, que faz algo menos óbvio: aproxima o mapa daquele ponto. No celular, um toque colado num marcador acerta o próprio marcador, então não dá para marcar um ponto ao lado de outro. O botão aproxima o mapa para o próximo toque cair ao lado.
+- **Remover ponto**, que pede confirmação e, depois de removido, oferece desfazer.
+
+Para mudar _onde_ um ponto está, você arrasta o marcador no mapa, e o planejador guarda qual foi movido para dizer no aviso: "Você moveu o B. Roteirize de novo para atualizar a rota." Limpar todos os pontos também pede confirmação e nunca toca nas rotas salvas.
+
+<Screenshots
+  images={[
+    {
+      src: '/static/images/projects/gps-simulator/screens/point.webp',
+      alt: 'Ajustes de um ponto',
+      width: 540,
+      height: 1200,
+    },
+    {
+      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
+      alt: 'Limpar os pontos',
+      width: 540,
+      height: 1200,
+    },
+  ]}
+/>
 
 ## Rotas salvas que funcionam offline
 
-Ao salvar uma rota, o app guarda os pontos, a geometria, o veículo, a velocidade e o modo, num banco local. Como a **geometria vem junto**, simular uma rota salva não exige consultar o serviço de roteamento de novo, e por isso funciona sem internet. A lista de rotas salvas tem busca, e cada rota mostra pontos, distância, tempo estimado e veículo.
+Quando você salva uma rota, o app guarda tudo o que é preciso para rodá-la de novo: os pontos marcados, a `PlannedRoute` inteira (geometria, volta, distância, tipo de trajeto e terreno), o veículo, a velocidade e o modo. A tela de salvar mostra um resumo e diz com clareza: a geometria fica guardada no aparelho, então a rota pode ser simulada offline. A persistência é o **sembast**, um banco de documentos em Dart, num armazenamento próprio. O modelo é serializado para JSON à mão, num formato propositalmente plano:
 
-Abrir uma rota salva mostra a distância e o tempo de cada sentido (só ida, só volta ou os dois), se há trecho com altitude e túneis, e as escolhas feitas. O menu da rota tem abrir no mapa, **simular agora** a partir do ponto A, renomear, duplicar, exportar em GPX, compartilhar em GPX ou KML e excluir. Excluir sempre pergunta antes.
+```dart
+static Map<String, Object?> savedRouteToJson(SavedRoute r) => {
+  'id': r.id,
+  'name': r.name,
+  'points': r.points.map(pointToJson).toList(),
+  'route': routeToJson(r.route), // geometry, returnGeometry, distance, style, terrain
+  'vehicle': r.vehicle.name,
+  'speed': r.speedKmh,
+  'mode': r.mode.name,
+  'savedAt': r.savedAt.millisecondsSinceEpoch,
+};
+```
+
+Os enums são salvos pelo nome e lidos com um valor padrão, e o terreno vai em listas paralelas em vez de um objeto por amostra, o que mantém as rotas longas pequenas.
+
+A lista é ordenada pela data de salvamento, da mais nova para a mais antiga, e a busca filtra pelo nome. Abrir uma rota mostra a distância e o tempo de cada sentido, se há um trecho com altitude e túneis, e as escolhas feitas. O menu de cada rota tem oito ações: **abrir no mapa**, **simular agora** a partir do ponto A, renomear, duplicar, **exportar GPX**, compartilhar GPX, compartilhar KML e excluir. Excluir pergunta antes e, depois de confirmado, mostra um aviso com "Desfazer" que traz a rota de volta.
 
 <Screenshots
   images={[
@@ -165,30 +354,38 @@ Abrir uma rota salva mostra a distância e o tempo de cada sentido (só ida, só
   ]}
 />
 
-## Editando os pontos
+## GPX, KML e GeoJSON
 
-Uma rota raramente sai certa de primeira. Tocar num marcador abre uma folha com a latitude, a longitude e a distância desde o ponto A. Dali dá para **mover o ponto para antes ou depois** na ordem, **adicionar um ponto perto dele** ou removê-lo. Para mudar o lugar do ponto, basta arrastar o marcador no mapa.
+Se você já tem uma rota, o app a importa, e o que ele faz com cada formato é mais cuidadoso do que "lê a linha":
 
-Quando os pontos mudam, a rota que já estava gerada deixa de valer: o mapa a marca como desatualizada até você tocar em gerar de novo. Limpar todos os pontos pede confirmação e não apaga as rotas salvas.
+- **GPX:** a linha vem dos pontos de trilha (`trkpt`); se não houver, dos pontos de rota (`rtept`); e se nenhum existir, dos waypoints (`wpt`).
+- **KML:** a linha vem dos elementos `LineString`, e os `Point` viram waypoints.
+- **GeoJSON:** aceita um `FeatureCollection`, um `Feature` ou uma geometria solta. `LineString` e `MultiLineString` formam a linha, `Point` e `MultiPoint` os waypoints, e as coordenadas seguem a ordem do padrão, `[lon, lat, ele]`.
+
+O botão de importar diz "Importar GPX ou KML", mas o seletor de arquivos não filtra por tipo, e o leitor de GeoJSON é o mesmo que roda quando o arquivo começa com `{`. Se o arquivo tem dois ou mais waypoints, eles viram os pontos da rota; senão, só o primeiro e o último ponto da linha ficam. A rota importada vai direto para a lista de salvas, como carro, só ida, na velocidade padrão do carro, e tudo isso pode ser mudado depois.
+
+A altitude tem uma regra de que eu gosto. Se o arquivo traz a altura de **todos** os pontos da linha, o app usa a dele, e senão ignora todas e deixa o terreno por conta dos dados do mapa:
+
+```dart
+/// The file's own elevations, only when every point of the line has one:
+/// mixing them with the terrain model would make steps that are not there.
+if (elevations.length != line.length || elevations.contains(null)) {
+  return null;
+}
+```
+
+Misturar alturas do arquivo com as do modelo de terreno cria degraus, saltos na fronteira entre as duas fontes, e um salto assim seria exatamente o tipo de número inventado que a série evita. Como os dados do mapa preenchem essa lacuna é assunto da parte 4.
+
+Na saída, são duas coisas diferentes. **Exportar GPX** abre o seletor de arquivos do Android para você escolher onde salvar, e isso é só GPX. **Compartilhar GPX** e **Compartilhar KML** gravam o arquivo numa pasta temporária e o entregam ao menu de compartilhar do Android por um canal de método. O GPX tem um `wpt` por ponto marcado e uma trilha com a linha e, quando conhecida, a `ele` de cada ponto; o KML tem um `Placemark` por ponto mais um `LineString` com `lon,lat,ele`.
 
 ## Lugares favoritos e teletransporte
 
-Nem todo teste precisa de uma rota. Os **lugares favoritos** guardam um ponto com um nome, e um toque leva o aparelho até ele. Isso é um teletransporte: a simulação tem um único ponto, e a posição fica parada ali. É o jeito mais rápido de colocar o celular em outra cidade para ver como o app reage, e é o mesmo recurso que o painel flutuante usa na [parte 5](/blog/gps-simulator-5-floating-panel-over-any-app).
+Nem todo teste precisa de rota. Um **lugar favorito** é um ponto com nome, salvo num armazenamento próprio do sembast, e um toque nele leva o aparelho até lá. Isso é um **teletransporte**: a simulação é um plano com um único ponto, o veículo fica parado ali, e a posição é publicada como se o celular estivesse estacionado naquele lugar. É a forma mais rápida de colocar um aparelho de teste em outra cidade para ver como um app reage a uma nova localização.
+
+O teletransporte faz duas coisas extras que eu não esperava precisar. Se o ponto ainda não tem altura, o app lê a altura real do terreno ali, para a posição publicada ter altitude como as demais. E ele pergunta ao Nominatim o **endereço do ponto** (a busca reversa) e o mostra no painel, para você saber onde colocou o celular. Os favoritos também vão para o lado do Android sempre que mudam, porque o painel flutuante da [parte 5](/blog/gps-simulator-5-floating-panel-over-any-app) os lista e salta para um deles com um toque.
 
 <Screenshots
   images={[
-    {
-      src: '/static/images/projects/gps-simulator/screens/point.webp',
-      alt: 'Ajustes de um ponto',
-      width: 540,
-      height: 1200,
-    },
-    {
-      src: '/static/images/projects/gps-simulator/screens/clear-dialog.webp',
-      alt: 'Limpar os pontos',
-      width: 540,
-      height: 1200,
-    },
     {
       src: '/static/images/projects/gps-simulator/screens/favorites.webp',
       alt: 'Lugares favoritos',
@@ -204,10 +401,22 @@ Nem todo teste precisa de uma rota. Os **lugares favoritos** guardam um ponto co
   ]}
 />
 
-## Para levar
+## Experimente você mesmo
 
-- **Separe a rota da simulação.** Com a geometria guardada na rota, o roteamento é consultado uma vez, e o resto roda offline e de forma repetível.
-- **Deixe o serviço de rotas trocável.** O servidor público é bom para começar, mas quem testa com frequência precisa poder apontar para o próprio.
-- **A volta também é uma rota.** Calcular a volta pelas ruas em vez de inverter a ida pega as mãos únicas e deixa o teste mais próximo da realidade.
+Se você instalou o app e terminou a configuração da [parte 1](/blog/gps-simulator-1-how-android-accepts-fake-locations), esta sequência percorre quase tudo o que está acima em poucos minutos:
+
+1. Toque em três pontos num mapa de ruas para formar uma viagem curta e deixe o modo em **ida e volta**. Toque em **Roteirizar** e use o seletor do painel para olhar as linhas de ida e de volta. Se as ruas têm trechos de mão única, você vai ver as duas linhas diferentes.
+2. Troque o veículo para **bicicleta**. A rota fica marcada como desatualizada, porque o perfil mudou. Roteirize de novo e compare a distância.
+3. Troque o trajeto para **linha reta** e roteirize de novo. A linha agora são os pontos ligados na ordem, e a volta é a mesma linha invertida.
+4. Ligue o modo avião e roteirize uma rota pelas ruas. O app não falha: desenha linhas retas e avisa que estava sem internet.
+5. Com a internet de volta, roteirize de novo e **salve** a rota. Ligue o modo avião, abra a rota salva e inicie a simulação. Ela roda sem pedir nada.
+6. No menu da rota, escolha **Compartilhar GPX** e abra o arquivo em outra ferramenta, ou **Exportar GPX** e importe de volta. Compare os pontos e o nome.
+7. Toque num marcador e teste **Inserir ponto depois** e **Adicionar ponto perto daqui**. Depois arraste um marcador e leia o aviso.
+
+## O que ficou comigo
+
+- **Mantenha a rota separada da simulação.** Com a geometria guardada na rota, o serviço é consultado uma vez, e o resto é repetível e funciona offline. Só essa separação deixou as rotas salvas, as importações e o plano B sem internet quase de graça.
+- **Uma demonstração pública não é um padrão.** O OSRM de demonstração do projeto responde todo perfil com um carro, e um pedestre roteirizado por vias de carro é um bug que você só nota olhando o mapa. Confira o que o seu servidor padrão realmente faz em cada perfil.
+- **A volta também é uma rota.** Calcular a volta pelas ruas em vez de inverter a ida pega as ruas de mão única, e quando não há volta roteirizada o app diz isso em vez de fingir.
 
 Na próxima parte, a rota ganha as imperfeições de um GPS de verdade: ruído, variação de velocidade e freada nas curvas.
