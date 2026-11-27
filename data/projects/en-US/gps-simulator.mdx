@@ -414,4 +414,17 @@ Testing background tracking, arrival at a point, geofences or speed calculation 
 - **Responsible use of public servers:** at most one request per second to the terrain server, a configurable address and the required credits on screen.
 - **Clean Architecture and BLoC**, with the simulation engine in the domain layer, independent of Flutter and Android, and more than 750 tests covering use cases, BLoCs, the background service and the screens in every language and both themes.
 
-I wrote about how it was built, with code samples, in [I built a GPS simulator to test location apps](/blog/building-a-gps-simulator-for-android).
+## The post series
+
+Each of the app's most interesting features became a post, with code and screens:
+
+1. [How Android accepts fake locations](/blog/gps-simulator-1-how-android-accepts-fake-locations)
+2. [Routes along the streets or in a straight line](/blog/gps-simulator-2-routes-streets-or-straight-lines)
+3. [A GPS that behaves like a real one](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)
+4. [Altitude and tunnels from real map data](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data)
+5. [A floating panel over any app](/blog/gps-simulator-5-floating-panel-over-any-app)
+6. [Home screen widgets and the live map](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)
+
+## Outside the posts
+
+Three topics live only here. The **five languages** (with regional variants) are Dart classes where each language implements the Portuguese class, so a forgotten translation is a compile error, and a test fails if any text is cut off. The **interface polish** follows fixed rules: one primary button per group, the destructive action in red only inside its confirmation, and speed always with its unit. And the **architecture** uses Clean Architecture per feature, BLoC, `get_it`, `go_router` and a `Result` in the use cases, with the simulation engine in the domain layer.

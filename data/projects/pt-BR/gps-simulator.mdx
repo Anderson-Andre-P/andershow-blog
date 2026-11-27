@@ -414,4 +414,17 @@ Testar rastreamento em segundo plano, chegada a um ponto, cerca virtual ou cálc
 - **Uso responsável de servidores públicos:** no máximo uma requisição por segundo ao servidor de terreno, endereço configurável e os créditos exigidos na tela.
 - **Clean Architecture e BLoC**, com o motor da simulação na camada de domínio, sem depender do Flutter nem do Android, e mais de 750 testes, que cobrem casos de uso, BLoCs, o serviço em segundo plano e as telas em todos os idiomas e nos dois temas.
 
-Contei como ele foi construído, com trechos de código, no post [Construí um simulador de GPS para testar apps de localização](/blog/building-a-gps-simulator-for-android).
+## A série de posts
+
+Cada recurso mais interessante do app virou um post, com código e telas:
+
+1. [Como o Android aceita posições falsas](/blog/gps-simulator-1-how-android-accepts-fake-locations)
+2. [Rotas pelas ruas ou em linha reta](/blog/gps-simulator-2-routes-streets-or-straight-lines)
+3. [Um GPS que se comporta como o de verdade](/blog/gps-simulator-3-a-gps-that-behaves-like-a-real-one)
+4. [Altitude e túneis do mapa real](/blog/gps-simulator-4-altitude-and-tunnels-from-real-map-data)
+5. [Painel flutuante por cima de qualquer app](/blog/gps-simulator-5-floating-panel-over-any-app)
+6. [Widgets na tela inicial e o mapa ao vivo](/blog/gps-simulator-6-live-map-widgets-on-the-home-screen)
+
+## Fora dos posts
+
+Três assuntos ficaram só aqui. Os **cinco idiomas** (com variantes regionais) são classes Dart em que cada idioma implementa a classe em português, então uma tradução esquecida é um erro de compilação, e um teste falha se algum texto for cortado. Os **ajustes de interface** seguem regras fixas: um botão principal por grupo, ação destrutiva em vermelho só na confirmação e velocidade sempre com unidade. E a **arquitetura** usa Clean Architecture por feature, BLoC, `get_it`, `go_router` e um `Result` nos casos de uso, com o motor da simulação na camada de domínio.
