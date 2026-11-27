@@ -12,6 +12,9 @@ import { localePath, useLocale, useT } from '@/lib/i18n'
 
 export default function PostLayout({ frontMatter, authorDetails, next, prev, children }) {
   const t = useT()
+  // A neighbor from the same series is a part; anything else is an older/newer post.
+  const isSeriesPart = (post) =>
+    Boolean(post && frontMatter.series && post.series === frontMatter.series)
   const locale = useLocale()
   const { slug, date, title, tags, readingMinutes } = frontMatter
 
@@ -98,8 +101,8 @@ export default function PostLayout({ frontMatter, authorDetails, next, prev, chi
                 <PrevNextNav
                   prev={prev && { href: `/blog/${prev.slug}`, title: prev.title }}
                   next={next && { href: `/blog/${next.slug}`, title: next.title }}
-                  prevLabel={frontMatter.series ? t.blog.previousPart : t.blog.older}
-                  nextLabel={frontMatter.series ? t.blog.nextPart : t.blog.newer}
+                  prevLabel={isSeriesPart(prev) ? t.blog.previousPart : t.blog.older}
+                  nextLabel={isSeriesPart(next) ? t.blog.nextPart : t.blog.newer}
                   ariaLabel={t.blog.more}
                 />
               </div>
